@@ -139,9 +139,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                 <Td>{row.time}</Td>
                 <Td>
                   <span
-                    className={`rounded-full px-2 py-1 text-xs ${
-                      statusStyles[row.status]
-                    }`}
+                    className={`rounded-full px-2 py-1 text-xs ${statusStyles[row.status]}`}
                   >
                     {statusLabelMap[row.status]}
                   </span>
@@ -195,4 +193,3 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
     </div>
   );
 }
-
