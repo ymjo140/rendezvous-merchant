@@ -24,12 +24,12 @@ export function HomePage({ storeId }: { storeId?: string }) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <p className="text-sm text-slate-500">Store #{storeId}</p>
+        <h1 className="text-2xl font-semibold">\uB300\uC2DC\uBCF4\uB4DC</h1>
+        <p className="text-sm text-slate-500">\uB9E4\uC7A5 #{storeId}</p>
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>Live activity</CardTitle>
+          <CardTitle>\uC2E4\uC2DC\uAC04 \uB9E4\uCE6D \uD604\uD669</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-slate-600">
           {logs.map((item, idx) => (
@@ -41,9 +41,9 @@ export function HomePage({ storeId }: { storeId?: string }) {
       </Card>
       <div className="grid gap-4 md:grid-cols-3">
         {[
-          { label: "Reservations", value: "12" },
-          { label: "Active rules", value: "4" },
-          { label: "Offer usage", value: "23" },
+          { label: "\uC608\uC57D", value: "12" },
+          { label: "\uD65C\uC131 \uB8F0", value: "4" },
+          { label: "\uD61C\uD0DD \uC0AC\uC6A9", value: "23" },
         ].map((item) => (
           <Card key={item.label}>
             <CardHeader>

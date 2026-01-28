@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -8,8 +8,8 @@ import { endpoints } from "@/lib/api/endpoints";
 import type { StoreSummary } from "@/domain/stores/types";
 
 const mockStores: StoreSummary[] = [
-  { id: 1, name: "데모 스토어" },
-  { id: 2, name: "샘플 분점" },
+  { id: 1, name: "\uB370\uBAA8 \uC2A4\uD1A0\uC5B4" },
+  { id: 2, name: "\uC0D8\uD50C \uBD84\uC810" },
 ];
 
 export default function Page() {
@@ -34,7 +34,7 @@ export default function Page() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">매장 선택</h1>
+      <h1 className="text-2xl font-semibold">\uB9E4\uC7A5 \uC120\uD0DD</h1>
       <div className="grid gap-3 md:grid-cols-2">
         {stores.map((store) => (
           <div
@@ -42,12 +42,12 @@ export default function Page() {
             className="rounded-lg border border-slate-200 bg-white p-4"
           >
             <div className="font-medium">{store.name}</div>
-            <div className="text-xs text-slate-500">ID: {store.id}</div>
+            <div className="text-xs text-slate-500">\uB9E4\uC7A5 \uBC88\uD638: {store.id}</div>
             <Button
               className="mt-3"
               onClick={() => router.push(`/stores/${store.id}`)}
             >
-              선택
+              \uC120\uD0DD
             </Button>
           </div>
         ))}
@@ -55,5 +55,3 @@ export default function Page() {
     </div>
   );
 }
-
-

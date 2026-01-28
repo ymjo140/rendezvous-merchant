@@ -15,7 +15,7 @@ export function Topbar({
         <button
           className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-700 lg:hidden"
           onClick={onMenuClick}
-          aria-label="Open menu"
+          aria-label="\uBA54\uB274 \uC5F4\uAE30"
         >
           <svg
             viewBox="0 0 24 24"
@@ -32,7 +32,7 @@ export function Topbar({
             <line x1="3" y1="18" x2="21" y2="18" />
           </svg>
         </button>
-        <div className="text-sm text-slate-500">Merchant Console</div>
+        <div className="text-sm text-slate-500">\uC0AC\uC7A5\uB2D8 \uCEE8\uC194</div>
       </div>
       <div className="flex items-center gap-3">{children}</div>
     </div>

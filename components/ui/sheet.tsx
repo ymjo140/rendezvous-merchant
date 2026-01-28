@@ -17,7 +17,7 @@ export function Sheet({
       <button
         className="absolute inset-0 bg-black/40"
         onClick={() => onOpenChange(false)}
-        aria-label="Close menu"
+        aria-label="\uBA54\uB274 \uB2EB\uAE30"
       />
       {children}
     </div>

@@ -8,7 +8,7 @@ import { setToken } from "@/lib/auth/tokenStore";
 function KakaoCallbackInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [status, setStatus] = useState("카카오 인증 처리 중...");
+  const [status, setStatus] = useState("\uCE74\uCE74\uC624 \uC778\uC99D \uCC98\uB9AC \uC911...");
 
   useEffect(() => {
     const code = searchParams.get("code");
@@ -16,14 +16,14 @@ function KakaoCallbackInner() {
     async function handle() {
       try {
         if (!code) {
-          throw new Error("Missing code");
+          throw new Error("\uC778\uC99D \uCF54\uB4DC\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
         }
         const result = await exchangeKakaoCode(code);
         setToken(result.access_token || "dev-token");
         router.replace("/stores/select");
       } catch {
         setToken("dev-token");
-        setStatus("개발용 토큰으로 로그인합니다.");
+        setStatus("\uAC1C\uBC1C\uC6A9 \uD1A0\uD070\uC73C\uB85C \uB85C\uADF8\uC778\uD569\uB2C8\uB2E4.");
         router.replace("/stores/select");
       }
     }
@@ -46,7 +46,7 @@ export default function Page() {
       fallback={
         <div className="flex min-h-screen items-center justify-center bg-slate-50">
           <div className="rounded-xl border border-slate-200 bg-white px-6 py-4 text-sm text-slate-600">
-            카카오 인증 처리 중...
+            \uCE74\uCE74\uC624 \uC778\uC99D \uCC98\uB9AC \uC911...
           </div>
         </div>
       }

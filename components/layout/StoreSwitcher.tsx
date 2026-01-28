@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -7,8 +7,8 @@ import { endpoints } from "@/lib/api/endpoints";
 import type { StoreSummary } from "@/domain/stores/types";
 
 const mockStores: StoreSummary[] = [
-  { id: 1, name: "데모 스토어" },
-  { id: 2, name: "샘플 분점" },
+  { id: 1, name: "\uB370\uBAA8 \uC2A4\uD1A0\uC5B4" },
+  { id: 2, name: "\uC0D8\uD50C \uBD84\uC810" },
 ];
 
 export function StoreSwitcher({ currentStoreId }: { currentStoreId: string | null }) {
@@ -51,5 +51,3 @@ export function StoreSwitcher({ currentStoreId }: { currentStoreId: string | nul
     </select>
   );
 }
-
-

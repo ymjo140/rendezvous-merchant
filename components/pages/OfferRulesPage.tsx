@@ -18,30 +18,30 @@ type Rule = {
   benefit?: { title?: string };
 };
 
-const fallbackRules = [
+const fallbackRules: Rule[] = [
   {
     id: 1,
-    name: "Weekday dinner for 4",
+    name: "\uD3C9\uC77C \uC800\uB141 4\uC778 \uB8F0",
     enabled: true,
     days: [true, true, true, true, false, false, false],
     timeBlocks: [{ start: "18:00", end: "20:00" }],
     partySize: { min: 4, max: 6 },
     leadTime: { min: 30, max: 240 },
-    benefit: { title: "10% off", type: "percentage_discount" },
+    benefit: { title: "\uC74C\uB8CC 1\uC794" },
   },
   {
     id: 2,
-    name: "Weekend lunch",
+    name: "\uC8FC\uB9D0 \uC810\uC2EC \uB8F0",
     enabled: false,
     days: [false, false, false, false, true, true, true],
     timeBlocks: [{ start: "11:30", end: "14:00" }],
     partySize: { min: 2, max: 4 },
     leadTime: { min: 60, max: 360 },
-    benefit: { title: "Free drink", type: "free_item" },
+    benefit: { title: "\uC74C\uB8CC \uC99D\uC815" },
   },
 ];
 
-const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const dayLabels = ["\uC6D4", "\uD654", "\uC218", "\uBAA9", "\uAE08", "\uD1A0", "\uC77C"];
 
 function formatDays(days: boolean[]) {
   return days
@@ -107,11 +107,11 @@ export function OfferRulesPage({ storeId }: { storeId?: string }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Offer Rules</h1>
-          <p className="text-sm text-slate-500">Store #{storeId}</p>
+          <h1 className="text-2xl font-semibold">\uB8F0 \uBAA9\uB85D</h1>
+          <p className="text-sm text-slate-500">\uB9E4\uC7A5 #{storeId}</p>
         </div>
         <Button onClick={() => router.push(`/stores/${storeId}/offers/rules/new`)}>
-          New rule
+          \uC0C8 \uB8F0 \uB9CC\uB4E4\uAE30
         </Button>
       </div>
       <div className="space-y-3">
@@ -123,7 +123,7 @@ export function OfferRulesPage({ storeId }: { storeId?: string }) {
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-medium">{rule.name}</div>
-                <div className="text-xs text-slate-500">Rule ID: {rule.id}</div>
+                <div className="text-xs text-slate-500">\uB8F0 \uBC88\uD638: {rule.id}</div>
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -132,7 +132,7 @@ export function OfferRulesPage({ storeId }: { storeId?: string }) {
                     router.push(`/stores/${storeId}/offers/rules/${rule.id}/edit`)
                   }
                 >
-                  Edit
+                  \uC218\uC815
                 </Button>
                 <button
                   className={`rounded-full px-3 py-1 text-xs font-medium ${
@@ -142,20 +142,21 @@ export function OfferRulesPage({ storeId }: { storeId?: string }) {
                   }`}
                   onClick={() => toggleRule(rule.id)}
                 >
-                  {rule.enabled ? "Enabled" : "Disabled"}
+                  {rule.enabled ? "\uD65C\uC131" : "\uBE44\uD65C\uC131"}
                 </button>
               </div>
             </div>
             <div className="flex flex-wrap gap-2 text-xs text-slate-600">
-              <Badge>Days: {formatDays(rule.days)}</Badge>
-              <Badge>Time: {formatTimeBlocks(rule.timeBlocks)}</Badge>
+              <Badge>\uC694\uC77C: {formatDays(rule.days)}</Badge>
+              <Badge>\uC2DC\uAC04: {formatTimeBlocks(rule.timeBlocks)}</Badge>
               <Badge>
-                Party: {rule.partySize?.min ?? "-"}~{rule.partySize?.max ?? "-"}
+                \uC778\uC6D0: {rule.partySize?.min ?? "-"}~{rule.partySize?.max ?? "-"}
               </Badge>
               <Badge>
-                Lead: {rule.leadTime?.min ?? "-"}~{rule.leadTime?.max ?? "-"} min
+                \uB9AC\uB4DC\uD0C0\uC784: {rule.leadTime?.min ?? "-"}~
+                {rule.leadTime?.max ?? "-"} \uBD84
               </Badge>
-              <Badge>Benefit: {rule.benefit?.title ?? "-"}</Badge>
+              <Badge>\uD61C\uD0DD: {rule.benefit?.title ?? "-"}</Badge>
             </div>
           </div>
         ))}

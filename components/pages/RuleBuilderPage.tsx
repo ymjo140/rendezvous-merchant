@@ -8,11 +8,57 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchWithAuth, baseURL } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import { HotDealCard } from "@/components/offers/HotDealCard";
+import { BenefitType } from "@/domain/offers/types";
+
+const dayLabels = ["\uC6D4", "\uD654", "\uC218", "\uBAA9", "\uAE08", "\uD1A0", "\uC77C"];
+
+const benefitTypes = [
+  { value: BenefitType.FREE_MENU_ITEM, label: "\uBA54\uB274 \uC99D\uC815" },
+  { value: BenefitType.SPACE_UPGRADE, label: "\uB8F8/\uC88C\uC11D \uC5C5\uADF8\uB808\uC774\uB4DC" },
+  { value: BenefitType.TIME_EXTENSION, label: "\uC2DC\uAC04 \uC5F0\uC7A5" },
+  { value: BenefitType.PERCENT_DISCOUNT, label: "\uC815\uB960 \uD560\uC778" },
+  { value: BenefitType.FIXED_AMOUNT_OFF, label: "\uC815\uC561 \uD560\uC778" },
+];
+
+const benefitTypeLabelMap: Record<BenefitType, string> = {
+  [BenefitType.PERCENT_DISCOUNT]: "\uC815\uB960 \uD560\uC778",
+  [BenefitType.FIXED_AMOUNT_OFF]: "\uC815\uC561 \uD560\uC778",
+  [BenefitType.FREE_MENU_ITEM]: "\uBA54\uB274 \uC99D\uC815",
+  [BenefitType.SIZE_UPGRADE]: "\uC0AC\uC774\uC988\uC5C5",
+  [BenefitType.UNLIMITED_REFILL]: "\uBB34\uC81C\uD55C \uB9AC\uD544",
+  [BenefitType.TIME_EXTENSION]: "\uC2DC\uAC04 \uC5F0\uC7A5",
+  [BenefitType.EARLY_ACCESS]: "\uC5BC\uB9AC \uCCB4\uD06C\uC778",
+  [BenefitType.LATE_CHECKOUT]: "\uB808\uC774\uD2B8 \uCCB4\uD06C\uC544\uC6C3",
+  [BenefitType.SPACE_UPGRADE]: "\uB8F8/\uC88C\uC11D \uC5C5\uADF8\uB808\uC774\uB4DC",
+  [BenefitType.FREE_EQUIPMENT]: "\uC7A5\uBE44 \uB300\uC5EC",
+  [BenefitType.CORKAGE_FREE]: "\uCF5C\uD0A4\uC9C0 \uD504\uB9AC",
+};
+
+const mockBenefits = [
+  { id: "1", title: "\uC74C\uB8CC 1\uC794", type: BenefitType.FREE_MENU_ITEM },
+  { id: "2", title: "\uCC3D\uAC00 \uC88C\uC11D", type: BenefitType.SPACE_UPGRADE },
+];
+
+const mockRule = {
+  name: "\uD3C9\uC77C \uC800\uB141 4\uC778",
+  days: [true, true, true, true, false, false, false],
+  timeBlocks: [{ start: "18:00", end: "20:00" }],
+  partyMin: "4",
+  partyMax: "6",
+  leadMin: "30",
+  leadMax: "240",
+  benefitId: "1",
+  benefitType: BenefitType.FREE_MENU_ITEM,
+  benefitValue: "\uC74C\uB8CC 1\uC794",
+  dailyCap: "20",
+  minSpend: "30000",
+  visibility: "public",
+};
 
 type BenefitItem = {
   id: string | number;
   title: string;
-  type?: string;
+  type?: BenefitType;
 };
 
 type RuleResponse = {
@@ -22,42 +68,40 @@ type RuleResponse = {
   timeBlocks?: Array<{ start: string; end: string }>;
   partySize?: { min?: number; max?: number };
   leadTime?: { min?: number; max?: number };
-  benefit?: { id?: string | number; type?: string };
+  benefit?: { id?: string | number; type?: BenefitType };
   benefitValue?: string;
   guardrails?: { dailyCap?: number; minSpend?: number };
   visibility?: "public" | "private";
 };
 
-const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const benefitTypes = [
-  { value: "free_item", label: "Free Item" },
-  { value: "service", label: "Service" },
-  { value: "set_menu", label: "Set Menu" },
-  { value: "percentage_discount", label: "Percent" },
-  { value: "fixed_discount", label: "Fixed" },
-  { value: "other", label: "Other" },
-];
-
-const mockBenefits: BenefitItem[] = [
-  { id: "1", title: "Free drink", type: "free_item" },
-  { id: "2", title: "Seat upgrade", type: "service" },
-];
-
-const mockRule = {
-  name: "Weekday dinner for 4",
-  days: [true, true, true, true, false, false, false],
-  timeBlocks: [{ start: "18:00", end: "20:00" }],
-  partyMin: "4",
-  partyMax: "6",
-  leadMin: "30",
-  leadMax: "240",
-  benefitId: "1",
-  benefitType: "free_item",
-  benefitValue: "Free drink",
-  dailyCap: "20",
-  minSpend: "30000",
-  visibility: "public",
-};
+function buildBenefitMessage(type: BenefitType, value: string) {
+  switch (type) {
+    case BenefitType.TIME_EXTENSION:
+      return `\u23F0 \uC774\uC6A9 \uC2DC\uAC04 ${value || "30\uBD84"} \uC5F0\uC7A5 \uD61C\uD0DD!`;
+    case BenefitType.EARLY_ACCESS:
+      return `\u23F0 ${value || "10\uBD84"} \uC77C\uCC0D \uC785\uC7A5 \uD61C\uD0DD!`;
+    case BenefitType.LATE_CHECKOUT:
+      return `\u23F0 ${value || "10\uBD84"} \uB2A6\uAC8C \uCCB4\uD06C\uC544\uC6C3 \uD61C\uD0DD!`;
+    case BenefitType.SPACE_UPGRADE:
+      return `\u2728 ${value || "\uB8F8 \uC5C5\uADF8\uB808\uC774\uB4DC"} \uBB34\uB8CC \uC5C5\uADF8\uB808\uC774\uB4DC!`;
+    case BenefitType.FREE_EQUIPMENT:
+      return `\u2728 ${value || "\uC7A5\uBE44"} \uB300\uC5EC \uD61C\uD0DD!`;
+    case BenefitType.CORKAGE_FREE:
+      return "\u2728 \uCF5C\uD0A4\uC9C0 \uD504\uB9AC \uD61C\uD0DD!";
+    case BenefitType.FREE_MENU_ITEM:
+      return `\uD83C\uDF7D ${value || "\uBA54\uB274 \uC99D\uC815"} \uD61C\uD0DD!`;
+    case BenefitType.SIZE_UPGRADE:
+      return `\uD83C\uDF7D ${value || "\uC0AC\uC774\uC988\uC5C5"} \uD61C\uD0DD!`;
+    case BenefitType.UNLIMITED_REFILL:
+      return "\uD83C\uDF7D \uBB34\uC81C\uD55C \uB9AC\uD544 \uD61C\uD0DD!";
+    case BenefitType.PERCENT_DISCOUNT:
+      return `\uD83D\uDCB8 ${value || "10%"} \uD560\uC778 \uD61C\uD0DD!`;
+    case BenefitType.FIXED_AMOUNT_OFF:
+      return `\uD83D\uDCB8 ${value || "5000\uC6D0"} \uD560\uC778 \uD61C\uD0DD!`;
+    default:
+      return value || "\uD61C\uD0DD";
+  }
+}
 
 export function RuleBuilderPage({
   storeId,
@@ -77,7 +121,7 @@ export function RuleBuilderPage({
   const [leadMin, setLeadMin] = useState("30");
   const [leadMax, setLeadMax] = useState("240");
   const [benefitId, setBenefitId] = useState("1");
-  const [benefitType, setBenefitType] = useState("free_item");
+  const [benefitType, setBenefitType] = useState<BenefitType>(BenefitType.FREE_MENU_ITEM);
   const [benefitValue, setBenefitValue] = useState("");
   const [dailyCap, setDailyCap] = useState("20");
   const [minSpend, setMinSpend] = useState("30000");
@@ -135,7 +179,7 @@ export function RuleBuilderPage({
           setLeadMin(String(target.leadTime?.min ?? leadMin));
           setLeadMax(String(target.leadTime?.max ?? leadMax));
           setBenefitId(String(target.benefit?.id ?? benefitId));
-          setBenefitType(String(target.benefit?.type ?? benefitType));
+          setBenefitType((target.benefit?.type ?? benefitType) as BenefitType);
           setBenefitValue(String(target.benefitValue ?? benefitValue));
           setDailyCap(String(target.guardrails?.dailyCap ?? dailyCap));
           setMinSpend(String(target.guardrails?.minSpend ?? minSpend));
@@ -164,11 +208,12 @@ export function RuleBuilderPage({
         .join(", "),
       timeBlocks: timeBlocks.map((block) => `${block.start}~${block.end}`).join(", "),
       partySize: `${partyMin}~${partyMax}`,
-      leadTime: `${leadMin}~${leadMax} min`,
-      benefit: benefit ? benefit.title : benefitType,
+      leadTime: `${leadMin}~${leadMax} \uBD84`,
+      benefit: benefit ? benefit.title : benefitTypeLabelMap[benefitType],
       benefitValue,
-      guardrails: `Daily cap ${dailyCap}, min spend ${minSpend}`,
+      guardrails: `\uC77C\uC77C \uB178\uCD9C \uC81C\uD55C ${dailyCap}, \uCD5C\uC18C \uACB0\uC81C \uAE08\uC561 ${minSpend}`,
       visibility,
+      benefitType: benefit?.type ?? benefitType,
     };
   }, [
     name,
@@ -201,6 +246,7 @@ export function RuleBuilderPage({
       benefitValue,
       guardrails: { dailyCap: Number(dailyCap), minSpend: Number(minSpend) },
       visibility,
+      is_private: visibility === "private",
     };
 
     if (!baseURL) return;
@@ -215,29 +261,34 @@ export function RuleBuilderPage({
     }
   }
 
+  const previewMessage = buildBenefitMessage(
+    summary.benefitType as BenefitType,
+    summary.benefitValue
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Rule Builder</h1>
-          <p className="text-sm text-slate-500">Conditions to Benefit to Guardrails to Preview</p>
+          <h1 className="text-2xl font-semibold">\uB8F0 \uBE4C\uB354</h1>
+          <p className="text-sm text-slate-500">\uC870\uAC74 / \uD61C\uD0DD / \uAC00\uB4DC\uB808\uC77C / \uBBF8\uB9AC\uBCF4\uAE30</p>
         </div>
-        <Button onClick={handleSave}>Save</Button>
+        <Button onClick={handleSave}>\uC800\uC7A5</Button>
       </div>
       <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-4">
-        <div className="text-sm font-medium">Step {step}</div>
+        <div className="text-sm font-medium">\uB2E8\uACC4 {step}</div>
         {step === 1 && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Rule name</label>
+              <label className="text-sm font-medium">\uADDC\uCE59 \uC774\uB984</label>
               <Input
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                placeholder="Weekday dinner for 4"
+                placeholder="\uD3C9\uC77C \uC800\uB141 4\uC778"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Days</label>
+              <label className="text-sm font-medium">\uC694\uC77C</label>
               <div className="flex flex-wrap gap-2">
                 {dayLabels.map((label, index) => (
                   <label key={label} className="flex items-center gap-1 text-sm">
@@ -256,7 +307,7 @@ export function RuleBuilderPage({
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Time blocks</label>
+              <label className="text-sm font-medium">\uC2DC\uAC04 \uBE14\uB85D</label>
               <div className="space-y-2">
                 {timeBlocks.map((block, index) => (
                   <div key={`${block.start}-${index}`} className="flex gap-2">
@@ -292,7 +343,7 @@ export function RuleBuilderPage({
                         setTimeBlocks((prev) => prev.filter((_, idx) => idx !== index))
                       }
                     >
-                      Remove
+                      \uC0AD\uC81C
                     </Button>
                   </div>
                 ))}
@@ -306,12 +357,12 @@ export function RuleBuilderPage({
                   ])
                 }
               >
-                Add time block
+                \uC2DC\uAC04 \uBE14\uB85D \uCD94\uAC00
               </Button>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Party min</label>
+                <label className="text-sm font-medium">\uC778\uC6D0 \uCD5C\uC18C</label>
                 <Input
                   type="number"
                   value={partyMin}
@@ -319,7 +370,7 @@ export function RuleBuilderPage({
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Party max</label>
+                <label className="text-sm font-medium">\uC778\uC6D0 \uCD5C\uB300</label>
                 <Input
                   type="number"
                   value={partyMax}
@@ -329,7 +380,7 @@ export function RuleBuilderPage({
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Lead time min (min)</label>
+                <label className="text-sm font-medium">\uB9AC\uB4DC\uD0C0\uC784 \uCD5C\uC18C(\uBD84)</label>
                 <Input
                   type="number"
                   value={leadMin}
@@ -337,7 +388,7 @@ export function RuleBuilderPage({
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Lead time max (min)</label>
+                <label className="text-sm font-medium">\uB9AC\uB4DC\uD0C0\uC784 \uCD5C\uB300(\uBD84)</label>
                 <Input
                   type="number"
                   value={leadMax}
@@ -350,7 +401,7 @@ export function RuleBuilderPage({
         {step === 2 && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Catalog benefit</label>
+              <label className="text-sm font-medium">\uCE74\uD0C8\uB85C\uADF8 \uD61C\uD0DD</label>
               <Select
                 value={benefitId}
                 onChange={(event) => setBenefitId(event.target.value)}
@@ -363,10 +414,10 @@ export function RuleBuilderPage({
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Benefit type</label>
+              <label className="text-sm font-medium">\uD61C\uD0DD \uC720\uD615</label>
               <Select
                 value={benefitType}
-                onChange={(event) => setBenefitType(event.target.value)}
+                onChange={(event) => setBenefitType(event.target.value as BenefitType)}
               >
                 {benefitTypes.map((type) => (
                   <option key={type.value} value={type.value}>
@@ -376,11 +427,11 @@ export function RuleBuilderPage({
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Benefit value</label>
+              <label className="text-sm font-medium">\uD61C\uD0DD \uAC12</label>
               <Input
                 value={benefitValue}
                 onChange={(event) => setBenefitValue(event.target.value)}
-                placeholder="10% or 5000"
+                placeholder="10% \uB610\uB294 5000\uC6D0"
               />
             </div>
           </div>
@@ -388,14 +439,14 @@ export function RuleBuilderPage({
         {step === 3 && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Daily cap</label>
+              <label className="text-sm font-medium">\uC77C\uC77C \uB178\uCD9C \uC81C\uD55C</label>
               <Input
                 value={dailyCap}
                 onChange={(event) => setDailyCap(event.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Min spend</label>
+              <label className="text-sm font-medium">\uCD5C\uC18C \uACB0\uC81C \uAE08\uC561</label>
               <Input
                 value={minSpend}
                 onChange={(event) => setMinSpend(event.target.value)}
@@ -412,7 +463,10 @@ export function RuleBuilderPage({
                     checked={visibility === "public"}
                     onChange={() => setVisibility("public")}
                   />
-                  \uACF5\uAC1C (Public)
+                  \uACF5\uAC1C
+                  <span className="text-xs text-slate-500">
+                    \uD56B\uB51C \uD0ED\uC5D0 \uBAA8\uB4E0 \uC0AC\uB78C\uC5D0\uAC8C \uB178\uCD9C\uD569\uB2C8\uB2E4. (\uACF5\uC2E4 \uD574\uACB0\uC5D0 \uCD5C\uC801)
+                  </span>
                 </label>
                 <label className="flex items-center gap-2">
                   <input
@@ -422,9 +476,9 @@ export function RuleBuilderPage({
                     checked={visibility === "private"}
                     onChange={() => setVisibility("private")}
                   />
-                  \uBE44\uACF5\uAC1C \uC81C\uC548 (Private)
+                  \uBE44\uACF5\uAC1C \uC81C\uC548
                   <span className="text-xs text-slate-500">
-                    \uB2E8\uACE8\uC774\uB098 \uC870\uAC74\uC774 \uB9DE\uB294 \uC190\uB2D8\uC5D0\uAC8C\uB9CC \uC740\uBC00\uD558\uAC8C \uC81C\uC548\uD569\uB2C8\uB2E4.
+                    \uD56B\uB51C \uD0ED\uC5D0 \uB178\uCD9C\uD558\uC9C0 \uC54A\uACE0, AI\uAC00 \uC801\uD569\uD55C \uC190\uB2D8\uC5D0\uAC8C\uB9CC \uC740\uBC00\uD558\uAC8C \uC81C\uC548\uD569\uB2C8\uB2E4. (\uBE0C\uB79C\uB4DC \uC774\uBBF8\uC9C0 \uBCF4\uD638)
                   </span>
                 </label>
               </div>
@@ -434,21 +488,21 @@ export function RuleBuilderPage({
         {step === 4 && (
           <Card>
             <CardHeader>
-              <CardTitle>Preview</CardTitle>
+              <CardTitle>\uBBF8\uB9AC\uBCF4\uAE30</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-sm text-slate-600">
               <div>\uC0AC\uC7A5\uB2D8, \uD559\uC0DD\uB4E4\uC5D0\uAC8C\uB294 \uC774\uB807\uAC8C \uBCF4\uC785\uB2C8\uB2E4.</div>
               <HotDealCard
                 title={summary.name || "-"}
-                benefit={summary.benefitValue ? summary.benefitValue : summary.benefit}
-                timer="Ends in 02:15"
+                benefit={previewMessage}
+                timer="\uB9C8\uAC10\uAE4C\uC9C0 02:15"
                 visibility={summary.visibility}
               />
-              <div>Days: {summary.days || "-"}</div>
-              <div>Time: {summary.timeBlocks || "-"}</div>
-              <div>Party: {summary.partySize}</div>
-              <div>Lead time: {summary.leadTime}</div>
-              <div>Guardrails: {summary.guardrails}</div>
+              <div>\uC694\uC77C: {summary.days || "-"}</div>
+              <div>\uC2DC\uAC04: {summary.timeBlocks || "-"}</div>
+              <div>\uC778\uC6D0: {summary.partySize}</div>
+              <div>\uB9AC\uB4DC\uD0C0\uC784: {summary.leadTime}</div>
+              <div>\uAC00\uB4DC\uB808\uC77C: {summary.guardrails}</div>
             </CardContent>
           </Card>
         )}
@@ -457,10 +511,10 @@ export function RuleBuilderPage({
             variant="secondary"
             onClick={() => setStep((prev) => Math.max(1, prev - 1))}
           >
-            Prev
+            \uC774\uC804
           </Button>
           <Button onClick={() => setStep((prev) => Math.min(4, prev + 1))}>
-            Next
+            \uB2E4\uC74C
           </Button>
         </div>
       </div>

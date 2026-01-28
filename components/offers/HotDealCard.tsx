@@ -16,7 +16,14 @@ export function HotDealCard({
     <Card className="overflow-hidden">
       <CardContent className="space-y-3 p-4">
         <div className="flex items-center justify-between">
-          <Badge className="bg-amber-100 text-amber-700">HOT DEAL</Badge>
+          <div className="flex items-center gap-2">
+            <Badge className="bg-amber-100 text-amber-700">\uD56B\uB51C</Badge>
+            {visibility === "private" ? (
+              <Badge className="bg-slate-900 text-white">
+                \uD83D\uDD12 \uC2DC\uD06C\uB9BF \uC624\uD37C
+              </Badge>
+            ) : null}
+          </div>
           <span className="text-xs text-slate-500">{timer}</span>
         </div>
         <div className="text-lg font-semibold">{benefit}</div>
