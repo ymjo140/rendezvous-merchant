@@ -8,23 +8,33 @@ import { Badge } from "@/components/ui/badge";
 import { fetchWithAuth, baseURL } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 
+type Benefit = {
+  id: number | string;
+  title: string;
+  type: string;
+  value?: string;
+  active: boolean;
+};
+
 const benefitTypes = [
+  { value: "free_item", label: "Free Item" },
+  { value: "service", label: "Service" },
+  { value: "set_menu", label: "Set Menu" },
   { value: "percentage_discount", label: "Percent" },
   { value: "fixed_discount", label: "Fixed" },
-  { value: "free_item", label: "Free Item" },
-  { value: "set_menu", label: "Set Menu" },
   { value: "other", label: "Other" },
 ];
 
-const fallbackBenefits = [
+const fallbackBenefits: Benefit[] = [
   { id: 1, title: "Free drink", type: "free_item", value: "Americano", active: true },
-  { id: 2, title: "10% off", type: "percentage_discount", value: "10%", active: true },
+  { id: 2, title: "Seat upgrade", type: "service", value: "Window seat", active: true },
+  { id: 3, title: "10% off", type: "percentage_discount", value: "10%", active: true },
 ];
 
 export function BenefitsCatalogPage({ storeId }: { storeId?: string }) {
-  const [benefits, setBenefits] = useState<any[]>(fallbackBenefits);
+  const [benefits, setBenefits] = useState<Benefit[]>(fallbackBenefits);
   const [title, setTitle] = useState("");
-  const [type, setType] = useState("percentage_discount");
+  const [type, setType] = useState("free_item");
   const [value, setValue] = useState("");
 
   useEffect(() => {
@@ -36,9 +46,9 @@ export function BenefitsCatalogPage({ storeId }: { storeId?: string }) {
         return;
       }
       try {
-        const data = await fetchWithAuth<any[]>(endpoints.benefits(storeId));
+        const data = await fetchWithAuth<Benefit[]>(endpoints.benefits(storeId));
         if (active && Array.isArray(data)) {
-          setBenefits(data as any);
+          setBenefits(data);
         }
       } catch {
         if (active) setBenefits(fallbackBenefits);
@@ -80,8 +90,11 @@ export function BenefitsCatalogPage({ storeId }: { storeId?: string }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="space-y-1">
         <h1 className="text-2xl font-semibold">Benefits Catalog</h1>
+        <p className="text-sm text-slate-500">
+          \uC11C\uBE44\uC2A4 \uC81C\uACF5\uD615 \uD61C\uD0DD\uC744 \uC6B0\uC120 \uCD94\uCC9C\uD569\uB2C8\uB2E4.
+        </p>
       </div>
 
       <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-3">

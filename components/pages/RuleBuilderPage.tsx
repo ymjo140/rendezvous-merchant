@@ -7,19 +7,40 @@ import { Select } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { fetchWithAuth, baseURL } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
+import { HotDealCard } from "@/components/offers/HotDealCard";
+
+type BenefitItem = {
+  id: string | number;
+  title: string;
+  type?: string;
+};
+
+type RuleResponse = {
+  id?: string | number;
+  name?: string;
+  days?: boolean[];
+  timeBlocks?: Array<{ start: string; end: string }>;
+  partySize?: { min?: number; max?: number };
+  leadTime?: { min?: number; max?: number };
+  benefit?: { id?: string | number; type?: string };
+  benefitValue?: string;
+  guardrails?: { dailyCap?: number; minSpend?: number };
+  visibility?: "public" | "private";
+};
 
 const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const benefitTypes = [
+  { value: "free_item", label: "Free Item" },
+  { value: "service", label: "Service" },
+  { value: "set_menu", label: "Set Menu" },
   { value: "percentage_discount", label: "Percent" },
   { value: "fixed_discount", label: "Fixed" },
-  { value: "free_item", label: "Free Item" },
-  { value: "set_menu", label: "Set Menu" },
   { value: "other", label: "Other" },
 ];
 
-const mockBenefits = [
-  { id: "1", title: "10% off", type: "percentage_discount" },
-  { id: "2", title: "Free drink", type: "free_item" },
+const mockBenefits: BenefitItem[] = [
+  { id: "1", title: "Free drink", type: "free_item" },
+  { id: "2", title: "Seat upgrade", type: "service" },
 ];
 
 const mockRule = {
@@ -31,10 +52,11 @@ const mockRule = {
   leadMin: "30",
   leadMax: "240",
   benefitId: "1",
-  benefitType: "percentage_discount",
-  benefitValue: "10%",
+  benefitType: "free_item",
+  benefitValue: "Free drink",
   dailyCap: "20",
   minSpend: "30000",
+  visibility: "public",
 };
 
 export function RuleBuilderPage({
@@ -55,11 +77,12 @@ export function RuleBuilderPage({
   const [leadMin, setLeadMin] = useState("30");
   const [leadMax, setLeadMax] = useState("240");
   const [benefitId, setBenefitId] = useState("1");
-  const [benefitType, setBenefitType] = useState("percentage_discount");
+  const [benefitType, setBenefitType] = useState("free_item");
   const [benefitValue, setBenefitValue] = useState("");
   const [dailyCap, setDailyCap] = useState("20");
   const [minSpend, setMinSpend] = useState("30000");
-  const [catalog, setCatalog] = useState(mockBenefits);
+  const [visibility, setVisibility] = useState<"public" | "private">("public");
+  const [catalog, setCatalog] = useState<BenefitItem[]>(mockBenefits);
 
   useEffect(() => {
     let active = true;
@@ -67,9 +90,9 @@ export function RuleBuilderPage({
     async function loadCatalog() {
       if (!storeId || !baseURL) return;
       try {
-        const data = await fetchWithAuth<any[]>(endpoints.benefits(storeId));
+        const data = await fetchWithAuth<BenefitItem[]>(endpoints.benefits(storeId));
         if (active && Array.isArray(data)) {
-          setCatalog(data as any);
+          setCatalog(data);
         }
       } catch {
         // ignore
@@ -91,12 +114,15 @@ export function RuleBuilderPage({
           setBenefitValue(mockRule.benefitValue);
           setDailyCap(mockRule.dailyCap);
           setMinSpend(mockRule.minSpend);
+          setVisibility(mockRule.visibility as "public" | "private");
         }
         return;
       }
 
       try {
-        const data = await fetchWithAuth<any>(endpoints.offerRules(storeId));
+        const data = await fetchWithAuth<RuleResponse[] | RuleResponse>(
+          endpoints.offerRules(storeId)
+        );
         const target = Array.isArray(data)
           ? data.find((item) => String(item.id) === String(ruleId))
           : null;
@@ -113,6 +139,7 @@ export function RuleBuilderPage({
           setBenefitValue(String(target.benefitValue ?? benefitValue));
           setDailyCap(String(target.guardrails?.dailyCap ?? dailyCap));
           setMinSpend(String(target.guardrails?.minSpend ?? minSpend));
+          setVisibility((target.visibility as "public" | "private") ?? "public");
         }
       } catch {
         // ignore
@@ -128,7 +155,7 @@ export function RuleBuilderPage({
   }, [storeId, ruleId]);
 
   const summary = useMemo(() => {
-    const benefit = catalog.find((item: any) => String(item.id) === benefitId);
+    const benefit = catalog.find((item) => String(item.id) === benefitId);
     return {
       name,
       days: days
@@ -141,6 +168,7 @@ export function RuleBuilderPage({
       benefit: benefit ? benefit.title : benefitType,
       benefitValue,
       guardrails: `Daily cap ${dailyCap}, min spend ${minSpend}`,
+      visibility,
     };
   }, [
     name,
@@ -156,6 +184,7 @@ export function RuleBuilderPage({
     dailyCap,
     minSpend,
     catalog,
+    visibility,
   ]);
 
   async function handleSave() {
@@ -171,6 +200,7 @@ export function RuleBuilderPage({
       benefitType,
       benefitValue,
       guardrails: { dailyCap: Number(dailyCap), minSpend: Number(minSpend) },
+      visibility,
     };
 
     if (!baseURL) return;
@@ -325,7 +355,7 @@ export function RuleBuilderPage({
                 value={benefitId}
                 onChange={(event) => setBenefitId(event.target.value)}
               >
-                {catalog.map((benefit: any) => (
+                {catalog.map((benefit) => (
                   <option key={benefit.id} value={String(benefit.id)}>
                     {benefit.title}
                   </option>
@@ -371,6 +401,34 @@ export function RuleBuilderPage({
                 onChange={(event) => setMinSpend(event.target.value)}
               />
             </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">\uACF5\uAC1C \uC124\uC815</label>
+              <div className="space-y-2 text-sm text-slate-600">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="visibility"
+                    value="public"
+                    checked={visibility === "public"}
+                    onChange={() => setVisibility("public")}
+                  />
+                  \uACF5\uAC1C (Public)
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="visibility"
+                    value="private"
+                    checked={visibility === "private"}
+                    onChange={() => setVisibility("private")}
+                  />
+                  \uBE44\uACF5\uAC1C \uC81C\uC548 (Private)
+                  <span className="text-xs text-slate-500">
+                    \uB2E8\uACE8\uC774\uB098 \uC870\uAC74\uC774 \uB9DE\uB294 \uC190\uB2D8\uC5D0\uAC8C\uB9CC \uC740\uBC00\uD558\uAC8C \uC81C\uC548\uD569\uB2C8\uB2E4.
+                  </span>
+                </label>
+              </div>
+            </div>
           </div>
         )}
         {step === 4 && (
@@ -378,15 +436,18 @@ export function RuleBuilderPage({
             <CardHeader>
               <CardTitle>Preview</CardTitle>
             </CardHeader>
-            <CardContent className="text-sm text-slate-600 space-y-2">
-              <div>Name: {summary.name || "-"}</div>
+            <CardContent className="space-y-4 text-sm text-slate-600">
+              <div>\uC0AC\uC7A5\uB2D8, \uD559\uC0DD\uB4E4\uC5D0\uAC8C\uB294 \uC774\uB807\uAC8C \uBCF4\uC785\uB2C8\uB2E4.</div>
+              <HotDealCard
+                title={summary.name || "-"}
+                benefit={summary.benefitValue ? summary.benefitValue : summary.benefit}
+                timer="Ends in 02:15"
+                visibility={summary.visibility}
+              />
               <div>Days: {summary.days || "-"}</div>
               <div>Time: {summary.timeBlocks || "-"}</div>
               <div>Party: {summary.partySize}</div>
               <div>Lead time: {summary.leadTime}</div>
-              <div>
-                Benefit: {summary.benefit} ({summary.benefitValue || "none"})
-              </div>
               <div>Guardrails: {summary.guardrails}</div>
             </CardContent>
           </Card>

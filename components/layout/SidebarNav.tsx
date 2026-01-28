@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -15,8 +15,15 @@ const navItems = [
   { label: "Settings", slug: "settings" },
 ];
 
-export function SidebarNav({ storeId }: { storeId: string | null }) {
+export function SidebarNav({
+  storeId,
+  onNavigate,
+}: {
+  storeId: string | null;
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
+
   return (
     <nav className="flex h-full flex-col gap-4 p-6">
       <div className="text-lg font-semibold">Rendezvous</div>
@@ -35,6 +42,7 @@ export function SidebarNav({ storeId }: { storeId: string | null }) {
             <Link
               key={item.label}
               href={href}
+              onClick={onNavigate}
               className={cn(
                 "rounded-md px-3 py-2 text-sm transition-colors",
                 isActive
@@ -50,5 +58,3 @@ export function SidebarNav({ storeId }: { storeId: string | null }) {
     </nav>
   );
 }
-
-

@@ -7,6 +7,17 @@ import { Badge } from "@/components/ui/badge";
 import { fetchWithAuth, baseURL } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 
+type Rule = {
+  id: number | string;
+  name: string;
+  enabled: boolean;
+  days: boolean[];
+  timeBlocks: Array<{ start: string; end: string }>;
+  partySize?: { min?: number; max?: number };
+  leadTime?: { min?: number; max?: number };
+  benefit?: { title?: string };
+};
+
 const fallbackRules = [
   {
     id: 1,
@@ -45,7 +56,7 @@ function formatTimeBlocks(blocks: Array<{ start: string; end: string }>) {
 
 export function OfferRulesPage({ storeId }: { storeId?: string }) {
   const router = useRouter();
-  const [rules, setRules] = useState(fallbackRules);
+  const [rules, setRules] = useState<Rule[]>(fallbackRules);
 
   useEffect(() => {
     let active = true;
@@ -56,9 +67,9 @@ export function OfferRulesPage({ storeId }: { storeId?: string }) {
         return;
       }
       try {
-        const data = await fetchWithAuth<any[]>(endpoints.offerRules(storeId));
+        const data = await fetchWithAuth<Rule[]>(endpoints.offerRules(storeId));
         if (active && Array.isArray(data)) {
-          setRules(data as any);
+          setRules(data);
         }
       } catch {
         if (active) setRules(fallbackRules);
@@ -104,7 +115,7 @@ export function OfferRulesPage({ storeId }: { storeId?: string }) {
         </Button>
       </div>
       <div className="space-y-3">
-        {rules.map((rule: any) => (
+        {rules.map((rule) => (
           <div
             key={rule.id}
             className="space-y-3 rounded-lg border border-slate-200 bg-white p-4"
