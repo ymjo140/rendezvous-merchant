@@ -45,7 +45,7 @@ export default function Page() {
             <div className="text-xs text-slate-500">ID: {store.id}</div>
             <Button
               className="mt-3"
-              onClick={() => router.push(/stores/)}
+              onClick={() => router.push(`/stores/${store.id}`)}
             >
               선택
             </Button>
