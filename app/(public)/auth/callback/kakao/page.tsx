@@ -8,7 +8,7 @@ import { setToken } from "@/lib/auth/tokenStore";
 function KakaoCallbackInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [status, setStatus] = useState("Ä«Ä«¿À ÀÎÁõ Ã³¸® Áß...");
+  const [status, setStatus] = useState("ì¹´ì¹´ì˜¤ ì¸ì¦ ì²˜ë¦¬ ì¤‘...");
 
   useEffect(() => {
     const code = searchParams.get("code");
@@ -23,7 +23,7 @@ function KakaoCallbackInner() {
         router.replace("/stores/select");
       } catch {
         setToken("dev-token");
-        setStatus("°³¹ß¿ë ÅäÅ«À¸·Î ·Î±×ÀÎÇÕ´Ï´Ù.");
+        setStatus("ê°œë°œìš© í† í°ìœ¼ë¡œ ë¡œê·¸ì¸í•©ë‹ˆë‹¤.");
         router.replace("/stores/select");
       }
     }
@@ -46,7 +46,7 @@ export default function Page() {
       fallback={
         <div className="flex min-h-screen items-center justify-center bg-slate-50">
           <div className="rounded-xl border border-slate-200 bg-white px-6 py-4 text-sm text-slate-600">
-            Ä«Ä«¿À ÀÎÁõ Ã³¸® Áß...
+            ì¹´ì¹´ì˜¤ ì¸ì¦ ì²˜ë¦¬ ì¤‘...
           </div>
         </div>
       }
