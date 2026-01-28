@@ -1,4 +1,4 @@
-export function OnboardingPage() {
+﻿export function OnboardingPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold">\uC628\uBCF4\uB529</h1>
@@ -8,3 +8,4 @@ export function OnboardingPage() {
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -51,3 +51,4 @@ export function StoreSwitcher({ currentStoreId }: { currentStoreId: string | nul
     </select>
   );
 }
+

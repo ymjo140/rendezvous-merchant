@@ -1,4 +1,4 @@
-export function CapacityPage() {
+﻿export function CapacityPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold">\uC218\uC6A9\uB7C9</h1>
@@ -6,3 +6,4 @@ export function CapacityPage() {
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -164,3 +164,4 @@ export function OfferRulesPage({ storeId }: { storeId?: string }) {
     </div>
   );
 }
+

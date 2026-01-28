@@ -1,4 +1,4 @@
-export function OfferBundlesPage() {
+﻿export function OfferBundlesPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold">\uC624\uD37C \uBC88\uB4E4</h1>
@@ -6,3 +6,4 @@ export function OfferBundlesPage() {
     </div>
   );
 }
+

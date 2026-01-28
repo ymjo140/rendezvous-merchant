@@ -1,4 +1,4 @@
-export function SettingsPage() {
+﻿export function SettingsPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold">\uC124\uC815</h1>
@@ -6,3 +6,4 @@ export function SettingsPage() {
     </div>
   );
 }
+
