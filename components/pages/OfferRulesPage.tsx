@@ -1,11 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { fetchWithAuth, baseURL } from "@/lib/api/client";
+import { endpoints } from "@/lib/api/endpoints";
 
-const initialRules = [
+const fallbackRules = [
   {
     id: 1,
     name: "Weekday dinner for 4",
@@ -43,7 +45,52 @@ function formatTimeBlocks(blocks: Array<{ start: string; end: string }>) {
 
 export function OfferRulesPage({ storeId }: { storeId?: string }) {
   const router = useRouter();
-  const [rules, setRules] = useState(initialRules);
+  const [rules, setRules] = useState(fallbackRules);
+
+  useEffect(() => {
+    let active = true;
+
+    async function load() {
+      if (!storeId || !baseURL) {
+        setRules(fallbackRules);
+        return;
+      }
+      try {
+        const data = await fetchWithAuth<any[]>(endpoints.offerRules(storeId));
+        if (active && Array.isArray(data)) {
+          setRules(data as any);
+        }
+      } catch {
+        if (active) setRules(fallbackRules);
+      }
+    }
+
+    void load();
+    return () => {
+      active = false;
+    };
+  }, [storeId]);
+
+  async function toggleRule(ruleId: number | string) {
+    setRules((prev) =>
+      prev.map((item) =>
+        item.id === ruleId ? { ...item, enabled: !item.enabled } : item
+      )
+    );
+
+    if (!storeId || !baseURL) return;
+
+    try {
+      const target = rules.find((item) => item.id === ruleId);
+      if (!target) return;
+      await fetchWithAuth(endpoints.offerRules(storeId), {
+        method: "PATCH",
+        body: JSON.stringify({ id: ruleId, enabled: !target.enabled }),
+      });
+    } catch {
+      // ignore in dev
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -57,7 +104,7 @@ export function OfferRulesPage({ storeId }: { storeId?: string }) {
         </Button>
       </div>
       <div className="space-y-3">
-        {rules.map((rule) => (
+        {rules.map((rule: any) => (
           <div
             key={rule.id}
             className="space-y-3 rounded-lg border border-slate-200 bg-white p-4"
@@ -67,31 +114,37 @@ export function OfferRulesPage({ storeId }: { storeId?: string }) {
                 <div className="font-medium">{rule.name}</div>
                 <div className="text-xs text-slate-500">Rule ID: {rule.id}</div>
               </div>
-              <button
-                className={`rounded-full px-3 py-1 text-xs font-medium ${
-                  rule.enabled
-                    ? "bg-emerald-100 text-emerald-700"
-                    : "bg-slate-100 text-slate-500"
-                }`}
-                onClick={() =>
-                  setRules((prev) =>
-                    prev.map((item) =>
-                      item.id === rule.id
-                        ? { ...item, enabled: !item.enabled }
-                        : item
-                    )
-                  )
-                }
-              >
-                {rule.enabled ? "Enabled" : "Disabled"}
-              </button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  onClick={() =>
+                    router.push(`/stores/${storeId}/offers/rules/${rule.id}/edit`)
+                  }
+                >
+                  Edit
+                </Button>
+                <button
+                  className={`rounded-full px-3 py-1 text-xs font-medium ${
+                    rule.enabled
+                      ? "bg-emerald-100 text-emerald-700"
+                      : "bg-slate-100 text-slate-500"
+                  }`}
+                  onClick={() => toggleRule(rule.id)}
+                >
+                  {rule.enabled ? "Enabled" : "Disabled"}
+                </button>
+              </div>
             </div>
             <div className="flex flex-wrap gap-2 text-xs text-slate-600">
               <Badge>Days: {formatDays(rule.days)}</Badge>
               <Badge>Time: {formatTimeBlocks(rule.timeBlocks)}</Badge>
-              <Badge>Party: {rule.partySize.min}~{rule.partySize.max}</Badge>
-              <Badge>Lead: {rule.leadTime.min}~{rule.leadTime.max} min</Badge>
-              <Badge>Benefit: {rule.benefit.title}</Badge>
+              <Badge>
+                Party: {rule.partySize?.min ?? "-"}~{rule.partySize?.max ?? "-"}
+              </Badge>
+              <Badge>
+                Lead: {rule.leadTime?.min ?? "-"}~{rule.leadTime?.max ?? "-"} min
+              </Badge>
+              <Badge>Benefit: {rule.benefit?.title ?? "-"}</Badge>
             </div>
           </div>
         ))}

@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { fetchWithAuth, baseURL } from "@/lib/api/client";
+import { endpoints } from "@/lib/api/endpoints";
 
 const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const benefitTypes = [
@@ -20,7 +22,28 @@ const mockBenefits = [
   { id: "2", title: "Free drink", type: "free_item" },
 ];
 
-export function RuleBuilderPage() {
+const mockRule = {
+  name: "Weekday dinner for 4",
+  days: [true, true, true, true, false, false, false],
+  timeBlocks: [{ start: "18:00", end: "20:00" }],
+  partyMin: "4",
+  partyMax: "6",
+  leadMin: "30",
+  leadMax: "240",
+  benefitId: "1",
+  benefitType: "percentage_discount",
+  benefitValue: "10%",
+  dailyCap: "20",
+  minSpend: "30000",
+};
+
+export function RuleBuilderPage({
+  storeId,
+  ruleId,
+}: {
+  storeId?: string;
+  ruleId?: string;
+}) {
   const [step, setStep] = useState(1);
   const [name, setName] = useState("");
   const [days, setDays] = useState([true, true, true, true, false, false, false]);
@@ -36,9 +59,76 @@ export function RuleBuilderPage() {
   const [benefitValue, setBenefitValue] = useState("");
   const [dailyCap, setDailyCap] = useState("20");
   const [minSpend, setMinSpend] = useState("30000");
+  const [catalog, setCatalog] = useState(mockBenefits);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadCatalog() {
+      if (!storeId || !baseURL) return;
+      try {
+        const data = await fetchWithAuth<any[]>(endpoints.benefits(storeId));
+        if (active && Array.isArray(data)) {
+          setCatalog(data as any);
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    async function loadRule() {
+      if (!storeId || !ruleId || !baseURL) {
+        if (ruleId) {
+          setName(mockRule.name);
+          setDays(mockRule.days);
+          setTimeBlocks(mockRule.timeBlocks);
+          setPartyMin(mockRule.partyMin);
+          setPartyMax(mockRule.partyMax);
+          setLeadMin(mockRule.leadMin);
+          setLeadMax(mockRule.leadMax);
+          setBenefitId(mockRule.benefitId);
+          setBenefitType(mockRule.benefitType);
+          setBenefitValue(mockRule.benefitValue);
+          setDailyCap(mockRule.dailyCap);
+          setMinSpend(mockRule.minSpend);
+        }
+        return;
+      }
+
+      try {
+        const data = await fetchWithAuth<any>(endpoints.offerRules(storeId));
+        const target = Array.isArray(data)
+          ? data.find((item) => String(item.id) === String(ruleId))
+          : null;
+        if (target) {
+          setName(target.name ?? "");
+          setDays(target.days ?? days);
+          setTimeBlocks(target.timeBlocks ?? timeBlocks);
+          setPartyMin(String(target.partySize?.min ?? partyMin));
+          setPartyMax(String(target.partySize?.max ?? partyMax));
+          setLeadMin(String(target.leadTime?.min ?? leadMin));
+          setLeadMax(String(target.leadTime?.max ?? leadMax));
+          setBenefitId(String(target.benefit?.id ?? benefitId));
+          setBenefitType(String(target.benefit?.type ?? benefitType));
+          setBenefitValue(String(target.benefitValue ?? benefitValue));
+          setDailyCap(String(target.guardrails?.dailyCap ?? dailyCap));
+          setMinSpend(String(target.guardrails?.minSpend ?? minSpend));
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    void loadCatalog();
+    void loadRule();
+
+    return () => {
+      active = false;
+    };
+  }, [storeId, ruleId]);
 
   const summary = useMemo(() => {
-    const benefit = mockBenefits.find((item) => item.id === benefitId);
+    const benefit = catalog.find((item: any) => String(item.id) === benefitId);
     return {
       name,
       days: days
@@ -65,13 +155,44 @@ export function RuleBuilderPage() {
     benefitValue,
     dailyCap,
     minSpend,
+    catalog,
   ]);
+
+  async function handleSave() {
+    if (!storeId) return;
+
+    const payload = {
+      name,
+      days,
+      timeBlocks,
+      partySize: { min: Number(partyMin), max: Number(partyMax) },
+      leadTime: { min: Number(leadMin), max: Number(leadMax) },
+      benefitId,
+      benefitType,
+      benefitValue,
+      guardrails: { dailyCap: Number(dailyCap), minSpend: Number(minSpend) },
+    };
+
+    if (!baseURL) return;
+
+    try {
+      await fetchWithAuth(endpoints.offerRules(storeId), {
+        method: ruleId ? "PATCH" : "POST",
+        body: JSON.stringify({ id: ruleId, ...payload }),
+      });
+    } catch {
+      // ignore in dev
+    }
+  }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Rule Builder</h1>
-        <p className="text-sm text-slate-500">Conditions → Benefit → Guardrails → Preview</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">Rule Builder</h1>
+          <p className="text-sm text-slate-500">Conditions -> Benefit -> Guardrails -> Preview</p>
+        </div>
+        <Button onClick={handleSave}>Save</Button>
       </div>
       <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-4">
         <div className="text-sm font-medium">Step {step}</div>
@@ -204,8 +325,8 @@ export function RuleBuilderPage() {
                 value={benefitId}
                 onChange={(event) => setBenefitId(event.target.value)}
               >
-                {mockBenefits.map((benefit) => (
-                  <option key={benefit.id} value={benefit.id}>
+                {catalog.map((benefit: any) => (
+                  <option key={benefit.id} value={String(benefit.id)}>
                     {benefit.title}
                   </option>
                 ))}

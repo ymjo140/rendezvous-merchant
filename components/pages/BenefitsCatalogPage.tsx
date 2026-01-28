@@ -1,27 +1,82 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { fetchWithAuth, baseURL } from "@/lib/api/client";
+import { endpoints } from "@/lib/api/endpoints";
 
 const benefitTypes = [
-  { value: "percentage_discount", label: "% 할인" },
-  { value: "fixed_discount", label: "정액 할인" },
-  { value: "free_item", label: "무료 메뉴" },
-  { value: "set_menu", label: "세트 메뉴" },
-  { value: "other", label: "기타" },
+  { value: "percentage_discount", label: "Percent" },
+  { value: "fixed_discount", label: "Fixed" },
+  { value: "free_item", label: "Free Item" },
+  { value: "set_menu", label: "Set Menu" },
+  { value: "other", label: "Other" },
 ];
 
-export function BenefitsCatalogPage() {
-  const [benefits, setBenefits] = useState([
-    { id: 1, title: "음료 1잔", type: "free_item", value: "아메리카노", active: true },
-    { id: 2, title: "10% 할인", type: "percentage_discount", value: "10%", active: true },
-  ]);
+const fallbackBenefits = [
+  { id: 1, title: "Free drink", type: "free_item", value: "Americano", active: true },
+  { id: 2, title: "10% off", type: "percentage_discount", value: "10%", active: true },
+];
+
+export function BenefitsCatalogPage({ storeId }: { storeId?: string }) {
+  const [benefits, setBenefits] = useState<any[]>(fallbackBenefits);
   const [title, setTitle] = useState("");
   const [type, setType] = useState("percentage_discount");
   const [value, setValue] = useState("");
+
+  useEffect(() => {
+    let active = true;
+
+    async function load() {
+      if (!storeId || !baseURL) {
+        setBenefits(fallbackBenefits);
+        return;
+      }
+      try {
+        const data = await fetchWithAuth<any[]>(endpoints.benefits(storeId));
+        if (active && Array.isArray(data)) {
+          setBenefits(data as any);
+        }
+      } catch {
+        if (active) setBenefits(fallbackBenefits);
+      }
+    }
+
+    void load();
+    return () => {
+      active = false;
+    };
+  }, [storeId]);
+
+  async function handleAdd() {
+    if (!title) return;
+
+    const next = {
+      id: benefits.length + 1,
+      title,
+      type,
+      value,
+      active: true,
+    };
+
+    setBenefits((prev) => [...prev, next]);
+    setTitle("");
+    setValue("");
+
+    if (!storeId || !baseURL) return;
+
+    try {
+      await fetchWithAuth(endpoints.benefits(storeId), {
+        method: "POST",
+        body: JSON.stringify(next),
+      });
+    } catch {
+      // ignore in dev
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -30,9 +85,9 @@ export function BenefitsCatalogPage() {
       </div>
 
       <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-3">
-        <div className="text-sm font-medium">혜택 추가</div>
+        <div className="text-sm font-medium">Add benefit</div>
         <div className="grid gap-3 md:grid-cols-3">
-          <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="혜택 이름" />
+          <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Title" />
           <Select value={type} onChange={(event) => setType(event.target.value)}>
             {benefitTypes.map((item) => (
               <option key={item.value} value={item.value}>
@@ -40,27 +95,9 @@ export function BenefitsCatalogPage() {
               </option>
             ))}
           </Select>
-          <Input value={value} onChange={(event) => setValue(event.target.value)} placeholder="혜택 값" />
+          <Input value={value} onChange={(event) => setValue(event.target.value)} placeholder="Value" />
         </div>
-        <Button
-          onClick={() => {
-            if (!title) return;
-            setBenefits((prev) => [
-              ...prev,
-              {
-                id: prev.length + 1,
-                title,
-                type,
-                value,
-                active: true,
-              },
-            ]);
-            setTitle("");
-            setValue("");
-          }}
-        >
-          혜택 추가
-        </Button>
+        <Button onClick={handleAdd}>Add benefit</Button>
       </div>
 
       <div className="space-y-3">
@@ -84,12 +121,12 @@ export function BenefitsCatalogPage() {
                   )
                 }
               >
-                {benefit.active ? "비활성" : "활성"}
+                {benefit.active ? "Disable" : "Enable"}
               </Button>
             </div>
             <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-600">
-              <Badge>값: {benefit.value || "-"}</Badge>
-              <Badge>{benefit.active ? "활성" : "비활성"}</Badge>
+              <Badge>Value: {benefit.value || "-"}</Badge>
+              <Badge>{benefit.active ? "Active" : "Inactive"}</Badge>
             </div>
           </div>
         ))}
