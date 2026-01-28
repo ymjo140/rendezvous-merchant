@@ -1,0 +1,12 @@
+﻿export function OnboardingPage() {
+  return (
+    <div className="space-y-4">
+      <h1 className="text-2xl font-semibold">온보딩</h1>
+      <p className="text-sm text-slate-600">
+        매장 정보를 등록하고 권한을 설정해 주세요.
+      </p>
+    </div>
+  );
+}
+
+

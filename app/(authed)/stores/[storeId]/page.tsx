@@ -1,0 +1,5 @@
+import { HomePage } from "@/components/pages/HomePage";
+
+export default function Page({ params }: { params: { storeId: string } }) {
+  return <HomePage storeId={params.storeId} />;
+}

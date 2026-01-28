@@ -1,0 +1,9 @@
+import { ReservationDetailPage } from "@/components/pages/ReservationDetailPage";
+
+export default function Page({
+  params,
+}: {
+  params: { storeId: string; reservationId: string };
+}) {
+  return <ReservationDetailPage reservationId={params.reservationId} />;
+}

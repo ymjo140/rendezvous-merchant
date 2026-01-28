@@ -1,0 +1,16 @@
+﻿import { AuthGuard } from "@/lib/auth/guard";
+import { Layout } from "@/components/layout/Layout";
+
+export default function AuthedLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <AuthGuard>
+      <Layout>{children}</Layout>
+    </AuthGuard>
+  );
+}
+
+
