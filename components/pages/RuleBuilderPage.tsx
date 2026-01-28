@@ -52,7 +52,20 @@ export function RuleBuilderPage() {
       benefitValue,
       guardrails: 일 cap , 최소 결제 ,
     };
-  }, [name, days, timeBlocks, partyMin, partyMax, leadMin, leadMax, benefitId, benefitType, benefitValue, dailyCap, minSpend]);
+  }, [
+    name,
+    days,
+    timeBlocks,
+    partyMin,
+    partyMax,
+    leadMin,
+    leadMax,
+    benefitId,
+    benefitType,
+    benefitValue,
+    dailyCap,
+    minSpend,
+  ]);
 
   return (
     <div className="space-y-6">
@@ -66,7 +79,11 @@ export function RuleBuilderPage() {
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">규칙 이름</label>
-              <Input value={name} onChange={(event) => setName(event.target.value)} placeholder="월-목 저녁 4인" />
+              <Input
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="월-목 저녁 4인"
+              />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">요일 선택</label>
@@ -98,7 +115,9 @@ export function RuleBuilderPage() {
                       onChange={(event) =>
                         setTimeBlocks((prev) =>
                           prev.map((item, idx) =>
-                            idx === index ? { ...item, start: event.target.value } : item
+                            idx === index
+                              ? { ...item, start: event.target.value }
+                              : item
                           )
                         )
                       }
@@ -109,7 +128,9 @@ export function RuleBuilderPage() {
                       onChange={(event) =>
                         setTimeBlocks((prev) =>
                           prev.map((item, idx) =>
-                            idx === index ? { ...item, end: event.target.value } : item
+                            idx === index
+                              ? { ...item, end: event.target.value }
+                              : item
                           )
                         )
                       }
@@ -128,7 +149,10 @@ export function RuleBuilderPage() {
               <Button
                 variant="secondary"
                 onClick={() =>
-                  setTimeBlocks((prev) => [...prev, { start: "18:00", end: "20:00" }])
+                  setTimeBlocks((prev) => [
+                    ...prev,
+                    { start: "18:00", end: "20:00" },
+                  ])
                 }
               >
                 시간 블록 추가
@@ -137,21 +161,37 @@ export function RuleBuilderPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <label className="text-sm font-medium">인원 최소</label>
-                <Input type="number" value={partyMin} onChange={(event) => setPartyMin(event.target.value)} />
+                <Input
+                  type="number"
+                  value={partyMin}
+                  onChange={(event) => setPartyMin(event.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">인원 최대</label>
-                <Input type="number" value={partyMax} onChange={(event) => setPartyMax(event.target.value)} />
+                <Input
+                  type="number"
+                  value={partyMax}
+                  onChange={(event) => setPartyMax(event.target.value)}
+                />
               </div>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <label className="text-sm font-medium">리드타임 최소(분)</label>
-                <Input type="number" value={leadMin} onChange={(event) => setLeadMin(event.target.value)} />
+                <Input
+                  type="number"
+                  value={leadMin}
+                  onChange={(event) => setLeadMin(event.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">리드타임 최대(분)</label>
-                <Input type="number" value={leadMax} onChange={(event) => setLeadMax(event.target.value)} />
+                <Input
+                  type="number"
+                  value={leadMax}
+                  onChange={(event) => setLeadMax(event.target.value)}
+                />
               </div>
             </div>
           </div>
@@ -160,7 +200,10 @@ export function RuleBuilderPage() {
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">혜택 선택(카탈로그)</label>
-              <Select value={benefitId} onChange={(event) => setBenefitId(event.target.value)}>
+              <Select
+                value={benefitId}
+                onChange={(event) => setBenefitId(event.target.value)}
+              >
                 {mockBenefits.map((benefit) => (
                   <option key={benefit.id} value={benefit.id}>
                     {benefit.title}
@@ -170,7 +213,10 @@ export function RuleBuilderPage() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">혜택 유형(직접 설정)</label>
-              <Select value={benefitType} onChange={(event) => setBenefitType(event.target.value)}>
+              <Select
+                value={benefitType}
+                onChange={(event) => setBenefitType(event.target.value)}
+              >
                 {benefitTypes.map((type) => (
                   <option key={type.value} value={type.value}>
                     {type.label}
@@ -192,11 +238,17 @@ export function RuleBuilderPage() {
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">일일 노출 제한</label>
-              <Input value={dailyCap} onChange={(event) => setDailyCap(event.target.value)} />
+              <Input
+                value={dailyCap}
+                onChange={(event) => setDailyCap(event.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">최소 결제 금액</label>
-              <Input value={minSpend} onChange={(event) => setMinSpend(event.target.value)} />
+              <Input
+                value={minSpend}
+                onChange={(event) => setMinSpend(event.target.value)}
+              />
             </div>
           </div>
         )}
@@ -211,7 +263,9 @@ export function RuleBuilderPage() {
               <div>시간: {summary.timeBlocks || "-"}</div>
               <div>인원: {summary.partySize}</div>
               <div>리드타임: {summary.leadTime}</div>
-              <div>혜택: {summary.benefit} ({summary.benefitValue || "값 없음"})</div>
+              <div>
+                혜택: {summary.benefit} ({summary.benefitValue || "값 없음"})
+              </div>
               <div>가드레일: {summary.guardrails}</div>
             </CardContent>
           </Card>
