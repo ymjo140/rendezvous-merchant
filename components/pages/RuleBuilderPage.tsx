@@ -6,18 +6,18 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const dayLabels = ["월", "화", "수", "목", "금", "토", "일"];
+const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const benefitTypes = [
-  { value: "percentage_discount", label: "% 할인" },
-  { value: "fixed_discount", label: "정액 할인" },
-  { value: "free_item", label: "무료 메뉴" },
-  { value: "set_menu", label: "세트 메뉴" },
-  { value: "other", label: "기타" },
+  { value: "percentage_discount", label: "Percent" },
+  { value: "fixed_discount", label: "Fixed" },
+  { value: "free_item", label: "Free Item" },
+  { value: "set_menu", label: "Set Menu" },
+  { value: "other", label: "Other" },
 ];
 
 const mockBenefits = [
-  { id: "1", title: "10% 할인", type: "percentage_discount" },
-  { id: "2", title: "음료 1잔", type: "free_item" },
+  { id: "1", title: "10% off", type: "percentage_discount" },
+  { id: "2", title: "Free drink", type: "free_item" },
 ];
 
 export function RuleBuilderPage() {
@@ -45,12 +45,12 @@ export function RuleBuilderPage() {
         .map((enabled, index) => (enabled ? dayLabels[index] : null))
         .filter(Boolean)
         .join(", "),
-      timeBlocks: timeBlocks.map((block) => ${block.start}~).join(", "),
-      partySize: ${partyMin}~,
-      leadTime: ${leadMin}~분,
+      timeBlocks: timeBlocks.map((block) => `${block.start}~${block.end}`).join(", "),
+      partySize: `${partyMin}~${partyMax}`,
+      leadTime: `${leadMin}~${leadMax} min`,
       benefit: benefit ? benefit.title : benefitType,
       benefitValue,
-      guardrails: 일 cap , 최소 결제 ,
+      guardrails: `Daily cap ${dailyCap}, min spend ${minSpend}`,
     };
   }, [
     name,
@@ -71,22 +71,22 @@ export function RuleBuilderPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Rule Builder</h1>
-        <p className="text-sm text-slate-500">조건 → 혜택 → 가드레일 → 미리보기</p>
+        <p className="text-sm text-slate-500">Conditions → Benefit → Guardrails → Preview</p>
       </div>
       <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-4">
         <div className="text-sm font-medium">Step {step}</div>
         {step === 1 && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">규칙 이름</label>
+              <label className="text-sm font-medium">Rule name</label>
               <Input
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                placeholder="월-목 저녁 4인"
+                placeholder="Weekday dinner for 4"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">요일 선택</label>
+              <label className="text-sm font-medium">Days</label>
               <div className="flex flex-wrap gap-2">
                 {dayLabels.map((label, index) => (
                   <label key={label} className="flex items-center gap-1 text-sm">
@@ -105,10 +105,10 @@ export function RuleBuilderPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">시간 블록</label>
+              <label className="text-sm font-medium">Time blocks</label>
               <div className="space-y-2">
                 {timeBlocks.map((block, index) => (
-                  <div key={${block.start}-} className="flex gap-2">
+                  <div key={`${block.start}-${index}`} className="flex gap-2">
                     <Input
                       type="time"
                       value={block.start}
@@ -141,7 +141,7 @@ export function RuleBuilderPage() {
                         setTimeBlocks((prev) => prev.filter((_, idx) => idx !== index))
                       }
                     >
-                      제거
+                      Remove
                     </Button>
                   </div>
                 ))}
@@ -155,12 +155,12 @@ export function RuleBuilderPage() {
                   ])
                 }
               >
-                시간 블록 추가
+                Add time block
               </Button>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-sm font-medium">인원 최소</label>
+                <label className="text-sm font-medium">Party min</label>
                 <Input
                   type="number"
                   value={partyMin}
@@ -168,7 +168,7 @@ export function RuleBuilderPage() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">인원 최대</label>
+                <label className="text-sm font-medium">Party max</label>
                 <Input
                   type="number"
                   value={partyMax}
@@ -178,7 +178,7 @@ export function RuleBuilderPage() {
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-sm font-medium">리드타임 최소(분)</label>
+                <label className="text-sm font-medium">Lead time min (min)</label>
                 <Input
                   type="number"
                   value={leadMin}
@@ -186,7 +186,7 @@ export function RuleBuilderPage() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">리드타임 최대(분)</label>
+                <label className="text-sm font-medium">Lead time max (min)</label>
                 <Input
                   type="number"
                   value={leadMax}
@@ -199,7 +199,7 @@ export function RuleBuilderPage() {
         {step === 2 && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">혜택 선택(카탈로그)</label>
+              <label className="text-sm font-medium">Catalog benefit</label>
               <Select
                 value={benefitId}
                 onChange={(event) => setBenefitId(event.target.value)}
@@ -212,7 +212,7 @@ export function RuleBuilderPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">혜택 유형(직접 설정)</label>
+              <label className="text-sm font-medium">Benefit type</label>
               <Select
                 value={benefitType}
                 onChange={(event) => setBenefitType(event.target.value)}
@@ -225,11 +225,11 @@ export function RuleBuilderPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">혜택 값</label>
+              <label className="text-sm font-medium">Benefit value</label>
               <Input
                 value={benefitValue}
                 onChange={(event) => setBenefitValue(event.target.value)}
-                placeholder="10% 또는 5000원"
+                placeholder="10% or 5000"
               />
             </div>
           </div>
@@ -237,14 +237,14 @@ export function RuleBuilderPage() {
         {step === 3 && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">일일 노출 제한</label>
+              <label className="text-sm font-medium">Daily cap</label>
               <Input
                 value={dailyCap}
                 onChange={(event) => setDailyCap(event.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">최소 결제 금액</label>
+              <label className="text-sm font-medium">Min spend</label>
               <Input
                 value={minSpend}
                 onChange={(event) => setMinSpend(event.target.value)}
@@ -255,18 +255,18 @@ export function RuleBuilderPage() {
         {step === 4 && (
           <Card>
             <CardHeader>
-              <CardTitle>미리보기</CardTitle>
+              <CardTitle>Preview</CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-slate-600 space-y-2">
-              <div>규칙명: {summary.name || "-"}</div>
-              <div>요일: {summary.days || "-"}</div>
-              <div>시간: {summary.timeBlocks || "-"}</div>
-              <div>인원: {summary.partySize}</div>
-              <div>리드타임: {summary.leadTime}</div>
+              <div>Name: {summary.name || "-"}</div>
+              <div>Days: {summary.days || "-"}</div>
+              <div>Time: {summary.timeBlocks || "-"}</div>
+              <div>Party: {summary.partySize}</div>
+              <div>Lead time: {summary.leadTime}</div>
               <div>
-                혜택: {summary.benefit} ({summary.benefitValue || "값 없음"})
+                Benefit: {summary.benefit} ({summary.benefitValue || "none"})
               </div>
-              <div>가드레일: {summary.guardrails}</div>
+              <div>Guardrails: {summary.guardrails}</div>
             </CardContent>
           </Card>
         )}
@@ -275,10 +275,10 @@ export function RuleBuilderPage() {
             variant="secondary"
             onClick={() => setStep((prev) => Math.max(1, prev - 1))}
           >
-            이전
+            Prev
           </Button>
           <Button onClick={() => setStep((prev) => Math.min(4, prev + 1))}>
-            다음
+            Next
           </Button>
         </div>
       </div>
