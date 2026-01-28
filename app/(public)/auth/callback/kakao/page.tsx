@@ -1,14 +1,14 @@
-ï»¿"use client";
+"use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { exchangeKakaoCode } from "@/lib/auth/kakao";
 import { setToken } from "@/lib/auth/tokenStore";
 
-export default function Page() {
+function KakaoCallbackInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [status, setStatus] = useState("ì¹´ì¹´ì˜¤ ì¸ì¦ ì²˜ë¦¬ ì¤‘...");
+  const [status, setStatus] = useState("Ä«Ä«¿À ÀÎÁõ Ã³¸® Áß...");
 
   useEffect(() => {
     const code = searchParams.get("code");
@@ -23,7 +23,7 @@ export default function Page() {
         router.replace("/stores/select");
       } catch {
         setToken("dev-token");
-        setStatus("ê°œë°œìš© í† í°ìœ¼ë¡œ ë¡œê·¸ì¸í•©ë‹ˆë‹¤.");
+        setStatus("°³¹ß¿ë ÅäÅ«À¸·Î ·Î±×ÀÎÇÕ´Ï´Ù.");
         router.replace("/stores/select");
       }
     }
@@ -40,4 +40,18 @@ export default function Page() {
   );
 }
 
-
+export default function Page() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-slate-50">
+          <div className="rounded-xl border border-slate-200 bg-white px-6 py-4 text-sm text-slate-600">
+            Ä«Ä«¿À ÀÎÁõ Ã³¸® Áß...
+          </div>
+        </div>
+      }
+    >
+      <KakaoCallbackInner />
+    </Suspense>
+  );
+}
