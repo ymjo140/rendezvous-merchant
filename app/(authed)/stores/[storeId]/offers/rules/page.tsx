@@ -1,5 +1,1 @@
-import { OfferRulesPage } from "@/components/pages/OfferRulesPage";
-
-export default function Page({ params }: { params: { storeId: string } }) {
-  return <OfferRulesPage storeId={params.storeId} />;
-}
+import { OfferRulesPage } from "@/components/pages/OfferRulesPage";  export default function Page({ params }: { params: { storeId: string } }) {   return <OfferRulesPage storeId={params.storeId} />; }

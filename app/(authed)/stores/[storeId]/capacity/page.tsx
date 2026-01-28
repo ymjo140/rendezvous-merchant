@@ -1,5 +1,1 @@
-import { CapacityPage } from "@/components/pages/CapacityPage";
-
-export default function Page() {
-  return <CapacityPage />;
-}
+import { CapacityPage } from "@/components/pages/CapacityPage";  export default function Page() {   return <CapacityPage />; }

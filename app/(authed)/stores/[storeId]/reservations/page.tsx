@@ -1,5 +1,1 @@
-import { ReservationsPage } from "@/components/pages/ReservationsPage";
-
-export default function Page({ params }: { params: { storeId: string } }) {
-  return <ReservationsPage storeId={params.storeId} />;
-}
+import { ReservationsPage } from "@/components/pages/ReservationsPage";  export default function Page({ params }: { params: { storeId: string } }) {   return <ReservationsPage storeId={params.storeId} />; }
