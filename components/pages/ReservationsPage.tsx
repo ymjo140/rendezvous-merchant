@@ -86,8 +86,8 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-semibold">\uC608\uC57D \uBAA9\uB85D</h1>
-          <p className="text-sm text-slate-500">\uB9E4\uC7A5 #{storeId}</p>
+          <h1 className="text-2xl font-semibold">{"\uC608\uC57D \uBAA9\uB85D"}</h1>
+          <p className="text-sm text-slate-500">{"\uB9E4\uC7A5 #"}{storeId}</p>
         </div>
         <div className="flex items-center gap-2">
           <select
@@ -105,13 +105,13 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
             variant={view === "table" ? "primary" : "secondary"}
             onClick={() => setView("table")}
           >
-            \uD45C
+            {"\uD45C"}
           </Button>
           <Button
             variant={view === "timeline" ? "primary" : "secondary"}
             onClick={() => setView("timeline")}
           >
-            \uD0C0\uC784\uB77C\uC778
+            {"\uD0C0\uC784\uB77C\uC778"}
           </Button>
         </div>
       </div>
@@ -120,13 +120,13 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
         <Table>
           <thead>
             <tr>
-              <Th>\uC608\uC57D \uBC88\uD638</Th>
-              <Th>\uACE0\uAC1D</Th>
-              <Th>\uC778\uC6D0</Th>
-              <Th>\uB0A0\uC9DC</Th>
-              <Th>\uC2DC\uAC04</Th>
-              <Th>\uC0C1\uD0DC</Th>
-              <Th>\uC870\uCE58</Th>
+              <Th>{"\uC608\uC57D \uBC88\uD638"}</Th>
+              <Th>{"\uACE0\uAC1D"}</Th>
+              <Th>{"\uC778\uC6D0"}</Th>
+              <Th>{"\uB0A0\uC9DC"}</Th>
+              <Th>{"\uC2DC\uAC04"}</Th>
+              <Th>{"\uC0C1\uD0DC"}</Th>
+              <Th>{"\uC870\uCE58"}</Th>
             </tr>
           </thead>
           <tbody>
@@ -151,7 +151,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                       router.push(`/stores/${storeId}/reservations/${row.id}`)
                     }
                   >
-                    \uC0C1\uC138
+                    {"\uC0C1\uC138"}
                   </Button>
                 </Td>
               </tr>
@@ -169,7 +169,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
             >
               <div>
                 <div className="text-sm font-medium">
-                  {row.time} - {row.guestName} ({row.partySize})
+                  {row.time}{" - "}{row.guestName}{" ("}{row.partySize}{")"}
                 </div>
                 <div className="text-xs text-slate-500">{row.date}</div>
               </div>
@@ -183,7 +183,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                     router.push(`/stores/${storeId}/reservations/${row.id}`)
                   }
                 >
-                  \uC5F4\uAE30
+                  {"\uC5F4\uAE30"}
                 </Button>
               </div>
             </div>
