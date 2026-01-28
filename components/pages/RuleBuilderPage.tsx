@@ -190,7 +190,7 @@ export function RuleBuilderPage({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Rule Builder</h1>
-          <p className="text-sm text-slate-500">Conditions -> Benefit -> Guardrails -> Preview</p>
+          <p className="text-sm text-slate-500">Conditions to Benefit to Guardrails to Preview</p>
         </div>
         <Button onClick={handleSave}>Save</Button>
       </div>
