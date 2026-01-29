@@ -10,6 +10,7 @@ import { endpoints } from "@/lib/api/endpoints";
 import { HotDealCard } from "@/components/offers/HotDealCard";
 import { BenefitType } from "@/domain/offers/types";
 import { loadBenefits } from "@/lib/utils/benefitsStore";
+import { loadRules, saveRules } from "@/lib/utils/rulesStore";
 
 const dayLabels = ["월", "화", "수", "목", "금", "토", "일"];
 
@@ -325,13 +326,40 @@ export function RuleBuilderPage({
       is_private: visibility === "private",
     };
 
-    if (!baseURL) return;
+    const localRule = {
+      id: ruleId ?? `rule-${Date.now()}`,
+      name,
+      enabled: true,
+      days,
+      timeBlocks,
+      partySize: { min: Number(partyMin), max: Number(partyMax) },
+      leadTime: { min: Number(leadMin), max: Number(leadMax) },
+      benefit: { title: summary.benefit },
+    };
+
+    if (!baseURL) {
+      const existing = loadRules(storeId) ?? [];
+      const next = ruleId
+        ? existing.map((item) =>
+            String(item.id) === String(ruleId) ? { ...item, ...localRule } : item
+          )
+        : [localRule, ...existing];
+      saveRules(storeId, next);
+      return;
+    }
 
     try {
       await fetchWithAuth(endpoints.offerRules(storeId), {
         method: ruleId ? "PATCH" : "POST",
         body: JSON.stringify({ id: ruleId, ...payload }),
       });
+      const existing = loadRules(storeId) ?? [];
+      const next = ruleId
+        ? existing.map((item) =>
+            String(item.id) === String(ruleId) ? { ...item, ...localRule } : item
+          )
+        : [localRule, ...existing];
+      saveRules(storeId, next);
     } catch {
       // ignore in dev
     }

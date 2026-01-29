@@ -6,17 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { fetchWithAuth, baseURL } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
+import { loadRules, saveRules, type StoredRule } from "@/lib/utils/rulesStore";
 
-type Rule = {
-  id: number | string;
-  name: string;
-  enabled: boolean;
-  days: boolean[];
-  timeBlocks: Array<{ start: string; end: string }>;
-  partySize?: { min?: number; max?: number };
-  leadTime?: { min?: number; max?: number };
-  benefit?: { title?: string };
-};
+type Rule = StoredRule;
 
 const fallbackRules: Rule[] = [
   {
@@ -56,23 +48,30 @@ function formatTimeBlocks(blocks: Array<{ start: string; end: string }>) {
 
 export function OfferRulesPage({ storeId }: { storeId?: string }) {
   const router = useRouter();
-  const [rules, setRules] = useState<Rule[]>(fallbackRules);
+  const [rules, setRules] = useState<Rule[]>([]);
+
+  useEffect(() => {
+    const local = loadRules(storeId);
+    if (local && local.length > 0) {
+      setRules(local);
+    } else {
+      setRules(fallbackRules);
+    }
+  }, [storeId]);
 
   useEffect(() => {
     let active = true;
 
     async function load() {
-      if (!storeId || !baseURL) {
-        setRules(fallbackRules);
-        return;
-      }
+      if (!storeId || !baseURL) return;
       try {
         const data = await fetchWithAuth<Rule[]>(endpoints.offerRules(storeId));
         if (active && Array.isArray(data)) {
           setRules(data);
+          saveRules(storeId, data);
         }
       } catch {
-        if (active) setRules(fallbackRules);
+        // keep local fallback
       }
     }
 
@@ -83,11 +82,13 @@ export function OfferRulesPage({ storeId }: { storeId?: string }) {
   }, [storeId]);
 
   async function toggleRule(ruleId: number | string) {
-    setRules((prev) =>
-      prev.map((item) =>
+    setRules((prev) => {
+      const next = prev.map((item) =>
         item.id === ruleId ? { ...item, enabled: !item.enabled } : item
-      )
-    );
+      );
+      saveRules(storeId, next);
+      return next;
+    });
 
     if (!storeId || !baseURL) return;
 
@@ -107,7 +108,11 @@ export function OfferRulesPage({ storeId }: { storeId?: string }) {
     if (!window.confirm("이 룰을 삭제할까요?")) return;
 
     const prev = rules;
-    setRules((current) => current.filter((item) => item.id !== ruleId));
+    setRules((current) => {
+      const next = current.filter((item) => item.id !== ruleId);
+      saveRules(storeId, next);
+      return next;
+    });
 
     if (!storeId || !baseURL) return;
 
@@ -118,6 +123,7 @@ export function OfferRulesPage({ storeId }: { storeId?: string }) {
       });
     } catch {
       setRules(prev);
+      saveRules(storeId, prev);
       window.alert("삭제에 실패했습니다. 다시 시도해 주세요.");
     }
   }
@@ -147,13 +153,16 @@ export function OfferRulesPage({ storeId }: { storeId?: string }) {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Badge className={rule.enabled ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}>
+                <Badge
+                  className={
+                    rule.enabled
+                      ? "bg-emerald-100 text-emerald-700"
+                      : "bg-slate-100 text-slate-500"
+                  }
+                >
                   {rule.enabled ? "활성" : "비활성"}
                 </Badge>
-                <Button
-                  variant="ghost"
-                  onClick={() => toggleRule(rule.id)}
-                >
+                <Button variant="ghost" onClick={() => toggleRule(rule.id)}>
                   {rule.enabled ? "끄기" : "켜기"}
                 </Button>
                 <Button
