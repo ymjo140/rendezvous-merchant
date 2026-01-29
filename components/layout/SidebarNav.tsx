@@ -28,7 +28,7 @@ export function SidebarNav({
     <nav className="flex h-full flex-col gap-4 p-6">
       <div className="text-lg font-semibold">렌데부</div>
       <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-        사장님 컨솔
+        사장님 콘솔
       </div>
       <div className="mt-4 flex flex-col gap-1">
         {navItems.map((item) => {

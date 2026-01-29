@@ -32,7 +32,7 @@ export function Topbar({
             <line x1="3" y1="18" x2="21" y2="18" />
           </svg>
         </button>
-        <div className="text-sm text-slate-500">사장님 컨솔</div>
+        <div className="text-sm text-slate-500">사장님 콘솔</div>
       </div>
       <div className="flex items-center gap-3">{children}</div>
     </div>

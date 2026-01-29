@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -118,45 +118,50 @@ export function OfferRulesPage({ storeId }: { storeId?: string }) {
         {rules.map((rule) => (
           <div
             key={rule.id}
-            className="space-y-3 rounded-lg border border-slate-200 bg-white p-4"
+            className="rounded-xl border border-slate-200 bg-white p-4"
           >
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <div className="font-medium">{rule.name}</div>
-                <div className="text-xs text-slate-500">룰 번호: {rule.id}</div>
+                <div className="text-sm font-semibold">{rule.name}</div>
+                <div className="text-xs text-slate-500">
+                  {formatDays(rule.days)} · {formatTimeBlocks(rule.timeBlocks)}
+                </div>
               </div>
               <div className="flex items-center gap-2">
+                <Badge className={rule.enabled ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}>
+                  {rule.enabled ? "활성" : "비활성"}
+                </Badge>
                 <Button
                   variant="ghost"
+                  onClick={() => toggleRule(rule.id)}
+                >
+                  {rule.enabled ? "끄기" : "켜기"}
+                </Button>
+                <Button
+                  variant="secondary"
                   onClick={() =>
                     router.push(`/stores/${storeId}/offers/rules/${rule.id}/edit`)
                   }
                 >
                   수정
                 </Button>
-                <button
-                  className={`rounded-full px-3 py-1 text-xs font-medium ${
-                    rule.enabled
-                      ? "bg-emerald-100 text-emerald-700"
-                      : "bg-slate-100 text-slate-500"
-                  }`}
-                  onClick={() => toggleRule(rule.id)}
-                >
-                  {rule.enabled ? "활성" : "비활성"}
-                </button>
               </div>
             </div>
-            <div className="flex flex-wrap gap-2 text-xs text-slate-600">
-              <Badge>요일: {formatDays(rule.days)}</Badge>
-              <Badge>시간: {formatTimeBlocks(rule.timeBlocks)}</Badge>
-              <Badge>
-                인원: {rule.partySize?.min ?? "-"}~{rule.partySize?.max ?? "-"}
-              </Badge>
-              <Badge>
-                리드타임: {rule.leadTime?.min ?? "-"}~
-                {rule.leadTime?.max ?? "-"} 분
-              </Badge>
-              <Badge>혜택: {rule.benefit?.title ?? "-"}</Badge>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-600">
+              <span className="rounded-full bg-slate-100 px-2 py-1">
+                적용할 시간대: {formatTimeBlocks(rule.timeBlocks)}
+              </span>
+              <span className="rounded-full bg-slate-100 px-2 py-1">
+                인원 제한: {rule.partySize?.min ?? "-"}~{rule.partySize?.max ?? "-"}
+              </span>
+              <span className="rounded-full bg-slate-100 px-2 py-1">
+                예약 마감/오픈: {rule.leadTime?.min ?? "-"}~{rule.leadTime?.max ?? "-"}분
+              </span>
+              {rule.benefit?.title ? (
+                <span className="rounded-full bg-slate-100 px-2 py-1">
+                  혜택: {rule.benefit.title}
+                </span>
+              ) : null}
             </div>
           </div>
         ))}
@@ -164,4 +169,3 @@ export function OfferRulesPage({ storeId }: { storeId?: string }) {
     </div>
   );
 }
-

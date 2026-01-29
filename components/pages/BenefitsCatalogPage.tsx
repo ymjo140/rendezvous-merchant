@@ -22,10 +22,10 @@ type Benefit = {
 };
 
 const categoryOptions = [
-  { value: BenefitCategory.FINANCIAL, label: "금액 할인" },
   { value: BenefitCategory.GOODS, label: "메뉴·물품 제공" },
-  { value: BenefitCategory.TIME, label: "시간 서비스" },
   { value: BenefitCategory.EXPERIENCE, label: "공간·경험 혜택" },
+  { value: BenefitCategory.TIME, label: "시간 서비스" },
+  { value: BenefitCategory.FINANCIAL, label: "금액 할인" },
 ];
 
 const categoryLabelMap: Record<BenefitCategory, string> = {
@@ -35,7 +35,16 @@ const categoryLabelMap: Record<BenefitCategory, string> = {
   [BenefitCategory.EXPERIENCE]: "공간·경험 혜택",
 };
 
-const typeOptionsByCategory: Record<BenefitCategory, Array<{ value: BenefitType; label: string; inputType: "number" | "text"; placeholder: string; unitLabel: string }>> = {
+const typeOptionsByCategory: Record<
+  BenefitCategory,
+  Array<{
+    value: BenefitType;
+    label: string;
+    inputType: "number" | "text";
+    placeholder: string;
+    unitLabel: string;
+  }>
+> = {
   [BenefitCategory.FINANCIAL]: [
     {
       value: BenefitType.PERCENT_DISCOUNT,
@@ -57,21 +66,21 @@ const typeOptionsByCategory: Record<BenefitCategory, Array<{ value: BenefitType;
       value: BenefitType.FREE_MENU_ITEM,
       label: "메뉴 증정",
       inputType: "text",
-      placeholder: "감자틐김",
+      placeholder: "감자튀김",
       unitLabel: "",
     },
     {
       value: BenefitType.SIZE_UPGRADE,
       label: "사이즈업",
       inputType: "text",
-      placeholder: "대형 사이즈",
+      placeholder: "큰 사이즈",
       unitLabel: "",
     },
     {
       value: BenefitType.UNLIMITED_REFILL,
-      label: "리필",
+      label: "무제한 리필",
       inputType: "text",
-      placeholder: "무제한",
+      placeholder: "무제한 리필",
       unitLabel: "",
     },
   ],
@@ -110,7 +119,7 @@ const typeOptionsByCategory: Record<BenefitCategory, Array<{ value: BenefitType;
       value: BenefitType.FREE_EQUIPMENT,
       label: "장비 대여",
       inputType: "text",
-      placeholder: "빔프매트",
+      placeholder: "빔프로젝터",
       unitLabel: "",
     },
     {
@@ -132,10 +141,65 @@ const typeLabelMap: Record<BenefitType, string> = Object.values(
   return acc;
 }, {} as Record<BenefitType, string>);
 
+const benefitFormSchema = z
+  .object({
+    category: z.nativeEnum(BenefitCategory),
+    type: z.nativeEnum(BenefitType),
+    title: z.string().min(1, "혜택 이름을 입력해 주세요."),
+    value: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    const rawValue = (data.value ?? "").trim();
+    const numberValue = Number(rawValue);
+    const isNumber = rawValue !== "" && !Number.isNaN(numberValue);
+
+    const addIssue = (message: string) => {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message,
+        path: ["value"],
+      });
+    };
+
+    switch (data.type) {
+      case BenefitType.PERCENT_DISCOUNT:
+        if (!isNumber || numberValue < 1 || numberValue > 100) {
+          addIssue("1~100 사이 숫자로 입력해 주세요.");
+        }
+        break;
+      case BenefitType.FIXED_AMOUNT_OFF:
+        if (!isNumber || numberValue <= 0) {
+          addIssue("금액을 숫자로 입력해 주세요.");
+        }
+        break;
+      case BenefitType.TIME_EXTENSION:
+      case BenefitType.EARLY_ACCESS:
+      case BenefitType.LATE_CHECKOUT:
+        if (!isNumber || numberValue <= 0) {
+          addIssue("분 단위 숫자로 입력해 주세요.");
+        }
+        break;
+      case BenefitType.FREE_MENU_ITEM:
+      case BenefitType.SIZE_UPGRADE:
+      case BenefitType.UNLIMITED_REFILL:
+      case BenefitType.SPACE_UPGRADE:
+      case BenefitType.FREE_EQUIPMENT:
+      case BenefitType.CORKAGE_FREE:
+        if (!rawValue) {
+          addIssue("혜택 내용을 입력해 주세요.");
+        }
+        break;
+      default:
+        break;
+    }
+  });
+
+type BenefitFormValues = z.infer<typeof benefitFormSchema>;
+
 const fallbackBenefits: Benefit[] = [
   {
     id: 1,
-    title: "음료 증정",
+    title: "음료 1잔",
     category: BenefitCategory.GOODS,
     type: BenefitType.FREE_MENU_ITEM,
     value: "아메리카노",
@@ -154,73 +218,54 @@ const fallbackBenefits: Benefit[] = [
     title: "정률 10% 할인",
     category: BenefitCategory.FINANCIAL,
     type: BenefitType.PERCENT_DISCOUNT,
-    value: "10%",
+    value: "10",
     active: true,
   },
 ];
 
-const benefitFormSchema = z
-  .object({
-    title: z.string().min(1, "혜택 이름을 입력해주세요."),
-    category: z.nativeEnum(BenefitCategory),
-    type: z.nativeEnum(BenefitType),
-    value: z.string().optional(),
-  })
-  .superRefine((data, ctx) => {
-    if (data.type === BenefitType.PERCENT_DISCOUNT) {
-      const numberValue = Number(data.value);
-      if (!Number.isFinite(numberValue) || numberValue < 1 || numberValue > 100) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["value"],
-          message: "1~100 사이의 숫자만 입력하세요.",
-        });
-      }
-    }
-
-    if (data.type === BenefitType.TIME_EXTENSION) {
-      const numberValue = Number(data.value);
-      if (!Number.isFinite(numberValue) || numberValue <= 0) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["value"],
-          message: "추가 시간(분)을 입력하세요.",
-        });
-      }
-    }
-
-    if (data.type === BenefitType.FREE_MENU_ITEM) {
-      if (!data.value || data.value.trim().length === 0) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["value"],
-          message: "증정할 메뉴를 입력하세요.",
-        });
-      }
-    }
-  });
-
-type BenefitFormValues = z.infer<typeof benefitFormSchema>;
-
 export function BenefitsCatalogPage({ storeId }: { storeId?: string }) {
   const [benefits, setBenefits] = useState<Benefit[]>(fallbackBenefits);
 
-  const form = useForm<BenefitFormValues>({
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors, isSubmitting },
+    reset,
+  } = useForm<BenefitFormValues>({
     resolver: zodResolver(benefitFormSchema),
     defaultValues: {
-      title: "",
       category: BenefitCategory.GOODS,
-      type: typeOptionsByCategory[BenefitCategory.GOODS][0].value,
+      type: BenefitType.FREE_MENU_ITEM,
+      title: "",
       value: "",
     },
   });
 
-  const category = form.watch("category");
-  const type = form.watch("type");
+  const selectedCategory = watch("category");
+  const selectedType = watch("type");
+
+  const typeOptions = useMemo(
+    () => typeOptionsByCategory[selectedCategory] ?? [],
+    [selectedCategory]
+  );
+
+  const activeTypeConfig = useMemo(() => {
+    return (
+      typeOptions.find((item) => item.value === selectedType) ??
+      typeOptions[0]
+    );
+  }, [typeOptions, selectedType]);
+
+  useEffect(() => {
+    if (!typeOptions.some((item) => item.value === selectedType) && typeOptions[0]) {
+      setValue("type", typeOptions[0].value, { shouldValidate: true });
+    }
+  }, [typeOptions, selectedType, setValue]);
 
   useEffect(() => {
     let active = true;
-
     async function load() {
       if (!storeId || !baseURL) {
         setBenefits(fallbackBenefits);
@@ -235,28 +280,15 @@ export function BenefitsCatalogPage({ storeId }: { storeId?: string }) {
         if (active) setBenefits(fallbackBenefits);
       }
     }
-
     void load();
     return () => {
       active = false;
     };
   }, [storeId]);
 
-  useEffect(() => {
-    const options = typeOptionsByCategory[category];
-    if (options.length && !options.find((item) => item.value === type)) {
-      form.setValue("type", options[0].value, { shouldValidate: true });
-    }
-  }, [category, type, form]);
-
-  const inputConfig = useMemo(() => {
-    const options = typeOptionsByCategory[category];
-    return options.find((item) => item.value === type) ?? options[0];
-  }, [category, type]);
-
-  async function handleAdd(values: BenefitFormValues) {
-    const next: Benefit = {
-      id: benefits.length + 1,
+  async function onSubmit(values: BenefitFormValues) {
+    const nextBenefit: Benefit = {
+      id: Date.now(),
       title: values.title,
       category: values.category,
       type: values.type,
@@ -264,139 +296,135 @@ export function BenefitsCatalogPage({ storeId }: { storeId?: string }) {
       active: true,
     };
 
-    setBenefits((prev) => [...prev, next]);
-    form.reset({
-      title: "",
-      category: values.category,
-      type: values.type,
-      value: "",
-    });
-
-    if (!storeId || !baseURL) return;
+    if (!storeId || !baseURL) {
+      setBenefits((prev) => [nextBenefit, ...prev]);
+      reset({
+        category: values.category,
+        type: values.type,
+        title: "",
+        value: "",
+      });
+      return;
+    }
 
     try {
       await fetchWithAuth(endpoints.benefits(storeId), {
         method: "POST",
-        body: JSON.stringify(next),
+        body: JSON.stringify(nextBenefit),
+      });
+      setBenefits((prev) => [nextBenefit, ...prev]);
+      reset({
+        category: values.category,
+        type: values.type,
+        title: "",
+        value: "",
       });
     } catch {
-      // ignore in dev
+      setBenefits((prev) => [nextBenefit, ...prev]);
+      reset({
+        category: values.category,
+        type: values.type,
+        title: "",
+        value: "",
+      });
     }
   }
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-1">
+    <div className="space-y-6">
+      <div>
         <h1 className="text-2xl font-semibold">혜택 카탈로그</h1>
         <p className="text-sm text-slate-500">
-          서비스 제공형 혜택을 우선 추천합니다.
+          혜택 유형을 선택하고 간단히 등록하세요. 서비스 제공형 혜택을 우선 추천합니다.
         </p>
       </div>
 
-      <form
-        className="rounded-lg border border-slate-200 bg-white p-4 space-y-3"
-        onSubmit={form.handleSubmit(handleAdd)}
-      >
-        <div className="text-sm font-medium">혜택 추가</div>
-        <div className="grid gap-3 md:grid-cols-2">
+      <form onSubmit={handleSubmit(onSubmit)} className="rounded-xl border border-slate-200 bg-white p-6 space-y-4">
+        <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <label className="text-xs text-slate-500">카테고리</label>
-            <Select
-              value={category}
-              onChange={(event) =>
-                form.setValue("category", event.target.value as BenefitCategory, {
-                  shouldValidate: true,
-                })
-              }
-            >
-              {categoryOptions.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.label}
+            <label className="text-sm font-medium">카테고리 선택</label>
+            <Select {...register("category")}>
+              {categoryOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
                 </option>
               ))}
             </Select>
+            {errors.category && (
+              <p className="text-xs text-rose-500">{errors.category.message}</p>
+            )}
           </div>
           <div className="space-y-2">
-            <label className="text-xs text-slate-500">상세 타입</label>
-            <Select
-              value={type}
-              onChange={(event) =>
-                form.setValue("type", event.target.value as BenefitType, {
-                  shouldValidate: true,
-                })
-              }
-            >
-              {typeOptionsByCategory[category].map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.label}
+            <label className="text-sm font-medium">상세 타입 선택</label>
+            <Select {...register("type")}>
+              {typeOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
                 </option>
               ))}
             </Select>
+            {errors.type && (
+              <p className="text-xs text-rose-500">{errors.type.message}</p>
+            )}
           </div>
         </div>
-        <div className="grid gap-3 md:grid-cols-3">
-          <div className="space-y-1">
-            <Input
-              {...form.register("title")}
-              placeholder="혜택 이름"
-            />
-            {form.formState.errors.title ? (
-              <p className="text-xs text-rose-600">
-                {form.formState.errors.title.message}
-              </p>
-            ) : null}
-          </div>
-          <div className="space-y-1">
-            <Input
-              type={inputConfig.inputType}
-              placeholder={inputConfig.placeholder}
-              {...form.register("value")}
-            />
-            {form.formState.errors.value ? (
-              <p className="text-xs text-rose-600">
-                {form.formState.errors.value.message}
-              </p>
-            ) : null}
-          </div>
-          <div className="flex items-center text-sm text-slate-500">
-            {inputConfig.unitLabel
-              ? `${inputConfig.unitLabel} 단위`
-              : "사용 예시를 입력하세요"}
-          </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">혜택 이름</label>
+          <Input
+            placeholder="예: 음료 1잔, 룸 업그레이드"
+            {...register("title")}
+          />
+          {errors.title && (
+            <p className="text-xs text-rose-500">{errors.title.message}</p>
+          )}
         </div>
-        <Button type="submit">혜택 추가</Button>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">혜택 내용</label>
+          <div className="flex items-center gap-2">
+            <Input
+              type={activeTypeConfig?.inputType ?? "text"}
+              placeholder={activeTypeConfig?.placeholder ?? ""}
+              {...register("value")}
+            />
+            {activeTypeConfig?.unitLabel ? (
+              <span className="text-sm text-slate-500">
+                {activeTypeConfig.unitLabel}
+              </span>
+            ) : null}
+          </div>
+          {errors.value && (
+            <p className="text-xs text-rose-500">{errors.value.message}</p>
+          )}
+        </div>
+
+        <div className="flex justify-end">
+          <Button type="submit" disabled={isSubmitting}>
+            혜택 추가
+          </Button>
+        </div>
       </form>
 
       <div className="space-y-3">
         {benefits.map((benefit) => (
           <div
             key={benefit.id}
-            className="rounded-lg border border-slate-200 bg-white p-4"
+            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4"
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-medium">{benefit.title}</div>
-                <div className="text-xs text-slate-500">
-                  {categoryLabelMap[benefit.category]} - {typeLabelMap[benefit.type]}
-                </div>
+            <div className="space-y-1">
+              <div className="text-sm font-medium">{benefit.title}</div>
+              <div className="text-xs text-slate-500">
+                {benefit.value ? `내용: ${benefit.value}` : "내용 없음"}
               </div>
-              <Button
-                variant="ghost"
-                onClick={() =>
-                  setBenefits((prev) =>
-                    prev.map((item) =>
-                      item.id === benefit.id ? { ...item, active: !item.active } : item
-                    )
-                  )
-                }
-              >
-                {benefit.active ? "비활성" : "활성"}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Badge>{categoryLabelMap[benefit.category]}</Badge>
+                <Badge>{typeLabelMap[benefit.type]}</Badge>
+              </div>
             </div>
-            <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-600">
-              <Badge>혜택 값: {benefit.value || "-"}</Badge>
-              <Badge>{benefit.active ? "활성" : "비활성"}</Badge>
-            </div>
+            <Badge className={benefit.active ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}>
+              {benefit.active ? "사용 중" : "비활성"}
+            </Badge>
           </div>
         ))}
       </div>

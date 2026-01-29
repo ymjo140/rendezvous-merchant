@@ -69,9 +69,9 @@ export function CapacityPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-semibold">수용량</h1>
+          <h1 className="text-2xl font-semibold">수용량 관리</h1>
           <p className="text-sm text-slate-500">
-            테이블 유형과 좌석 재고를 등록하세요.
+            테이블 유형과 좌석 수량을 등록해 주세요.
           </p>
         </div>
         <Button onClick={() => setOpen(true)}>테이블 타입 추가</Button>
@@ -127,24 +127,29 @@ export function CapacityPage() {
                 />
               </div>
             </div>
-            <div className="space-y-1">
-              <label className="text-xs text-slate-500">수량</label>
-              <Input
-                type="number"
-                value={quantity}
-                onChange={(event) => setQuantity(event.target.value)}
-              />
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1">
+                <label className="text-xs text-slate-500">보유 수량</label>
+                <Input
+                  type="number"
+                  value={quantity}
+                  onChange={(event) => setQuantity(event.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-slate-500">룸 여부</label>
+                <select
+                  className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
+                  value={isPrivate ? "yes" : "no"}
+                  onChange={(event) => setIsPrivate(event.target.value === "yes")}
+                >
+                  <option value="no">일반 홀</option>
+                  <option value="yes">프라이빗 룸</option>
+                </select>
+              </div>
             </div>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={isPrivate}
-                onChange={(event) => setIsPrivate(event.target.checked)}
-              />
-              룸(비공개 공간)
-            </label>
           </div>
-          <div className="flex gap-2">
+          <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setOpen(false)}>
               취소
             </Button>

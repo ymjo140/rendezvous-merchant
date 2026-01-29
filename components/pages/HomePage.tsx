@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const feedItems = [
-  "방금 4명 그룹이 [평일 저녁 룰] 에 매칭되었습니다! ⚡",
+  "방금 4명 그룹이 [평일 저녁 룰]에 매칭되었습니다! ⚡",
   "현재 2팀이 사장님의 제안을 보고 있습니다.",
-  "방금 예약 확정이 완료되었습니다.",
+  "방금 예약이 확정되었습니다.",
 ];
 
 export function HomePage({ storeId }: { storeId?: string }) {

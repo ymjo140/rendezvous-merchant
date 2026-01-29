@@ -17,6 +17,7 @@ type ReservationEntry = {
   unit_index: number;
   start_time: string;
   end_time: string;
+  source?: "internal" | "external";
 };
 
 const mockUnits: TableUnit[] = [
@@ -57,6 +58,7 @@ const mockReservations: ReservationEntry[] = [
     unit_index: 1,
     start_time: "2026-02-01T18:00:00",
     end_time: "2026-02-01T20:00:00",
+    source: "internal",
   },
   {
     id: "R-102",
@@ -68,6 +70,7 @@ const mockReservations: ReservationEntry[] = [
     unit_index: 2,
     start_time: "2026-02-01T19:00:00",
     end_time: "2026-02-01T21:00:00",
+    source: "internal",
   },
   {
     id: "R-103",
@@ -79,6 +82,19 @@ const mockReservations: ReservationEntry[] = [
     unit_index: 1,
     start_time: "2026-02-01T20:30:00",
     end_time: "2026-02-01T22:30:00",
+    source: "internal",
+  },
+  {
+    id: "R-104",
+    guestName: "네이버 예약(김철수)",
+    partySize: 2,
+    date: "2026-02-01",
+    status: "confirmed",
+    unit_id: "unit-hall-4",
+    unit_index: 3,
+    start_time: "2026-02-01T18:30:00",
+    end_time: "2026-02-01T20:00:00",
+    source: "external",
   },
   {
     id: "R-201",
@@ -90,6 +106,7 @@ const mockReservations: ReservationEntry[] = [
     unit_index: 1,
     start_time: "2026-02-02T17:30:00",
     end_time: "2026-02-02T19:30:00",
+    source: "internal",
   },
   {
     id: "R-202",
@@ -101,6 +118,7 @@ const mockReservations: ReservationEntry[] = [
     unit_index: 3,
     start_time: "2026-02-02T18:30:00",
     end_time: "2026-02-02T20:30:00",
+    source: "internal",
   },
   {
     id: "R-203",
@@ -112,6 +130,19 @@ const mockReservations: ReservationEntry[] = [
     unit_index: 2,
     start_time: "2026-02-02T19:00:00",
     end_time: "2026-02-02T21:00:00",
+    source: "internal",
+  },
+  {
+    id: "R-204",
+    guestName: "구글 캘린더(이정아)",
+    partySize: 4,
+    date: "2026-02-02",
+    status: "confirmed",
+    unit_id: "unit-vip",
+    unit_index: 2,
+    start_time: "2026-02-02T20:00:00",
+    end_time: "2026-02-02T22:00:00",
+    source: "external",
   },
   {
     id: "R-301",
@@ -123,6 +154,7 @@ const mockReservations: ReservationEntry[] = [
     unit_index: 2,
     start_time: "2026-02-03T18:00:00",
     end_time: "2026-02-03T20:00:00",
+    source: "internal",
   },
   {
     id: "R-302",
@@ -134,6 +166,7 @@ const mockReservations: ReservationEntry[] = [
     unit_index: 1,
     start_time: "2026-02-03T20:00:00",
     end_time: "2026-02-03T22:00:00",
+    source: "internal",
   },
 ];
 
@@ -191,7 +224,11 @@ function buildRows(units: TableUnit[]) {
 }
 
 function todayString() {
-  return new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function addDays(dateString: string, delta: number) {
@@ -261,6 +298,15 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
               {">"}
             </Button>
           </div>
+          <Button
+            variant="ghost"
+            className="border border-slate-300 text-slate-700"
+            onClick={() =>
+              window.alert("구글/네이버 캘린더와 연동하여 중복 예약을 방지합니다.")
+            }
+          >
+            📅 외부 캘린더 연동
+          </Button>
           <select
             className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm"
             value={statusFilter}
@@ -289,7 +335,9 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
 
       {filtered.length === 0 ? (
         <div className="rounded-lg border border-dashed border-slate-200 bg-white p-6 text-center space-y-3">
-          <div className="text-lg font-semibold">?? {dateLabel}에는 아직 예약이 없습니다.</div>
+          <div className="text-lg font-semibold">
+            📅 {dateLabel}에는 아직 예약이 없습니다.
+          </div>
           <p className="text-sm text-slate-500">
             지금 이 시간대에 타임세일을 걸어 손님을 모아보세요!
           </p>
@@ -341,22 +389,38 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                   {rowReservations.map((reservation) => {
                     const start = toMinutes(reservation.start_time);
                     const end = toMinutes(reservation.end_time);
-                    const startIndex = Math.max(0, Math.floor((start - startMinutes) / slotMinutes));
+                    const startIndex = Math.max(
+                      0,
+                      Math.floor((start - startMinutes) / slotMinutes)
+                    );
                     const endIndex = Math.min(
                       slots.length,
                       Math.ceil((end - startMinutes) / slotMinutes)
                     );
                     const columnStart = 2 + startIndex;
                     const columnEnd = Math.max(columnStart + 1, 2 + endIndex);
+                    const isExternal = reservation.source === "external";
 
                     return (
                       <div
                         key={reservation.id}
-                        className="z-10 flex items-center justify-between rounded-md bg-slate-900 px-2 py-1 text-xs text-white"
+                        className={`z-10 flex items-center justify-between rounded-md px-2 py-1 text-xs ${
+                          isExternal
+                            ? "bg-slate-200 text-slate-700"
+                            : "bg-slate-900 text-white"
+                        } ${isExternal ? "cursor-pointer" : ""}`}
                         style={{
                           gridColumn: `${columnStart} / ${columnEnd}`,
                           gridRow: "1",
                           alignSelf: "center",
+                          backgroundImage: isExternal
+                            ? "repeating-linear-gradient(45deg, rgba(148,163,184,0.35), rgba(148,163,184,0.35) 6px, rgba(255,255,255,0.4) 6px, rgba(255,255,255,0.4) 12px)"
+                            : undefined,
+                        }}
+                        onClick={() => {
+                          if (isExternal) {
+                            window.alert("외부 플랫폼에서 관리되는 예약입니다.");
+                          }
                         }}
                       >
                         <span>{reservation.guestName}</span>
@@ -388,7 +452,14 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
             {filtered.map((row) => (
               <tr key={row.id}>
                 <Td>{row.id}</Td>
-                <Td>{row.guestName}</Td>
+                <Td>
+                  <div className="flex items-center gap-2">
+                    <span>{row.guestName}</span>
+                    {row.source === "external" ? (
+                      <Badge className="bg-slate-200 text-slate-600">외부</Badge>
+                    ) : null}
+                  </div>
+                </Td>
                 <Td>{row.partySize}</Td>
                 <Td>{row.date}</Td>
                 <Td>

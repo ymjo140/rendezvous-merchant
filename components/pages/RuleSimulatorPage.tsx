@@ -22,7 +22,7 @@ const mockRules = [
   },
   {
     id: "3",
-    name: "특가 메뉴 제안",
+    name: "학생 메뉴 제안",
     benefitType: BenefitType.FREE_MENU_ITEM,
     benefitValue: "음료 1잔",
     visibility: "public" as const,
@@ -44,11 +44,11 @@ function buildBenefitMessage(type: BenefitType, value: string) {
     case BenefitType.CORKAGE_FREE:
       return "✨ 콜키지 프리 혜택!";
     case BenefitType.FREE_MENU_ITEM:
-      return `🍽 ${value || "메뉴 증정"} 혜택!`;
+      return `🎁 ${value || "메뉴 증정"} 혜택!`;
     case BenefitType.SIZE_UPGRADE:
-      return `🍽 ${value || "사이즈업"} 혜택!`;
+      return `🎁 ${value || "사이즈업"} 혜택!`;
     case BenefitType.UNLIMITED_REFILL:
-      return "🍽 무제한 리필 혜택!";
+      return "🎁 무제한 리필 혜택!";
     case BenefitType.PERCENT_DISCOUNT:
       return `💸 ${value || "10%"} 할인 혜택!`;
     case BenefitType.FIXED_AMOUNT_OFF:
@@ -70,7 +70,9 @@ export function RuleSimulatorPage() {
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-semibold">룰 시뮬레이터</h1>
-        <p className="text-sm text-slate-500">룰을 선택하면 실제 카드 뷰로 보여집니다.</p>
+        <p className="text-sm text-slate-500">
+          룰을 선택하면 실제 카드 UI로 어떻게 보이는지 확인할 수 있어요.
+        </p>
       </div>
       <div className="flex flex-wrap gap-2">
         {mockRules.map((rule) => (
