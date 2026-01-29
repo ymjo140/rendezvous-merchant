@@ -80,6 +80,61 @@ const mockReservations: ReservationEntry[] = [
     start_time: "2026-02-01T20:30:00",
     end_time: "2026-02-01T22:30:00",
   },
+  {
+    id: "R-201",
+    guestName: "최하늘",
+    partySize: 2,
+    date: "2026-02-02",
+    status: "confirmed",
+    unit_id: "unit-terrace-2",
+    unit_index: 1,
+    start_time: "2026-02-02T17:30:00",
+    end_time: "2026-02-02T19:30:00",
+  },
+  {
+    id: "R-202",
+    guestName: "오지훈",
+    partySize: 4,
+    date: "2026-02-02",
+    status: "cancelled",
+    unit_id: "unit-hall-4",
+    unit_index: 3,
+    start_time: "2026-02-02T18:30:00",
+    end_time: "2026-02-02T20:30:00",
+  },
+  {
+    id: "R-203",
+    guestName: "서지은",
+    partySize: 3,
+    date: "2026-02-02",
+    status: "pending",
+    unit_id: "unit-hall-4",
+    unit_index: 2,
+    start_time: "2026-02-02T19:00:00",
+    end_time: "2026-02-02T21:00:00",
+  },
+  {
+    id: "R-301",
+    guestName: "황도윤",
+    partySize: 5,
+    date: "2026-02-03",
+    status: "confirmed",
+    unit_id: "unit-vip",
+    unit_index: 2,
+    start_time: "2026-02-03T18:00:00",
+    end_time: "2026-02-03T20:00:00",
+  },
+  {
+    id: "R-302",
+    guestName: "강유진",
+    partySize: 2,
+    date: "2026-02-03",
+    status: "no_show",
+    unit_id: "unit-terrace-2",
+    unit_index: 1,
+    start_time: "2026-02-03T20:00:00",
+    end_time: "2026-02-03T22:00:00",
+  },
 ];
 
 const statusLabelMap: Record<ReservationEntry["status"], string> = {
@@ -107,6 +162,7 @@ const statusOptions = [
 const startMinutes = 17 * 60;
 const endMinutes = 24 * 60;
 const slotMinutes = 30;
+const dayLabels = ["일", "월", "화", "수", "목", "금", "토"];
 
 function toMinutes(dateString: string) {
   const date = new Date(dateString);
@@ -134,18 +190,42 @@ function buildRows(units: TableUnit[]) {
   );
 }
 
+function todayString() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function addDays(dateString: string, delta: number) {
+  const date = new Date(`${dateString}T00:00:00`);
+  date.setDate(date.getDate() + delta);
+  return date.toISOString().slice(0, 10);
+}
+
+function formatDateLabel(dateString: string) {
+  const date = new Date(`${dateString}T00:00:00`);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const weekday = dayLabels[date.getDay()];
+  return `${year}년 ${month}월 ${day}일 (${weekday})`;
+}
+
 export function ReservationsPage({ storeId }: { storeId?: string }) {
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState("all");
   const [view, setView] = useState<"scheduler" | "list">("scheduler");
+  const [selectedDate, setSelectedDate] = useState(todayString);
 
   const filtered = useMemo(() => {
-    if (statusFilter === "all") return mockReservations;
-    return mockReservations.filter((item) => item.status === statusFilter);
-  }, [statusFilter]);
+    return mockReservations.filter((item) => {
+      const statusMatch = statusFilter === "all" || item.status === statusFilter;
+      const dateMatch = item.date === selectedDate;
+      return statusMatch && dateMatch;
+    });
+  }, [statusFilter, selectedDate]);
 
   const slots = useMemo(() => buildSlots(), []);
   const rows = useMemo(() => buildRows(mockUnits), []);
+  const dateLabel = formatDateLabel(selectedDate);
 
   return (
     <div className="space-y-4">
@@ -154,7 +234,30 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
           <h1 className="text-2xl font-semibold">예약 목록</h1>
           <p className="text-sm text-slate-500">매장 #{storeId}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2 py-1 text-sm">
+            <Button
+              variant="ghost"
+              onClick={() => setSelectedDate((prev) => addDays(prev, -1))}
+            >
+              {"<"}
+            </Button>
+            <div className="relative px-2 text-sm font-medium">
+              {dateLabel}
+              <input
+                type="date"
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                value={selectedDate}
+                onChange={(event) => setSelectedDate(event.target.value)}
+              />
+            </div>
+            <Button
+              variant="ghost"
+              onClick={() => setSelectedDate((prev) => addDays(prev, 1))}
+            >
+              {">"}
+            </Button>
+          </div>
           <select
             className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm"
             value={statusFilter}
@@ -181,7 +284,19 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
         </div>
       </div>
 
-      {view === "scheduler" && (
+      {filtered.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-slate-200 bg-white p-6 text-center space-y-3">
+          <div className="text-lg font-semibold">?? {dateLabel}에는 아직 예약이 없습니다.</div>
+          <p className="text-sm text-slate-500">
+            지금 이 시간대에 타임세일을 걸어 손님을 모아보세요!
+          </p>
+          <Button onClick={() => router.push(`/stores/${storeId}/offers/rules/new`)}>
+            새 룰 만들기
+          </Button>
+        </div>
+      ) : null}
+
+      {view === "scheduler" && filtered.length > 0 && (
         <div className="space-y-3">
           <div className="text-sm text-slate-500">
             빈 시간대는 AI가 예약을 추천할 수 있는 슬롯입니다.
@@ -214,7 +329,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                   }}
                 >
                   <div className="bg-white p-2 text-slate-700">{row.label}</div>
-                  {slots.map((slot, index) => (
+                  {slots.map((slot) => (
                     <div
                       key={`${row.id}-${slot}`}
                       className="bg-white p-2 border-l border-slate-100"
@@ -253,7 +368,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
         </div>
       )}
 
-      {view === "list" && (
+      {view === "list" && filtered.length > 0 && (
         <Table>
           <thead>
             <tr>
