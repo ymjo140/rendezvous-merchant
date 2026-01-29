@@ -103,6 +103,25 @@ export function OfferRulesPage({ storeId }: { storeId?: string }) {
     }
   }
 
+  async function handleDelete(ruleId: number | string) {
+    if (!window.confirm("이 룰을 삭제할까요?")) return;
+
+    const prev = rules;
+    setRules((current) => current.filter((item) => item.id !== ruleId));
+
+    if (!storeId || !baseURL) return;
+
+    try {
+      await fetchWithAuth(endpoints.offerRules(storeId), {
+        method: "DELETE",
+        body: JSON.stringify({ id: ruleId }),
+      });
+    } catch {
+      setRules(prev);
+      window.alert("삭제에 실패했습니다. 다시 시도해 주세요.");
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -144,6 +163,13 @@ export function OfferRulesPage({ storeId }: { storeId?: string }) {
                   }
                 >
                   수정
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="text-rose-600 hover:bg-rose-50"
+                  onClick={() => handleDelete(rule.id)}
+                >
+                  삭제
                 </Button>
               </div>
             </div>

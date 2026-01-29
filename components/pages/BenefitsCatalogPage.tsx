@@ -330,6 +330,25 @@ export function BenefitsCatalogPage({ storeId }: { storeId?: string }) {
     }
   }
 
+  async function handleDelete(targetId: Benefit["id"]) {
+    if (!window.confirm("이 혜택을 삭제할까요?")) return;
+
+    const prev = benefits;
+    setBenefits((current) => current.filter((item) => item.id !== targetId));
+
+    if (!storeId || !baseURL) return;
+
+    try {
+      await fetchWithAuth(endpoints.benefits(storeId), {
+        method: "DELETE",
+        body: JSON.stringify({ id: targetId }),
+      });
+    } catch {
+      setBenefits(prev);
+      window.alert("삭제에 실패했습니다. 다시 시도해 주세요.");
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -422,9 +441,24 @@ export function BenefitsCatalogPage({ storeId }: { storeId?: string }) {
                 <Badge>{typeLabelMap[benefit.type]}</Badge>
               </div>
             </div>
-            <Badge className={benefit.active ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}>
-              {benefit.active ? "사용 중" : "비활성"}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge
+                className={
+                  benefit.active
+                    ? "bg-emerald-100 text-emerald-700"
+                    : "bg-slate-100 text-slate-500"
+                }
+              >
+                {benefit.active ? "사용 중" : "비활성"}
+              </Badge>
+              <Button
+                variant="ghost"
+                className="text-rose-600 hover:bg-rose-50"
+                onClick={() => handleDelete(benefit.id)}
+              >
+                삭제
+              </Button>
+            </div>
           </div>
         ))}
       </div>
