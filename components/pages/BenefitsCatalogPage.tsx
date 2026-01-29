@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { fetchWithAuth, baseURL } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import { BenefitCategory, BenefitType } from "@/domain/offers/types";
+import { loadBenefits, saveBenefits } from "@/lib/utils/benefitsStore";
 
 type Benefit = {
   id: number | string;
@@ -224,7 +225,7 @@ const fallbackBenefits: Benefit[] = [
 ];
 
 export function BenefitsCatalogPage({ storeId }: { storeId?: string }) {
-  const [benefits, setBenefits] = useState<Benefit[]>(fallbackBenefits);
+  const [benefits, setBenefits] = useState<Benefit[]>([]);
 
   const {
     register,
@@ -265,19 +266,26 @@ export function BenefitsCatalogPage({ storeId }: { storeId?: string }) {
   }, [typeOptions, selectedType, setValue]);
 
   useEffect(() => {
+    const local = loadBenefits(storeId);
+    if (local && local.length > 0) {
+      setBenefits(local);
+    } else {
+      setBenefits(fallbackBenefits);
+    }
+  }, [storeId]);
+
+  useEffect(() => {
     let active = true;
     async function load() {
-      if (!storeId || !baseURL) {
-        setBenefits(fallbackBenefits);
-        return;
-      }
+      if (!storeId || !baseURL) return;
       try {
         const data = await fetchWithAuth<Benefit[]>(endpoints.benefits(storeId));
         if (active && Array.isArray(data)) {
           setBenefits(data);
+          saveBenefits(storeId, data);
         }
       } catch {
-        if (active) setBenefits(fallbackBenefits);
+        // keep local fallback
       }
     }
     void load();
@@ -297,7 +305,11 @@ export function BenefitsCatalogPage({ storeId }: { storeId?: string }) {
     };
 
     if (!storeId || !baseURL) {
-      setBenefits((prev) => [nextBenefit, ...prev]);
+      setBenefits((prev) => {
+        const next = [nextBenefit, ...prev];
+        saveBenefits(storeId, next);
+        return next;
+      });
       reset({
         category: values.category,
         type: values.type,
@@ -312,7 +324,11 @@ export function BenefitsCatalogPage({ storeId }: { storeId?: string }) {
         method: "POST",
         body: JSON.stringify(nextBenefit),
       });
-      setBenefits((prev) => [nextBenefit, ...prev]);
+      setBenefits((prev) => {
+        const next = [nextBenefit, ...prev];
+        saveBenefits(storeId, next);
+        return next;
+      });
       reset({
         category: values.category,
         type: values.type,
@@ -320,7 +336,11 @@ export function BenefitsCatalogPage({ storeId }: { storeId?: string }) {
         value: "",
       });
     } catch {
-      setBenefits((prev) => [nextBenefit, ...prev]);
+      setBenefits((prev) => {
+        const next = [nextBenefit, ...prev];
+        saveBenefits(storeId, next);
+        return next;
+      });
       reset({
         category: values.category,
         type: values.type,
@@ -334,7 +354,11 @@ export function BenefitsCatalogPage({ storeId }: { storeId?: string }) {
     if (!window.confirm("이 혜택을 삭제할까요?")) return;
 
     const prev = benefits;
-    setBenefits((current) => current.filter((item) => item.id !== targetId));
+    setBenefits((current) => {
+      const next = current.filter((item) => item.id !== targetId);
+      saveBenefits(storeId, next);
+      return next;
+    });
 
     if (!storeId || !baseURL) return;
 
@@ -345,6 +369,7 @@ export function BenefitsCatalogPage({ storeId }: { storeId?: string }) {
       });
     } catch {
       setBenefits(prev);
+      saveBenefits(storeId, prev);
       window.alert("삭제에 실패했습니다. 다시 시도해 주세요.");
     }
   }

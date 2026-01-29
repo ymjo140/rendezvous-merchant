@@ -9,6 +9,7 @@ import { fetchWithAuth, baseURL } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import { HotDealCard } from "@/components/offers/HotDealCard";
 import { BenefitType } from "@/domain/offers/types";
+import { loadBenefits, saveBenefits } from "@/lib/utils/benefitsStore";
 
 const dayLabels = ["월", "화", "수", "목", "금", "토", "일"];
 
@@ -186,14 +187,25 @@ export function RuleBuilderPage({
     let active = true;
 
     async function loadCatalog() {
-      if (!storeId || !baseURL) return;
+      const local = loadBenefits(storeId);
+      if (local && local.length > 0) {
+        setCatalog(local);
+      }
+      if (!storeId || !baseURL) {
+        if (!local || local.length === 0) {
+          setCatalog(mockBenefits);
+        }
+        return;
+      }
       try {
         const data = await fetchWithAuth<BenefitItem[]>(endpoints.benefits(storeId));
         if (active && Array.isArray(data)) {
           setCatalog(data);
         }
       } catch {
-        // ignore
+        if (!local || local.length === 0) {
+          setCatalog(mockBenefits);
+        }
       }
     }
 
@@ -251,6 +263,14 @@ export function RuleBuilderPage({
       active = false;
     };
   }, [storeId, ruleId]);
+
+  useEffect(() => {
+    if (!catalog.length) return;
+    const exists = catalog.some((item) => String(item.id) === String(benefitId));
+    if (!exists) {
+      setBenefitId(String(catalog[0].id));
+    }
+  }, [catalog, benefitId]);
 
   const summary = useMemo(() => {
     const benefit = catalog.find((item) => String(item.id) === benefitId);
