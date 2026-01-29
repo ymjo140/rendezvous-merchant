@@ -337,31 +337,23 @@ export function RuleBuilderPage({
       benefit: { title: summary.benefit },
     };
 
-    if (!baseURL) {
-      const existing = loadRules(storeId) ?? [];
-      const next = ruleId
-        ? existing.map((item) =>
-            String(item.id) === String(ruleId) ? { ...item, ...localRule } : item
-          )
-        : [localRule, ...existing];
-      saveRules(storeId, next);
-      return;
-    }
+    const existing = loadRules(storeId) ?? [];
+    const next = ruleId
+      ? existing.map((item) =>
+          String(item.id) === String(ruleId) ? { ...item, ...localRule } : item
+        )
+      : [localRule, ...existing];
+    saveRules(storeId, next);
+
+    if (!baseURL) return;
 
     try {
       await fetchWithAuth(endpoints.offerRules(storeId), {
         method: ruleId ? "PATCH" : "POST",
         body: JSON.stringify({ id: ruleId, ...payload }),
       });
-      const existing = loadRules(storeId) ?? [];
-      const next = ruleId
-        ? existing.map((item) =>
-            String(item.id) === String(ruleId) ? { ...item, ...localRule } : item
-          )
-        : [localRule, ...existing];
-      saveRules(storeId, next);
     } catch {
-      // ignore in dev
+      window.alert("서버 저장에 실패했습니다. 로컬에 임시 저장되었습니다.");
     }
   }
 
