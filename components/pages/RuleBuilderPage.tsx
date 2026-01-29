@@ -9,7 +9,7 @@ import { fetchWithAuth, baseURL } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import { HotDealCard } from "@/components/offers/HotDealCard";
 import { BenefitType } from "@/domain/offers/types";
-import { loadBenefits, saveBenefits } from "@/lib/utils/benefitsStore";
+import { loadBenefits } from "@/lib/utils/benefitsStore";
 
 const dayLabels = ["월", "화", "수", "목", "금", "토", "일"];
 
