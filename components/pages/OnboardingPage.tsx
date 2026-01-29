@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { searchPlaces, type Place } from "@/lib/api/places";
 
 const steps = [
   { id: 1, label: "기본 정보" },
@@ -51,20 +52,38 @@ function Counter({
   );
 }
 
+function mapMainCategory(value?: string | null) {
+  const key = (value ?? "").toUpperCase();
+  if (key.includes("CAFE")) return "카페/디저트";
+  if (key.includes("STUDY") || key.includes("OFFICE")) return "스터디룸/공간";
+  if (key.includes("PARTY")) return "파티룸";
+  if (key.includes("BAR") || key.includes("DRINK") || key.includes("PUB")) {
+    return "술집/포차";
+  }
+  if (key.includes("FOOD") || key.includes("RESTAURANT")) {
+    return "식당/밥집";
+  }
+  return "식당/밥집";
+}
+
 export function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [storeName, setStoreName] = useState("");
   const [category, setCategory] = useState("식당/밥집");
   const [location, setLocation] = useState("안암동");
+  const [autoFilled, setAutoFilled] = useState(false);
 
-  const [table4, setTable4] = useState(6);
-  const [table6, setTable6] = useState(2);
-  const [privateRoom, setPrivateRoom] = useState(false);
+  const [searchResults, setSearchResults] = useState<Place[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
 
-  const [room4, setRoom4] = useState(2);
-  const [room6, setRoom6] = useState(1);
-  const [room10, setRoom10] = useState(0);
+  const [seat1, setSeat1] = useState(4);
+  const [seat2, setSeat2] = useState(6);
+  const [seat4, setSeat4] = useState(10);
+  const [seat6, setSeat6] = useState(2);
+  const [roomCount, setRoomCount] = useState(1);
 
   const [menus, setMenus] = useState([
     { name: "", price: "" },
@@ -95,10 +114,67 @@ export function OnboardingPage() {
     return ["10000", "12000", "15000"];
   }, [category]);
 
+  const capacityLabels = useMemo(() => {
+    if (isSpaceBusiness) {
+      return {
+        seat1: "1인 데스크",
+        seat2: "2인 데스크",
+        seat4: "4인실",
+        seat6: "6인 이상 룸",
+        room: "프라이빗 룸",
+      };
+    }
+    return {
+      seat1: "1인석 (혼밥/바 테이블)",
+      seat2: "2인석 (커플/친구)",
+      seat4: "4인석 (기본)",
+      seat6: "6인 이상 (단체석)",
+      room: "프라이빗 룸",
+    };
+  }, [isSpaceBusiness]);
+
+  useEffect(() => {
+    if (storeName.trim().length < 2 || selectedPlace) {
+      setSearchResults([]);
+      setShowResults(false);
+      return;
+    }
+
+    let active = true;
+    setIsSearching(true);
+    const timer = setTimeout(async () => {
+      const data = await searchPlaces(storeName);
+      if (!active) return;
+      setSearchResults(data);
+      setShowResults(true);
+      setIsSearching(false);
+    }, 300);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [storeName, selectedPlace]);
+
   function updateMenu(index: number, key: "name" | "price", value: string) {
     setMenus((prev) =>
       prev.map((menu, idx) => (idx === index ? { ...menu, [key]: value } : menu))
     );
+  }
+
+  function handleSelectPlace(place: Place) {
+    setSelectedPlace(place);
+    setStoreName(place.name);
+    setLocation(place.address ?? "");
+    setCategory(mapMainCategory(place.main_category));
+    setAutoFilled(true);
+    setShowResults(false);
+  }
+
+  function clearSelection() {
+    setSelectedPlace(null);
+    setAutoFilled(false);
+    setSearchResults([]);
   }
 
   async function handleComplete(payload: Record<string, unknown>) {
@@ -120,10 +196,13 @@ export function OnboardingPage() {
       storeId: "1",
       name: "안암동 1등 포차",
       category: "술집/포차",
-      location: "안암동",
+      location: "서울 성북구 안암로 145",
       capacity: {
-        table4: 10,
-        privateRoom: 2,
+        seat1: 4,
+        seat2: 6,
+        seat4: 10,
+        seat6: 2,
+        room: 3,
       },
       menus: [
         { name: "모둠 오뎅탕", price: "1.8만" },
@@ -187,12 +266,54 @@ export function OnboardingPage() {
         <div className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6">
           <div className="space-y-2">
             <label className="text-sm font-medium">가게 이름</label>
-            <Input
-              className="h-12 text-lg"
-              value={storeName}
-              onChange={(event) => setStoreName(event.target.value)}
-              placeholder="예: 안암동 데일리 포차"
-            />
+            <div className="relative">
+              <Input
+                className="h-12 text-lg"
+                value={storeName}
+                onChange={(event) => {
+                  setStoreName(event.target.value);
+                  setSelectedPlace(null);
+                }}
+                placeholder="예: 안암동 데일리 포차"
+              />
+              {showResults && searchResults.length > 0 ? (
+                <div className="absolute z-10 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg">
+                  {searchResults.map((place) => (
+                    <button
+                      key={place.id}
+                      type="button"
+                      className="flex w-full flex-col items-start gap-1 px-4 py-3 text-left text-sm hover:bg-slate-50"
+                      onClick={() => handleSelectPlace(place)}
+                    >
+                      <span className="font-medium text-slate-900">
+                        {place.name}
+                      </span>
+                      <span className="text-xs text-slate-500">
+                        {place.address ?? "주소 정보 없음"}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              {showResults && searchResults.length === 0 && !isSearching ? (
+                <div className="absolute z-10 mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 shadow-lg">
+                  검색 결과가 없습니다. 새로 입력해 주세요.
+                </div>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+              {autoFilled ? "📍 검색된 주소를 불러왔습니다." : null}
+              {selectedPlace ? (
+                <button
+                  type="button"
+                  className="text-slate-500 underline"
+                  onClick={clearSelection}
+                >
+                  새로 입력하기
+                </button>
+              ) : null}
+              {isSearching ? "검색 중..." : null}
+            </div>
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium">업종 선택</label>
@@ -231,66 +352,42 @@ export function OnboardingPage() {
       )}
 
       {step === 2 && (
-        <div className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6">
-          {!isSpaceBusiness ? (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <div className="text-sm font-medium">기본 4인석</div>
-                  <div className="text-xs text-slate-500">주력 좌석 개수를 알려주세요.</div>
-                </div>
-                <Counter value={table4} onChange={setTable4} />
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <div className="text-sm font-medium">단체 6인석</div>
-                  <div className="text-xs text-slate-500">모임 예약에 쓰입니다.</div>
-                </div>
-                <Counter value={table6} onChange={setTable6} />
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <div className="text-sm font-medium">프라이빗 룸</div>
-                  <div className="text-xs text-slate-500">룸이 있다면 켜주세요.</div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setPrivateRoom((prev) => !prev)}
-                  className={`h-11 w-20 rounded-full border text-sm font-medium ${
-                    privateRoom
-                      ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-200 text-slate-600"
-                  }`}
-                >
-                  {privateRoom ? "있음" : "없음"}
-                </button>
-              </div>
+        <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-sm font-medium">{capacityLabels.seat1}</div>
+              <div className="text-xs text-slate-500">혼자 오는 손님용 좌석</div>
             </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <div className="text-sm font-medium">4인실</div>
-                  <div className="text-xs text-slate-500">기본 스터디룸</div>
-                </div>
-                <Counter value={room4} onChange={setRoom4} />
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <div className="text-sm font-medium">6인실</div>
-                  <div className="text-xs text-slate-500">중형 룸</div>
-                </div>
-                <Counter value={room6} onChange={setRoom6} />
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <div className="text-sm font-medium">10인 세미나실</div>
-                  <div className="text-xs text-slate-500">대형 모임 공간</div>
-                </div>
-                <Counter value={room10} onChange={setRoom10} />
-              </div>
+            <Counter value={seat1} onChange={setSeat1} />
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-sm font-medium">{capacityLabels.seat2}</div>
+              <div className="text-xs text-slate-500">2인이 가장 많이 앉는 자리</div>
             </div>
-          )}
+            <Counter value={seat2} onChange={setSeat2} />
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-sm font-medium">{capacityLabels.seat4}</div>
+              <div className="text-xs text-slate-500">기본 테이블 수</div>
+            </div>
+            <Counter value={seat4} onChange={setSeat4} />
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-sm font-medium">{capacityLabels.seat6}</div>
+              <div className="text-xs text-slate-500">단체 예약 대응 좌석</div>
+            </div>
+            <Counter value={seat6} onChange={setSeat6} />
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-sm font-medium">{capacityLabels.room}</div>
+              <div className="text-xs text-slate-500">별도 공간 개수</div>
+            </div>
+            <Counter value={roomCount} onChange={setRoomCount} />
+          </div>
         </div>
       )}
 
@@ -361,9 +458,13 @@ export function OnboardingPage() {
                   name: storeName || "새 매장",
                   category,
                   location,
-                  capacity: isSpaceBusiness
-                    ? { room4, room6, room10 }
-                    : { table4, table6, privateRoom },
+                  capacity: {
+                    seat1,
+                    seat2,
+                    seat4,
+                    seat6,
+                    room: roomCount,
+                  },
                   menus,
                 })
               }
