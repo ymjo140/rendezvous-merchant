@@ -7,9 +7,9 @@ import { endpoints } from "@/lib/api/endpoints";
 import type { StoreSummary } from "@/domain/stores/types";
 
 const mockStores: StoreSummary[] = [
-  { id: 1, name: "데모 스토어" },
-  { id: 2, name: "샘플 분점" },
-  { id: "dev-store", name: "테스트 매장" },
+  { id: 1, name: "\uACE0\uB824\uB300\uC810" },
+  { id: 2, name: "\uC548\uC554 2\uD638\uC810" },
+  { id: "dev-store", name: "\uD14C\uC2A4\uD2B8 \uB9E4\uC7A5" },
 ];
 
 export function StoreSwitcher({ currentStoreId }: { currentStoreId: string | null }) {

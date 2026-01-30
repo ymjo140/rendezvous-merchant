@@ -69,33 +69,6 @@ type TimeDealForm = {
   endTime: string;
 };
 
-const mockUnits: TableUnit[] = [
-  {
-    id: "unit-hall-4",
-    name: "\uD640 4\uC778\uC11D",
-    min_capacity: 2,
-    max_capacity: 4,
-    quantity: 4,
-    is_private: false,
-  },
-  {
-    id: "unit-terrace-2",
-    name: "\uD14C\uB77C\uC2A4 2\uC778\uC11D",
-    min_capacity: 1,
-    max_capacity: 2,
-    quantity: 2,
-    is_private: false,
-  },
-  {
-    id: "unit-vip",
-    name: "VIP \uB8F8",
-    min_capacity: 4,
-    max_capacity: 8,
-    quantity: 2,
-    is_private: true,
-  },
-];
-
 const mockStoreId = "dev-store";
 
 const mockReservations: ReservationEntry[] = [
@@ -434,6 +407,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
 
   const {
     data: unitRows = [],
+    error: unitsError,
     isSupabaseConfigured: isUnitsSupabaseReady,
   } = useTableUnits(resolvedStoreId);
 
@@ -536,12 +510,8 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
       );
       return;
     }
-    if (!isUnitsSupabaseReady) {
-      setTableUnits(mockUnits);
-      return;
-    }
     setTableUnits([]);
-  }, [unitRows, isUnitsSupabaseReady]);
+  }, [unitRows, isUnitsSupabaseReady, unitsError]);
 
   useEffect(() => {
     if (ruleRows.length > 0) {
