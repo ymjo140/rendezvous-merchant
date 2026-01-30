@@ -179,15 +179,22 @@ export function OnboardingPage() {
 
   async function handleComplete(payload: Record<string, unknown>) {
     try {
-      await fetch("/api/stores", {
+      const response = await fetch("/api/stores", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      if (response.ok) {
+        const data = await response.json();
+        const nextId = data?.id ?? payload.storeId ?? "1";
+        window.alert("🎉 사장님, 준비가 끝났습니다!");
+        router.push(`/stores/${nextId}`);
+        return;
+      }
     } catch {
-      // mock only
+      // ignore
     }
-    window.alert("🎉 사장님, 준비가 끝났습니다!");
+    window.alert("서버 저장에 실패했습니다. 로컬로 진행합니다.");
     router.push(`/stores/${payload.storeId ?? "1"}`);
   }
 
@@ -458,6 +465,7 @@ export function OnboardingPage() {
                   name: storeName || "새 매장",
                   category,
                   location,
+                  main_category: category,
                   capacity: {
                     seat1,
                     seat2,
