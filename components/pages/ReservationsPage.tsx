@@ -15,6 +15,24 @@ import {
 
 type ReservationEntry = StoredReservation;
 
+type RowInfo = {
+  id: string;
+  unit_id: string;
+  unit_index: number;
+  label: string;
+};
+
+type CreateForm = {
+  id: string;
+  guestName: string;
+  partySize: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  unit_id: string;
+  unit_index: number;
+};
+
 const mockUnits: TableUnit[] = [
   {
     id: "unit-hall-4",
@@ -197,6 +215,17 @@ function toMinutes(dateString: string) {
   return date.getHours() * 60 + date.getMinutes();
 }
 
+function timeToMinutes(time: string) {
+  const [h, m] = time.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function minutesToTime(minutes: number) {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
 function buildSlots() {
   const slots: string[] = [];
   for (let minutes = startMinutes; minutes < endMinutes; minutes += slotMinutes) {
@@ -253,6 +282,8 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
   const [selectedReservation, setSelectedReservation] =
     useState<ReservationEntry | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createForm, setCreateForm] = useState<CreateForm | null>(null);
 
   useEffect(() => {
     const local = loadReservations(storeId);
@@ -302,6 +333,75 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
       return next;
     });
     setDialogOpen(false);
+  }
+
+  function openCreate(row: RowInfo, slot: string) {
+    const startTime = slot;
+    const endTime = minutesToTime(timeToMinutes(slot) + 120);
+    setCreateForm({
+      id: "",
+      guestName: "",
+      partySize: "2",
+      date: selectedDate,
+      startTime,
+      endTime,
+      unit_id: row.unit_id,
+      unit_index: row.unit_index,
+    });
+    setCreateOpen(true);
+  }
+
+  function handleCreateSubmit() {
+    if (!createForm) return;
+    const { id, guestName, partySize, date, startTime, endTime } = createForm;
+
+    if (!id.trim() || !guestName.trim()) {
+      window.alert("예약 번호와 고객 이름을 입력해 주세요.");
+      return;
+    }
+
+    const start = timeToMinutes(startTime);
+    const end = timeToMinutes(endTime);
+    if (end <= start) {
+      window.alert("종료 시간이 시작 시간보다 늦어야 합니다.");
+      return;
+    }
+
+    const overlap = reservations.some((item) => {
+      if (item.date !== date) return false;
+      if (item.unit_id !== createForm.unit_id) return false;
+      if (item.unit_index !== createForm.unit_index) return false;
+      if (item.status === "cancelled" || item.status === "no_show") return false;
+      const itemStart = timeToMinutes(item.start_time.slice(11, 16));
+      const itemEnd = timeToMinutes(item.end_time.slice(11, 16));
+      return start < itemEnd && end > itemStart;
+    });
+
+    if (overlap) {
+      window.alert("해당 시간대에 이미 예약이 있습니다.");
+      return;
+    }
+
+    const newReservation: ReservationEntry = {
+      id: id.trim(),
+      guestName: guestName.trim(),
+      partySize: Number(partySize) || 1,
+      date,
+      status: "confirmed",
+      unit_id: createForm.unit_id,
+      unit_index: createForm.unit_index,
+      start_time: `${date}T${startTime}:00`,
+      end_time: `${date}T${endTime}:00`,
+      source: "internal",
+    };
+
+    setReservations((prev) => {
+      const next = [newReservation, ...prev];
+      saveReservations(storeId, next);
+      return next;
+    });
+
+    setCreateOpen(false);
   }
 
   const schedulerItems = filtered.filter(
@@ -421,12 +521,28 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                   }}
                 >
                   <div className="bg-white p-2 text-slate-700">{row.label}</div>
-                  {slots.map((slot) => (
-                    <div
-                      key={`${row.id}-${slot}`}
-                      className="bg-white p-2 border-l border-slate-100"
-                    />
-                  ))}
+                  {slots.map((slot) => {
+                    const slotMinutesValue = timeToMinutes(slot);
+                    const occupied = rowReservations.some((reservation) => {
+                      const start = timeToMinutes(reservation.start_time.slice(11, 16));
+                      const end = timeToMinutes(reservation.end_time.slice(11, 16));
+                      return slotMinutesValue >= start && slotMinutesValue < end;
+                    });
+
+                    return (
+                      <button
+                        key={`${row.id}-${slot}`}
+                        type="button"
+                        className={`bg-white p-2 border-l border-slate-100 ${
+                          occupied ? "cursor-not-allowed" : "hover:bg-slate-50"
+                        }`}
+                        onClick={() => {
+                          if (occupied) return;
+                          openCreate(row, slot);
+                        }}
+                      />
+                    );
+                  })}
                   {rowReservations.map((reservation) => {
                     const start = toMinutes(reservation.start_time);
                     const end = toMinutes(reservation.end_time);
@@ -448,7 +564,9 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                         className={`z-10 flex items-center justify-between rounded-md px-2 py-1 text-xs ${
                           isExternal
                             ? "bg-slate-200 text-slate-700"
-                            : "bg-slate-900 text-white"
+                            : reservation.status === "no_show"
+                              ? "bg-rose-100 text-rose-700"
+                              : "bg-slate-900 text-white"
                         } ${isExternal ? "cursor-pointer" : ""}`}
                         style={{
                           gridColumn: `${columnStart} / ${columnEnd}`,
@@ -570,6 +688,107 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
               >
                 취소
               </Button>
+            </div>
+          </div>
+        ) : null}
+      </Dialog>
+
+      <Dialog open={createOpen}>
+        {createForm ? (
+          <div className="space-y-4">
+            <div className="text-lg font-semibold">새 예약 추가</div>
+            <div className="grid gap-3 text-sm">
+              <div className="space-y-1">
+                <label className="text-xs text-slate-500">예약 번호</label>
+                <input
+                  className="h-10 w-full rounded-md border border-slate-200 px-3"
+                  value={createForm.id}
+                  onChange={(event) =>
+                    setCreateForm({ ...createForm, id: event.target.value })
+                  }
+                  placeholder="R-101"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-slate-500">고객</label>
+                <input
+                  className="h-10 w-full rounded-md border border-slate-200 px-3"
+                  value={createForm.guestName}
+                  onChange={(event) =>
+                    setCreateForm({
+                      ...createForm,
+                      guestName: event.target.value,
+                    })
+                  }
+                  placeholder="김민수"
+                />
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-500">인원</label>
+                  <input
+                    type="number"
+                    className="h-10 w-full rounded-md border border-slate-200 px-3"
+                    value={createForm.partySize}
+                    onChange={(event) =>
+                      setCreateForm({
+                        ...createForm,
+                        partySize: event.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-500">날짜</label>
+                  <input
+                    type="date"
+                    className="h-10 w-full rounded-md border border-slate-200 px-3"
+                    value={createForm.date}
+                    onChange={(event) =>
+                      setCreateForm({ ...createForm, date: event.target.value })
+                    }
+                  />
+                </div>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-500">시작 시간</label>
+                  <input
+                    type="time"
+                    className="h-10 w-full rounded-md border border-slate-200 px-3"
+                    value={createForm.startTime}
+                    onChange={(event) =>
+                      setCreateForm({
+                        ...createForm,
+                        startTime: event.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-500">종료 시간</label>
+                  <input
+                    type="time"
+                    className="h-10 w-full rounded-md border border-slate-200 px-3"
+                    value={createForm.endTime}
+                    onChange={(event) =>
+                      setCreateForm({
+                        ...createForm,
+                        endTime: event.target.value,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+              <div className="text-xs text-slate-500">
+                테이블: {createForm.unit_id}-{createForm.unit_index}
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setCreateOpen(false)}>
+                취소
+              </Button>
+              <Button onClick={handleCreateSubmit}>추가</Button>
             </div>
           </div>
         ) : null}
