@@ -360,7 +360,8 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
     }
   }, [storeId]);
   useEffect(() => {
-    if (!resizeState) return;
+    const activeResize = resizeState;
+    if (!activeResize) return;
 
     function handleMove(event: MouseEvent) {
       const ref = timeDealRowRef.current;
@@ -378,11 +379,11 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
 
       setTimeDeals((prev) => {
         const next = prev.map((deal) => {
-          if (deal.id !== resizeState.dealId) return deal;
+          if (deal.id !== activeResize.dealId) return deal;
           const currentStart = timeToMinutes(deal.start_time.slice(11, 16));
           const currentEnd = timeToMinutes(deal.end_time.slice(11, 16));
 
-          if (resizeState.edge === "start") {
+          if (activeResize.edge === "start") {
             const nextStart = Math.min(targetMinutes, currentEnd - slotMinutes);
             const nextStartTime = minutesToTime(Math.max(startMinutes, nextStart));
             return {
