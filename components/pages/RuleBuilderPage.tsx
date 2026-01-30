@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -164,6 +165,7 @@ export function RuleBuilderPage({
   storeId?: string;
   ruleId?: string;
 }) {
+  const router = useRouter();
   const [step, setStep] = useState(1);
   const [name, setName] = useState("");
   const [days, setDays] = useState([true, true, true, true, false, false, false]);
@@ -345,13 +347,19 @@ export function RuleBuilderPage({
       : [localRule, ...existing];
     saveRules(storeId, next);
 
-    if (!baseURL) return;
+    if (!baseURL) {
+      window.alert("성공적으로 저장되었습니다!");
+      router.push(`/stores/${storeId}/offers/rules`);
+      return;
+    }
 
     try {
       await fetchWithAuth(endpoints.offerRules(storeId), {
         method: ruleId ? "PATCH" : "POST",
         body: JSON.stringify({ id: ruleId, ...payload }),
       });
+      window.alert("성공적으로 저장되었습니다!");
+      router.push(`/stores/${storeId}/offers/rules`);
     } catch {
       window.alert("서버 저장에 실패했습니다. 로컬에 임시 저장되었습니다.");
     }
@@ -637,12 +645,17 @@ export function RuleBuilderPage({
           <Button
             variant="secondary"
             onClick={() => setStep((prev) => Math.max(1, prev - 1))}
+            disabled={step === 1}
           >
             이전
           </Button>
-          <Button onClick={() => setStep((prev) => Math.min(4, prev + 1))}>
-            다음
-          </Button>
+          {step < 4 ? (
+            <Button onClick={() => setStep((prev) => prev + 1)}>
+              다음
+            </Button>
+          ) : (
+            <Button onClick={handleSave}>완료</Button>
+          )}
         </div>
       </div>
     </div>
