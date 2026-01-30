@@ -869,16 +869,27 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                 const columnStart = 2 + startIndex;
                 const columnEnd = Math.max(columnStart + 1, 2 + endIndex);
 
-                return (
-                  <div
-                    key={deal.id}
-                    className="relative z-10 flex items-center gap-2 rounded-md bg-indigo-50 px-2 py-1 text-xs text-indigo-700"
-                    style={{
-                      gridColumn: `${columnStart} / ${columnEnd}`,
-                      gridRow: "1",
-                      alignSelf: "center",
-                    }}
-                  >
+                  return (
+                    <div
+                      key={deal.id}
+                      className="relative z-10 flex items-center gap-2 rounded-md bg-indigo-50 px-2 py-1 text-xs text-indigo-700 cursor-pointer"
+                      style={{
+                        gridColumn: `${columnStart} / ${columnEnd}`,
+                        gridRow: "1",
+                        alignSelf: "center",
+                      }}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        if (!window.confirm("\uD0C0\uC784\uC138\uC77C\uC744 \uC0AD\uC81C\uD560\uAE4C\uC694?")) {
+                          return;
+                        }
+                        setTimeDeals((prev) => {
+                          const next = prev.filter((item) => item.id !== deal.id);
+                          saveTimeDeals(resolvedStoreId, next);
+                          return next;
+                        });
+                      }}
+                    >
                     <button
                       type="button"
                       className="absolute left-0 top-0 h-full w-2 cursor-ew-resize rounded-l-md bg-indigo-200"
