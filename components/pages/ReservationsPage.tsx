@@ -327,6 +327,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
   const [createOpen, setCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState<CreateForm | null>(null);
   const [resizeState, setResizeState] = useState<ResizeState | null>(null);
+  const [activeBenefit, setActiveBenefit] = useState<StoredBenefit | null>(null);
   const timeDealRowRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -648,6 +649,33 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
     });
   }
 
+  function createDealFromSlot(slot: string) {
+    if (!activeBenefit) {
+      window.alert("\uC801\uC6A9\uD560 \uD61C\uD0DD\uC744 \uBA3C\uC800 \uC120\uD0DD\uD574\uC8FC\uC138\uC694.");
+      return;
+    }
+    const start = timeToMinutes(slot);
+    const end = Math.min(start + 60, endMinutes);
+    if (end <= start) return;
+
+    const startTime = minutesToTime(start);
+    const endTime = minutesToTime(end);
+    const newDeal: StoredTimeDeal = {
+      id: `deal-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      benefitId: String(activeBenefit.id),
+      title: activeBenefit.title,
+      date: selectedDate,
+      start_time: `${selectedDate}T${startTime}:00`,
+      end_time: `${selectedDate}T${endTime}:00`,
+    };
+
+    setTimeDeals((prev) => {
+      const next = [newDeal, ...prev];
+      saveTimeDeals(resolvedStoreId, next);
+      return next;
+    });
+  }
+
   const activeReservations = filtered.filter((item) => item.status !== "cancelled");
 
   return (
@@ -769,17 +797,23 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                 </p>
               ) : (
                 <div className="flex flex-wrap gap-2">
-                  {benefits.map((benefit) => (
-                    <Button
-                      key={String(benefit.id)}
-                      variant="secondary"
-                      className="h-8 rounded-full px-3 text-xs"
-                      draggable
-                      onDragStart={(event) => handleBenefitDragStart(benefit, event)}
-                    >
-                      {benefit.title}
-                    </Button>
-                  ))}
+                  {benefits.map((benefit) => {
+                    const isActive = activeBenefit?.id === benefit.id;
+                    return (
+                      <Button
+                        key={String(benefit.id)}
+                        variant={isActive ? "primary" : "secondary"}
+                        className="h-8 rounded-full px-3 text-xs"
+                        draggable
+                        onDragStart={(event) => handleBenefitDragStart(benefit, event)}
+                        onClick={() =>
+                          setActiveBenefit(isActive ? null : benefit)
+                        }
+                      >
+                        {benefit.title}
+                      </Button>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -812,14 +846,15 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
               }}
             >
               <div className="bg-white p-2 text-slate-700">{"\uD0C0\uC784\uC138\uC77C"}</div>
-              {slots.map((slot) => (
-                <div
-                  key={`deal-slot-${slot}`}
-                  className="bg-white p-2 border-l border-slate-100"
-                  onDragOver={(event) => event.preventDefault()}
-                  onDrop={(event) => handleBenefitDrop(slot, event)}
-                />
-              ))}
+                {slots.map((slot) => (
+                  <div
+                    key={`deal-slot-${slot}`}
+                    className="bg-white p-2 border-l border-slate-100"
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={(event) => handleBenefitDrop(slot, event)}
+                    onClick={() => createDealFromSlot(slot)}
+                  />
+                ))}
               {timeDealsForDate.map((deal) => {
                 const start = toMinutes(deal.start_time);
                 const end = toMinutes(deal.end_time);
@@ -1183,6 +1218,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
           </div>
         ) : null}
       </Dialog>
+
     </div>
   );
 }

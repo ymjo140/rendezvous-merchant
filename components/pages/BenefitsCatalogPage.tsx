@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -225,6 +226,22 @@ const fallbackBenefits: Benefit[] = [
 ];
 
 export function BenefitsCatalogPage({ storeId }: { storeId?: string }) {
+  const pathname = usePathname();
+  const effectiveStoreId = useMemo(() => {
+    if (storeId && storeId !== "undefined" && storeId !== "null") return storeId;
+    const parts = pathname?.split("/").filter(Boolean) ?? [];
+    const storesIndex = parts.indexOf("stores");
+    if (storesIndex >= 0 && parts[storesIndex + 1]) {
+      const candidate = parts[storesIndex + 1];
+      if (candidate && candidate !== "undefined" && candidate !== "null") {
+        return candidate;
+      }
+    }
+    return undefined;
+  }, [storeId, pathname]);
+  const [resolvedStoreId, setResolvedStoreId] = useState<string | undefined>(
+    undefined
+  );
   const [benefits, setBenefits] = useState<Benefit[]>([]);
 
   const {
@@ -266,23 +283,46 @@ export function BenefitsCatalogPage({ storeId }: { storeId?: string }) {
   }, [typeOptions, selectedType, setValue]);
 
   useEffect(() => {
-    const local = loadBenefits(storeId);
+    if (effectiveStoreId) {
+      setResolvedStoreId(effectiveStoreId);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("rendezvous_last_store", effectiveStoreId);
+      }
+      return;
+    }
+    if (typeof window !== "undefined") {
+      const lastStore = window.localStorage.getItem("rendezvous_last_store");
+      if (lastStore) {
+        setResolvedStoreId(lastStore);
+      }
+    }
+  }, [effectiveStoreId]);
+
+  useEffect(() => {
+    const local = loadBenefits(resolvedStoreId);
     if (local && local.length > 0) {
       setBenefits(local);
-    } else {
-      setBenefits(fallbackBenefits);
+      return;
     }
-  }, [storeId]);
+    const fallback = loadBenefits();
+    if (fallback && fallback.length > 0) {
+      setBenefits(fallback);
+      saveBenefits(resolvedStoreId, fallback);
+      return;
+    }
+    setBenefits(fallbackBenefits);
+    saveBenefits(resolvedStoreId, fallbackBenefits);
+  }, [resolvedStoreId]);
 
   useEffect(() => {
     let active = true;
     async function load() {
-      if (!storeId || !baseURL) return;
+      if (!resolvedStoreId || !baseURL) return;
       try {
-        const data = await fetchWithAuth<Benefit[]>(endpoints.benefits(storeId));
+        const data = await fetchWithAuth<Benefit[]>(endpoints.benefits(resolvedStoreId));
         if (active && Array.isArray(data)) {
           setBenefits(data);
-          saveBenefits(storeId, data);
+          saveBenefits(resolvedStoreId, data);
         }
       } catch {
         // keep local fallback
@@ -292,7 +332,7 @@ export function BenefitsCatalogPage({ storeId }: { storeId?: string }) {
     return () => {
       active = false;
     };
-  }, [storeId]);
+  }, [resolvedStoreId]);
 
   async function onSubmit(values: BenefitFormValues) {
     const nextBenefit: Benefit = {
@@ -304,10 +344,10 @@ export function BenefitsCatalogPage({ storeId }: { storeId?: string }) {
       active: true,
     };
 
-    if (!storeId || !baseURL) {
+    if (!resolvedStoreId || !baseURL) {
       setBenefits((prev) => {
         const next = [nextBenefit, ...prev];
-        saveBenefits(storeId, next);
+        saveBenefits(resolvedStoreId, next);
         return next;
       });
       reset({
@@ -320,13 +360,13 @@ export function BenefitsCatalogPage({ storeId }: { storeId?: string }) {
     }
 
     try {
-      await fetchWithAuth(endpoints.benefits(storeId), {
+      await fetchWithAuth(endpoints.benefits(resolvedStoreId), {
         method: "POST",
         body: JSON.stringify(nextBenefit),
       });
       setBenefits((prev) => {
         const next = [nextBenefit, ...prev];
-        saveBenefits(storeId, next);
+        saveBenefits(resolvedStoreId, next);
         return next;
       });
       reset({
@@ -338,7 +378,7 @@ export function BenefitsCatalogPage({ storeId }: { storeId?: string }) {
     } catch {
       setBenefits((prev) => {
         const next = [nextBenefit, ...prev];
-        saveBenefits(storeId, next);
+        saveBenefits(resolvedStoreId, next);
         return next;
       });
       reset({
@@ -360,10 +400,10 @@ export function BenefitsCatalogPage({ storeId }: { storeId?: string }) {
       return next;
     });
 
-    if (!storeId || !baseURL) return;
+    if (!resolvedStoreId || !baseURL) return;
 
     try {
-      await fetchWithAuth(endpoints.benefits(storeId), {
+      await fetchWithAuth(endpoints.benefits(resolvedStoreId), {
         method: "DELETE",
         body: JSON.stringify({ id: targetId }),
       });
