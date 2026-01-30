@@ -488,7 +488,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
         </div>
       ) : null}
 
-      {view === "scheduler" && filtered.length > 0 && (
+      {view === "scheduler" && (
         <div className="space-y-3">
           <div className="text-sm text-slate-500">
             빈 시간대는 AI가 예약을 추천할 수 있는 슬롯입니다.
@@ -596,7 +596,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
         </div>
       )}
 
-      {view === "list" && filtered.length > 0 && (
+      {view === "list" && (
         <Table>
           <thead>
             <tr>
@@ -610,36 +610,46 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((row) => (
-              <tr key={row.id}>
-                <Td>{row.id}</Td>
-                <Td>
-                  <div className="flex items-center gap-2">
-                    <span>{row.guestName}</span>
-                    {row.source === "external" ? (
-                      <Badge className="bg-slate-200 text-slate-600">외부</Badge>
-                    ) : null}
+            {filtered.length === 0 ? (
+              <tr>
+                <Td colSpan={7}>
+                  <div className="py-6 text-center text-sm text-slate-500">
+                    선택한 날짜에 예약이 없습니다.
                   </div>
                 </Td>
-                <Td>{row.partySize}</Td>
-                <Td>{row.date}</Td>
-                <Td>
-                  {row.start_time.slice(11, 16)}~{row.end_time.slice(11, 16)}
-                </Td>
-                <Td>
-                  <span
-                    className={`rounded-full px-2 py-1 text-xs ${statusStyles[row.status]}`}
-                  >
-                    {statusLabelMap[row.status]}
-                  </span>
-                </Td>
-                <Td>
-                  <Button variant="ghost" onClick={() => openDetail(row)}>
-                    상세
-                  </Button>
-                </Td>
               </tr>
-            ))}
+            ) : (
+              filtered.map((row) => (
+                <tr key={row.id}>
+                  <Td>{row.id}</Td>
+                  <Td>
+                    <div className="flex items-center gap-2">
+                      <span>{row.guestName}</span>
+                      {row.source === "external" ? (
+                        <Badge className="bg-slate-200 text-slate-600">외부</Badge>
+                      ) : null}
+                    </div>
+                  </Td>
+                  <Td>{row.partySize}</Td>
+                  <Td>{row.date}</Td>
+                  <Td>
+                    {row.start_time.slice(11, 16)}~{row.end_time.slice(11, 16)}
+                  </Td>
+                  <Td>
+                    <span
+                      className={`rounded-full px-2 py-1 text-xs ${statusStyles[row.status]}`}
+                    >
+                      {statusLabelMap[row.status]}
+                    </span>
+                  </Td>
+                  <Td>
+                    <Button variant="ghost" onClick={() => openDetail(row)}>
+                      상세
+                    </Button>
+                  </Td>
+                </tr>
+              ))
+            )}
           </tbody>
         </Table>
       )}
