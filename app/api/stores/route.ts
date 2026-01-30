@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export async function POST(request: Request) {
   try {
@@ -13,7 +13,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "name is required" }, { status: 400 });
     }
 
-    if (!process.env.SUPABASE_SERVICE_KEY) {
+    const supabaseAdmin = getSupabaseAdmin();
+    if (!supabaseAdmin) {
       return NextResponse.json(
         { error: "SUPABASE_SERVICE_KEY missing" },
         { status: 500 }
