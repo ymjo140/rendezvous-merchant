@@ -8,23 +8,23 @@ import { BenefitType } from "@/domain/offers/types";
 const mockRules = [
   {
     id: "1",
-    name: "?됱씪 ???4??猷?,
+    name: "\uD3C9\uC77C \uC800\uB141 4\uC778 \uB8F0",
     benefitType: BenefitType.TIME_EXTENSION,
-    benefitValue: "30遺?,
+    benefitValue: "30\uBD84",
     visibility: "public" as const,
   },
   {
     id: "2",
-    name: "二쇰쭚 ?먯떖 猷?,
+    name: "\uC8FC\uB9D0 \uC810\uC2EC \uB8F0",
     benefitType: BenefitType.SPACE_UPGRADE,
-    benefitValue: "4?몄떎 ??6?몄떎",
+    benefitValue: "4\uC778\uC2E4 \u2192 6\uC778\uC2E4",
     visibility: "private" as const,
   },
   {
     id: "3",
-    name: "?숈깮 硫붾돱 ?쒖븞",
+    name: "\uD559\uC0DD \uBA54\uB274 \uC81C\uC548",
     benefitType: BenefitType.FREE_MENU_ITEM,
-    benefitValue: "?뚮즺 1??,
+    benefitValue: "\uC74C\uB8CC 1\uC794",
     visibility: "public" as const,
   },
 ];
@@ -32,29 +32,29 @@ const mockRules = [
 function buildBenefitMessage(type: BenefitType, value: string) {
   switch (type) {
     case BenefitType.TIME_EXTENSION:
-      return `???댁슜 ?쒓컙 ${value || "30遺?} ?곗옣 ?쒗깮!`;
+      return `\u23F0 \uC774\uC6A9 \uC2DC\uAC04 ${value || "30\uBD84"} \uC5F0\uC7A5 \uD61C\uD0DD!`;
     case BenefitType.EARLY_ACCESS:
-      return `??${value || "10遺?} ?쇱컢 ?낆옣 ?쒗깮!`;
+      return `\u23F0 ${value || "10\uBD84"} \uC77C\uCC0D \uC785\uC7A5 \uD61C\uD0DD!`;
     case BenefitType.LATE_CHECKOUT:
-      return `??${value || "10遺?} ??쾶 泥댄겕?꾩썐 ?쒗깮!`;
+      return `\u23F0 ${value || "10\uBD84"} \uB291\uAC8C \uCCB4\uD06C\uC544\uC6C3 \uD61C\uD0DD!`;
     case BenefitType.SPACE_UPGRADE:
-      return `??${value || "猷??낃렇?덉씠??} 臾대즺 ?낃렇?덉씠??`;
+      return `\u2728 ${value || "\uB8F8/\uC88C\uC11D \uC5C5\uADF8\uB808\uC774\uB4DC"} \uBB34\uB8CC \uC5C5\uADF8\uB808\uC774\uB4DC!`;
     case BenefitType.FREE_EQUIPMENT:
-      return `??${value || "?λ퉬"} ????쒗깮!`;
+      return `\u2728 ${value || "\uC7A5\uBE44"} \uB300\uC5EC \uD61C\uD0DD!`;
     case BenefitType.CORKAGE_FREE:
-      return "??肄쒗궎吏 ?꾨━ ?쒗깮!";
+      return "\u2728 \uCF5C\uD0A4\uC9C0 \uD504\uB9AC \uD61C\uD0DD!";
     case BenefitType.FREE_MENU_ITEM:
-      return `?럞 ${value || "硫붾돱 利앹젙"} ?쒗깮!`;
+      return `\uD83C\uDF81 ${value || "\uBA54\uB274 \uC99D\uC815"} \uD61C\uD0DD!`;
     case BenefitType.SIZE_UPGRADE:
-      return `?럞 ${value || "?ъ씠利덉뾽"} ?쒗깮!`;
+      return `\uD83C\uDF81 ${value || "\uC0AC\uC774\uC988\uC5C5"} \uD61C\uD0DD!`;
     case BenefitType.UNLIMITED_REFILL:
-      return "?럞 臾댁젣??由ы븘 ?쒗깮!";
+      return "\uD83C\uDF81 \uBB34\uC81C\uD55C \uB9AC\uD544 \uD61C\uD0DD!";
     case BenefitType.PERCENT_DISCOUNT:
-      return `?뮯 ${value || "10%"} ?좎씤 ?쒗깮!`;
+      return `\uD83D\uDCB8 ${value || "10%"} \uD560\uC778 \uD61C\uD0DD!`;
     case BenefitType.FIXED_AMOUNT_OFF:
-      return `?뮯 ${value || "5000??} ?좎씤 ?쒗깮!`;
+      return `\uD83D\uDCB8 ${value || "5000\uC6D0"} \uD560\uC778 \uD61C\uD0DD!`;
     default:
-      return value || "?쒗깮";
+      return value || "\uD61C\uD0DD";
   }
 }
 
@@ -71,9 +71,9 @@ export function RuleSimulatorPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold">猷??쒕??덉씠??/h1>
+        <h1 className="text-2xl font-semibold">{"\uB8F0 \uC2DC\uBBAC\uB808\uC774\uD130"}</h1>
         <p className="text-sm text-slate-500">
-          猷곗쓣 ?좏깮?섎㈃ ?ㅼ젣 移대뱶 UI濡??대뼸寃?蹂댁씠?붿? ?뺤씤?????덉뼱??
+          {"\uB8F0\uC744 \uC120\uD0DD\uD558\uBA74 \uC2E4\uC81C \uCE74\uB4DC \uC2DC\uAC01\uD654\uB85C \uBCF4\uC5EC\uC9D1\uB2C8\uB2E4."}
         </p>
       </div>
       <div className="flex flex-wrap gap-2">
@@ -98,4 +98,3 @@ export function RuleSimulatorPage() {
     </div>
   );
 }
-

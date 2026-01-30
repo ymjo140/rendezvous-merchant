@@ -96,9 +96,12 @@ const mockUnits: TableUnit[] = [
   },
 ];
 
+const mockStoreId = "dev-store";
+
 const mockReservations: ReservationEntry[] = [
   {
     id: "R-101",
+    store_id: mockStoreId,
     guestName: "\uAE40\uBBFC\uC218",
     partySize: 4,
     date: "2026-02-01",
@@ -111,6 +114,7 @@ const mockReservations: ReservationEntry[] = [
   },
   {
     id: "R-102",
+    store_id: mockStoreId,
     guestName: "\uC774\uC9C0\uD604",
     partySize: 2,
     date: "2026-02-01",
@@ -123,6 +127,7 @@ const mockReservations: ReservationEntry[] = [
   },
   {
     id: "R-103",
+    store_id: mockStoreId,
     guestName: "\uBC15\uC131\uC900",
     partySize: 6,
     date: "2026-02-01",
@@ -135,6 +140,7 @@ const mockReservations: ReservationEntry[] = [
   },
   {
     id: "R-104",
+    store_id: mockStoreId,
     guestName: "\uB124\uC774\uBC84 \uC608\uC57D(\uAE40\uCCA0\uC218)",
     partySize: 2,
     date: "2026-02-01",
@@ -147,6 +153,7 @@ const mockReservations: ReservationEntry[] = [
   },
   {
     id: "R-201",
+    store_id: mockStoreId,
     guestName: "\uCD5C\uD558\uB9BC",
     partySize: 2,
     date: "2026-02-02",
@@ -159,6 +166,7 @@ const mockReservations: ReservationEntry[] = [
   },
   {
     id: "R-202",
+    store_id: mockStoreId,
     guestName: "\uBC15\uC9C4\uC6C5",
     partySize: 4,
     date: "2026-02-02",
@@ -171,6 +179,7 @@ const mockReservations: ReservationEntry[] = [
   },
   {
     id: "R-203",
+    store_id: mockStoreId,
     guestName: "\uC724\uC9C4\uC11C",
     partySize: 3,
     date: "2026-02-02",
@@ -183,6 +192,7 @@ const mockReservations: ReservationEntry[] = [
   },
   {
     id: "R-204",
+    store_id: mockStoreId,
     guestName: "\uAD6C\uAE00 \uCE98\uB9B0\uB354 \uC678\uBD80\uC608\uC57D",
     partySize: 4,
     date: "2026-02-02",
@@ -195,6 +205,7 @@ const mockReservations: ReservationEntry[] = [
   },
   {
     id: "R-301",
+    store_id: mockStoreId,
     guestName: "\uD64D\uB3C4\uD61C",
     partySize: 5,
     date: "2026-02-03",
@@ -207,6 +218,7 @@ const mockReservations: ReservationEntry[] = [
   },
   {
     id: "R-302",
+    store_id: mockStoreId,
     guestName: "\uAC15\uC720\uC9C4",
     partySize: 2,
     date: "2026-02-03",

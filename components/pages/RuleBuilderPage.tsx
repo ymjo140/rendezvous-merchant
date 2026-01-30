@@ -13,37 +13,45 @@ import { BenefitType } from "@/domain/offers/types";
 import { useBenefits } from "@/lib/hooks/useBenefits";
 import { useRules } from "@/lib/hooks/useRules";
 
-const dayLabels = ["??, "??, "??, "紐?, "湲?, "??, "??];
+const dayLabels = [
+  "\uC6D4",
+  "\uD654",
+  "\uC218",
+  "\uBAA9",
+  "\uAE08",
+  "\uD1A0",
+  "\uC77C",
+];
 
 const benefitTypes = [
-  { value: BenefitType.FREE_MENU_ITEM, label: "硫붾돱 利앹젙" },
-  { value: BenefitType.SPACE_UPGRADE, label: "猷?醫뚯꽍 ?낃렇?덉씠?? },
-  { value: BenefitType.TIME_EXTENSION, label: "?쒓컙 ?곗옣" },
-  { value: BenefitType.PERCENT_DISCOUNT, label: "?뺣쪧 ?좎씤" },
-  { value: BenefitType.FIXED_AMOUNT_OFF, label: "?뺤븸 ?좎씤" },
+  { value: BenefitType.FREE_MENU_ITEM, label: "\uBA54\uB274 \uC99D\uC815" },
+  { value: BenefitType.SPACE_UPGRADE, label: "\uB8F8/\uC88C\uC11D \uC5C5\uADF8\uB808\uC774\uB4DC" },
+  { value: BenefitType.TIME_EXTENSION, label: "\uC2DC\uAC04 \uC5F0\uC7A5" },
+  { value: BenefitType.PERCENT_DISCOUNT, label: "\uC815\uB960 \uD560\uC778" },
+  { value: BenefitType.FIXED_AMOUNT_OFF, label: "\uC815\uC561 \uD560\uC778" },
 ];
 
 const benefitTypeLabelMap: Record<BenefitType, string> = {
-  [BenefitType.PERCENT_DISCOUNT]: "?뺣쪧 ?좎씤",
-  [BenefitType.FIXED_AMOUNT_OFF]: "?뺤븸 ?좎씤",
-  [BenefitType.FREE_MENU_ITEM]: "硫붾돱 利앹젙",
-  [BenefitType.SIZE_UPGRADE]: "?ъ씠利덉뾽",
-  [BenefitType.UNLIMITED_REFILL]: "臾댁젣??由ы븘",
-  [BenefitType.TIME_EXTENSION]: "?쒓컙 ?곗옣",
-  [BenefitType.EARLY_ACCESS]: "?쇰━ 泥댄겕??,
-  [BenefitType.LATE_CHECKOUT]: "?덉씠??泥댄겕?꾩썐",
-  [BenefitType.SPACE_UPGRADE]: "猷?醫뚯꽍 ?낃렇?덉씠??,
-  [BenefitType.FREE_EQUIPMENT]: "?λ퉬 ???,
-  [BenefitType.CORKAGE_FREE]: "肄쒗궎吏 ?꾨━",
+  [BenefitType.PERCENT_DISCOUNT]: "\uC815\uB960 \uD560\uC778",
+  [BenefitType.FIXED_AMOUNT_OFF]: "\uC815\uC561 \uD560\uC778",
+  [BenefitType.FREE_MENU_ITEM]: "\uBA54\uB274 \uC99D\uC815",
+  [BenefitType.SIZE_UPGRADE]: "\uC0AC\uC774\uC988\uC5C5",
+  [BenefitType.UNLIMITED_REFILL]: "\uBB34\uC81C\uD55C \uB9AC\uD544",
+  [BenefitType.TIME_EXTENSION]: "\uC2DC\uAC04 \uC5F0\uC7A5",
+  [BenefitType.EARLY_ACCESS]: "\uC5BC\uB9AC \uCCB4\uD06C\uC778",
+  [BenefitType.LATE_CHECKOUT]: "\uB808\uC774\uD2B8 \uCCB4\uD06C\uC544\uC6C3",
+  [BenefitType.SPACE_UPGRADE]: "\uB8F8/\uC88C\uC11D \uC5C5\uADF8\uB808\uC774\uB4DC",
+  [BenefitType.FREE_EQUIPMENT]: "\uC7A5\uBE44 \uB300\uC5EC",
+  [BenefitType.CORKAGE_FREE]: "\uCF5C\uD0A4\uC9C0 \uD504\uB9AC",
 };
 
 const mockBenefits = [
-  { id: "1", title: "?뚮즺 1??, type: BenefitType.FREE_MENU_ITEM },
-  { id: "2", title: "李쎄? 醫뚯꽍", type: BenefitType.SPACE_UPGRADE },
+  { id: "1", title: "\uC74C\uB8CC 1\uC794", type: BenefitType.FREE_MENU_ITEM },
+  { id: "2", title: "\uCC3D\uAC00 \uC88C\uC11D", type: BenefitType.SPACE_UPGRADE },
 ];
 
 const mockRule = {
-  name: "?됱씪 ???4??,
+  name: "\uD3C9\uC77C \uC800\uB141 4\uC778 \uB8F0",
   days: [true, true, true, true, false, false, false],
   timeBlocks: [{ start: "18:00", end: "20:00" }],
   partyMin: "4",
@@ -52,7 +60,7 @@ const mockRule = {
   leadMax: "240",
   benefitId: "1",
   benefitType: BenefitType.FREE_MENU_ITEM,
-  benefitValue: "?뚮즺 1??,
+  benefitValue: "\uC74C\uB8CC 1\uC794",
   dailyCap: "20",
   minSpend: "30000",
   visibility: "public",
@@ -77,46 +85,6 @@ type RuleResponse = {
   visibility?: "public" | "private";
 };
 
-const presets = [
-  {
-    key: "rainy",
-    label: "?뙢截?鍮꾩삤????怨듭떎 梨꾩슦湲?,
-    apply: (setters: PresetSetters) => {
-      setters.setName("鍮꾩삤????踰덇컻");
-      setters.setBenefitType(BenefitType.FREE_MENU_ITEM);
-      setters.setBenefitValue("??留됯구由?);
-      setters.setPartyMin("2");
-      setters.setPartyMax("4");
-      setters.setLeadMin("0");
-      setters.setLeadMax("1440");
-    },
-  },
-  {
-    key: "group",
-    label: "?뫅?랅윉⒱랅윉㎮랅윉??⑥껜 ?뚯떇 ?좎튂",
-    apply: (setters: PresetSetters) => {
-      setters.setName("?⑥껜 ?뚯떇 ?곕?");
-      setters.setBenefitType(BenefitType.FREE_MENU_ITEM);
-      setters.setBenefitValue("?뚯＜ 2蹂?);
-      setters.setPartyMin("6");
-      setters.setPartyMax("12");
-      setters.setMinSpend("100000");
-    },
-  },
-  {
-    key: "closing",
-    label: "??留덇컧 吏곸쟾 ??꾩꽭??,
-    apply: (setters: PresetSetters) => {
-      setters.setName("留덇컧 ?⑥씠 ?좎씤");
-      setters.setBenefitType(BenefitType.PERCENT_DISCOUNT);
-      setters.setBenefitValue("20%");
-      setters.setTimeBlocks([{ start: "21:00", end: "23:00" }]);
-      setters.setLeadMin("30");
-      setters.setLeadMax("240");
-    },
-  },
-];
-
 type PresetSetters = {
   setName: (value: string) => void;
   setBenefitType: (value: BenefitType) => void;
@@ -129,32 +97,72 @@ type PresetSetters = {
   setMinSpend: (value: string) => void;
 };
 
+const presets = [
+  {
+    key: "rainy",
+    label: "\u26A1 \uBE44\uC624\uB294 \uB0A0 \uACF5\uC2E4 \uCC44\uC6B0\uAE30",
+    apply: (setters: PresetSetters) => {
+      setters.setName("\uBE44\uC624\uB294 \uB0A0 \uBC88\uAC1C");
+      setters.setBenefitType(BenefitType.FREE_MENU_ITEM);
+      setters.setBenefitValue("\uC804/\uB9C9\uAC78\uB9AC");
+      setters.setPartyMin("2");
+      setters.setPartyMax("4");
+      setters.setLeadMin("0");
+      setters.setLeadMax("1440");
+    },
+  },
+  {
+    key: "group",
+    label: "\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67\u200D\uD83D\uDC66 \uB2E8\uCCB4 \uD68C\uC2DD \uC720\uCE58",
+    apply: (setters: PresetSetters) => {
+      setters.setName("\uB2E8\uCCB4 \uD68C\uC2DD \uC6B0\uB300");
+      setters.setBenefitType(BenefitType.FREE_MENU_ITEM);
+      setters.setBenefitValue("\uC18C\uC8FC 2\uBCD1");
+      setters.setPartyMin("6");
+      setters.setPartyMax("12");
+      setters.setMinSpend("100000");
+    },
+  },
+  {
+    key: "closing",
+    label: "\u23F0 \uB9C8\uAC10 \uC9C1\uC804 \uD0C0\uC784\uC138\uC77C",
+    apply: (setters: PresetSetters) => {
+      setters.setName("\uB9C8\uAC10 \uB5A8\uC774 \uD560\uC778");
+      setters.setBenefitType(BenefitType.PERCENT_DISCOUNT);
+      setters.setBenefitValue("20%");
+      setters.setTimeBlocks([{ start: "21:00", end: "23:00" }]);
+      setters.setLeadMin("30");
+      setters.setLeadMax("240");
+    },
+  },
+];
+
 function buildBenefitMessage(type: BenefitType, value: string) {
   switch (type) {
     case BenefitType.TIME_EXTENSION:
-      return `???댁슜 ?쒓컙 ${value || "30遺?} ?곗옣 ?쒗깮!`;
+      return `\u23F0 \uC774\uC6A9 \uC2DC\uAC04 ${value || "30\uBD84"} \uC5F0\uC7A5 \uD61C\uD0DD!`;
     case BenefitType.EARLY_ACCESS:
-      return `??${value || "10遺?} ?쇱컢 ?낆옣 ?쒗깮!`;
+      return `\u23F0 ${value || "10\uBD84"} \uC77C\uCC0D \uC785\uC7A5 \uD61C\uD0DD!`;
     case BenefitType.LATE_CHECKOUT:
-      return `??${value || "10遺?} ??쾶 泥댄겕?꾩썐 ?쒗깮!`;
+      return `\u23F0 ${value || "10\uBD84"} \uB291\uAC8C \uCCB4\uD06C\uC544\uC6C3 \uD61C\uD0DD!`;
     case BenefitType.SPACE_UPGRADE:
-      return `??${value || "猷??낃렇?덉씠??} 臾대즺 ?낃렇?덉씠??`;
+      return `\u2728 ${value || "\uB8F8/\uC88C\uC11D \uC5C5\uADF8\uB808\uC774\uB4DC"} \uBB34\uB8CC \uC5C5\uADF8\uB808\uC774\uB4DC!`;
     case BenefitType.FREE_EQUIPMENT:
-      return `??${value || "?λ퉬"} ????쒗깮!`;
+      return `\u2728 ${value || "\uC7A5\uBE44"} \uB300\uC5EC \uD61C\uD0DD!`;
     case BenefitType.CORKAGE_FREE:
-      return "??肄쒗궎吏 ?꾨━ ?쒗깮!";
+      return "\u2728 \uCF5C\uD0A4\uC9C0 \uD504\uB9AC \uD61C\uD0DD!";
     case BenefitType.FREE_MENU_ITEM:
-      return `?럞 ${value || "硫붾돱 利앹젙"} ?쒗깮!`;
+      return `\uD83C\uDF81 ${value || "\uBA54\uB274 \uC99D\uC815"} \uD61C\uD0DD!`;
     case BenefitType.SIZE_UPGRADE:
-      return `?럞 ${value || "?ъ씠利덉뾽"} ?쒗깮!`;
+      return `\uD83C\uDF81 ${value || "\uC0AC\uC774\uC988\uC5C5"} \uD61C\uD0DD!`;
     case BenefitType.UNLIMITED_REFILL:
-      return "?럞 臾댁젣??由ы븘 ?쒗깮!";
+      return "\uD83C\uDF81 \uBB34\uC81C\uD55C \uB9AC\uD544 \uD61C\uD0DD!";
     case BenefitType.PERCENT_DISCOUNT:
-      return `?뮯 ${value || "10%"} ?좎씤 ?쒗깮!`;
+      return `\uD83D\uDCB8 ${value || "10%"} \uD560\uC778 \uD61C\uD0DD!`;
     case BenefitType.FIXED_AMOUNT_OFF:
-      return `?뮯 ${value || "5000??} ?좎씤 ?쒗깮!`;
+      return `\uD83D\uDCB8 ${value || "5000\uC6D0"} \uD560\uC778 \uD61C\uD0DD!`;
     default:
-      return value || "?쒗깮";
+      return value || "\uD61C\uD0DD";
   }
 }
 
@@ -176,6 +184,7 @@ export function RuleBuilderPage({
   const storeCategory = "\uC2DD\uB2F9/\uBC25\uC9D1";
   const { data: benefitRows = [] } = useBenefits(resolvedStoreId);
   const { data: ruleRows = [], createRule, updateRule } = useRules(resolvedStoreId);
+
   const [step, setStep] = useState(1);
   const [name, setName] = useState("");
   const [days, setDays] = useState([true, true, true, true, false, false, false]);
@@ -230,6 +239,7 @@ export function RuleBuilderPage({
           return;
         }
       }
+
       if (!resolvedStoreId || resolvedStoreId === "default" || !ruleId || !baseURL) {
         if (ruleId) {
           setName(mockRule.name);
@@ -299,10 +309,10 @@ export function RuleBuilderPage({
         .map((block) => `${block.start}~${block.end}`)
         .join(", "),
       partySize: `${partyMin}~${partyMax}`,
-      leadTime: `${leadMin}~${leadMax} 遺?,
+      leadTime: `${leadMin}~${leadMax} \uBD84`,
       benefit: benefit ? benefit.title : benefitTypeLabelMap[benefitType],
       benefitValue,
-      guardrails: `?섎（ ?좎갑??${dailyCap}?, 理쒖냼 寃곗젣 湲덉븸 ${minSpend}??,
+      guardrails: `\uD558\uB8E8 \uC120\uCC29\uC21C ${dailyCap}\uD300, \uCD5C\uC18C \uACB0\uC81C \uAE08\uC561 ${minSpend}\uC6D0`,
       visibility,
       benefitType: benefit?.type ?? benefitType,
     };
@@ -359,7 +369,8 @@ export function RuleBuilderPage({
 
     try {
       if (ruleId) {
-        await updateRule.mutateAsync({ id: String(ruleRow.id), ...ruleRow });
+        const { id, ...payload } = ruleRow;
+        await updateRule.mutateAsync({ id: String(id), ...payload });
       } else {
         await createRule.mutateAsync(ruleRow);
       }
@@ -406,19 +417,20 @@ export function RuleBuilderPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">猷?鍮뚮뜑</h1>
+          <h1 className="text-2xl font-semibold">{"\uB8F0 \uBE4C\uB354"}</h1>
           <p className="text-sm text-slate-500">
-            議곌굔 / ?쒗깮 / ?곸꽭 議곌굔 ?ㅼ젙 / 誘몃━蹂닿린
+            {"\uC870\uAC74 / \uD61C\uD0DD / \uC0C1\uC138 \uC870\uAC74 \uC124\uC815 / \uBBF8\uB9AC\uBCF4\uAE30"}
           </p>
         </div>
-        <Button onClick={handleSave}>???/Button>
+        <Button onClick={handleSave}>{"\uC800\uC7A5"}</Button>
       </div>
       <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-4">
-        <div className="text-sm font-medium">?④퀎 {step}</div>
+        <div className="text-sm font-medium">{`\uB2E8\uACC4 ${step}`}</div>
         {step === 1 && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <div className="text-sm font-medium">???먯＜ ?곕뒗 洹쒖튃 遺덈윭?ㅺ린</div>
+              <div className="text-sm font-medium">{"[0m"}</div>
+              <div className="text-sm font-medium">{"\u26A1 \uC790\uC8FC \uC4F0\uB294 \uADDC\uCE59 \uBD88\uB7EC\uC624\uAE30"}</div>
               <div className="flex flex-wrap gap-2">
                 {presets.map((preset) => (
                   <Button
@@ -433,15 +445,15 @@ export function RuleBuilderPage({
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">洹쒖튃 ?대쫫</label>
+              <label className="text-sm font-medium">{"\uADDC\uCE59 \uC774\uB984"}</label>
               <Input
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                placeholder="?됱씪 ???4??
+                placeholder="\uD3C9\uC77C \uC800\uB141 4\uC778 \uB8F0"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">?붿씪</label>
+              <label className="text-sm font-medium">{"\uC694\uC77C"}</label>
               <div className="flex flex-wrap gap-2">
                 {dayLabels.map((label, index) => (
                   <label key={label} className="flex items-center gap-1 text-sm">
@@ -460,7 +472,7 @@ export function RuleBuilderPage({
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">?곸슜???쒓컙?</label>
+              <label className="text-sm font-medium">{"\uC801\uC6A9\uD560 \uC2DC\uAC04\uB300"}</label>
               <div className="space-y-2">
                 {timeBlocks.map((block, index) => (
                   <div key={`${block.start}-${index}`} className="flex gap-2">
@@ -496,7 +508,7 @@ export function RuleBuilderPage({
                         setTimeBlocks((prev) => prev.filter((_, idx) => idx !== index))
                       }
                     >
-                      ??젣
+                      {"\uC0AD\uC81C"}
                     </Button>
                   </div>
                 ))}
@@ -507,12 +519,12 @@ export function RuleBuilderPage({
                   setTimeBlocks((prev) => [...prev, { start: "18:00", end: "20:00" }])
                 }
               >
-                ?쒓컙? 異붽?
+                {"\uC2DC\uAC04\uB300 \uCD94\uAC00"}
               </Button>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-sm font-medium">?몄썝 ?쒗븳 (理쒖냼)</label>
+                <label className="text-sm font-medium">{"\uC778\uC6D0 \uC81C\uD55C (\uCD5C\uC18C)"}</label>
                 <Input
                   type="number"
                   value={partyMin}
@@ -520,7 +532,7 @@ export function RuleBuilderPage({
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">?몄썝 ?쒗븳 (理쒕?)</label>
+                <label className="text-sm font-medium">{"\uC778\uC6D0 \uC81C\uD55C (\uCD5C\uB300)"}</label>
                 <Input
                   type="number"
                   value={partyMax}
@@ -531,7 +543,7 @@ export function RuleBuilderPage({
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <label className="text-sm font-medium">
-                  ?덉빟 留덇컧 (諛⑸Ц N遺??꾧퉴吏)
+                  {"\uC608\uC57D \uB9C8\uAC10 (\uBC29\uBB38 N\uBD84 \uC804\uAE4C\uC9C0)"}
                 </label>
                 <Input
                   type="number"
@@ -541,7 +553,7 @@ export function RuleBuilderPage({
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">
-                  ?덉빟 ?ㅽ뵂 (諛⑸Ц N遺??꾨???
+                  {"\uC608\uC57D \uC624\uD508 (\uBC29\uBB38 N\uBD84 \uC804\uBD80\uD130)"}
                 </label>
                 <Input
                   type="number"
@@ -555,7 +567,7 @@ export function RuleBuilderPage({
         {step === 2 && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">???쒗깮 遺덈윭?ㅺ린</label>
+              <label className="text-sm font-medium">{"\uB0B4 \uD61C\uD0DD \uBD88\uB7EC\uC624\uAE30"}</label>
               <Select
                 value={benefitId}
                 onChange={(event) => setBenefitId(event.target.value)}
@@ -568,7 +580,7 @@ export function RuleBuilderPage({
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">?쒗깮 醫낅쪟</label>
+              <label className="text-sm font-medium">{"\uD61C\uD0DD \uC885\uB958"}</label>
               <Select
                 value={benefitType}
                 onChange={(event) => setBenefitType(event.target.value as BenefitType)}
@@ -581,11 +593,11 @@ export function RuleBuilderPage({
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">?쒗깮 ?댁슜</label>
+              <label className="text-sm font-medium">{"\uD61C\uD0DD \uB0B4\uC6A9"}</label>
               <Input
                 value={benefitValue}
                 onChange={(event) => setBenefitValue(event.target.value)}
-                placeholder="?? ??留됯구由? 10% ?좎씤"
+                placeholder="\uC608: \uC804/\uB9C9\uAC78\uB9AC, 10% \uD560\uC778"
               />
             </div>
           </div>
@@ -593,21 +605,21 @@ export function RuleBuilderPage({
         {step === 3 && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">?섎（ ?좎갑??(?)</label>
+              <label className="text-sm font-medium">{"\uD558\uB8E8 \uC120\uCC29\uC21C (\uD300)"}</label>
               <Input
                 value={dailyCap}
                 onChange={(event) => setDailyCap(event.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">理쒖냼 寃곗젣 湲덉븸 (媛앸떒媛)</label>
+              <label className="text-sm font-medium">{"\uCD5C\uC18C \uACB0\uC81C \uAE08\uC561 (\uAC1D\uB2E8\uAC00)"}</label>
               <Input
                 value={minSpend}
                 onChange={(event) => setMinSpend(event.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">?곸꽭 議곌굔 ?ㅼ젙</label>
+              <label className="text-sm font-medium">{"\uC0C1\uC138 \uC870\uAC74 \uC124\uC815"}</label>
               <div className="space-y-2 text-sm text-slate-600">
                 <label className="flex items-center gap-2">
                   <input
@@ -617,9 +629,9 @@ export function RuleBuilderPage({
                     checked={visibility === "public"}
                     onChange={() => setVisibility("public")}
                   />
-                  怨듦컻
+                  {"\uACF5\uAC1C"}
                   <span className="text-xs text-slate-500">
-                    ?ル뵜 ??뿉 紐⑤뱺 ?щ엺?먭쾶 ?몄텧?⑸땲?? (怨듭떎 ?닿껐??理쒖쟻)
+                    {"\uD56B\uB51C \uD0ED\uC5D0 \uBAA8\uB4E0 \uC0AC\uB78C\uC5D0\uAC8C \uB178\uCD9C\uD569\uB2C8\uB2E4. (\uACF5\uC2E4 \uD574\uACB0 \uCD5C\uC801)"}
                   </span>
                 </label>
                 <label className="flex items-center gap-2">
@@ -630,10 +642,11 @@ export function RuleBuilderPage({
                     checked={visibility === "private"}
                     onChange={() => setVisibility("private")}
                   />
-                  鍮꾧났媛??쒖븞
+                  {"\uBE44\uACF5\uAC1C \uC81C\uC548"}
                   <span className="text-xs text-slate-500">
-                    ?ル뵜 ??뿉 ?몄텧?섏? ?딄퀬, AI媛 ?곹빀???먮떂?먭쾶留??諛?섍쾶 ?쒖븞?⑸땲??
-                    (釉뚮옖???대?吏 蹂댄샇)
+                    {
+                      "\uD56B\uB51C \uD0ED\uC5D0 \uB178\uCD9C\uD558\uC9C0 \uC54A\uACE0, AI\uAC00 \uC801\uD569\uD55C \uC190\uB2D8\uC5D0\uAC8C\uB9CC \uC81C\uC548\uD569\uB2C8\uB2E4. (\uBE0C\uB79C\uB4DC \uBCF4\uD638)"
+                    }
                   </span>
                 </label>
               </div>
@@ -643,10 +656,10 @@ export function RuleBuilderPage({
         {step === 4 && (
           <Card>
             <CardHeader>
-              <CardTitle>誘몃━蹂닿린</CardTitle>
+              <CardTitle>{"\uBBF8\uB9AC\uBCF4\uAE30"}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-sm text-slate-600">
-              <div>?ъ옣?? ?숈깮?ㅼ뿉寃뚮뒗 ?대젃寃?蹂댁엯?덈떎.</div>
+              <div>{"\uC0AC\uC7A5\uB2D8, \uD559\uC0DD\uB4E4\uC5D0\uAC8C\uB294 \uC774\uB807\uAC8C \uBCF4\uC785\uB2C8\uB2E4."}</div>
               <HotDealCard
                 title={summary.name || "-"}
                 benefit={previewMessage}
@@ -655,11 +668,11 @@ export function RuleBuilderPage({
                 storeName={storeName}
                 category={storeCategory}
               />
-              <div>?붿씪: {summary.days || "-"}</div>
-              <div>?쒓컙?: {summary.timeBlocks || "-"}</div>
-              <div>?몄썝 ?쒗븳: {summary.partySize}</div>
-              <div>?덉빟 留덇컧/?ㅽ뵂: {summary.leadTime}</div>
-              <div>?곸꽭 議곌굔 ?ㅼ젙: {summary.guardrails}</div>
+              <div>{"\uC694\uC77C: "}{summary.days || "-"}</div>
+              <div>{"\uC2DC\uAC04\uB300: "}{summary.timeBlocks || "-"}</div>
+              <div>{"\uC778\uC6D0 \uC81C\uD55C: "}{summary.partySize}</div>
+              <div>{"\uC608\uC57D \uB9C8\uAC10/\uC624\uD508: "}{summary.leadTime}</div>
+              <div>{"\uC0C1\uC138 \uC870\uAC74 \uC124\uC815: "}{summary.guardrails}</div>
             </CardContent>
           </Card>
         )}
@@ -669,23 +682,17 @@ export function RuleBuilderPage({
             onClick={() => setStep((prev) => Math.max(1, prev - 1))}
             disabled={step === 1}
           >
-            ?댁쟾
+            {"\uC774\uC804"}
           </Button>
           {step < 4 ? (
             <Button onClick={() => setStep((prev) => prev + 1)}>
-              ?ㅼ쓬
+              {"\uB2E4\uC74C"}
             </Button>
           ) : (
-            <Button onClick={handleSave}>?꾨즺</Button>
+            <Button onClick={handleSave}>{"\uC644\uB8CC"}</Button>
           )}
         </div>
       </div>
     </div>
   );
 }
-
-
-
-
-
-

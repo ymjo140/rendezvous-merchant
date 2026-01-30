@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
-import type { TableUnit } from "@/domain/stores/types";
 import { useTableUnits, type TableUnitRow } from "@/lib/hooks/useTableUnits";
 
 const initialUnits: TableUnitRow[] = [
@@ -117,7 +116,8 @@ export function CapacityPage({ storeId }: { storeId?: string }) {
     };
 
     if (editingId) {
-      updateUnit.mutate({ id: nextUnit.id, ...nextUnit });
+      const { id, ...payload } = nextUnit;
+      updateUnit.mutate({ id, ...payload });
     } else {
       createUnit.mutate(nextUnit);
     }
@@ -125,15 +125,6 @@ export function CapacityPage({ storeId }: { storeId?: string }) {
     setOpen(false);
     resetForm();
   }
-
-  const units: TableUnit[] = unitRows.map((unit) => ({
-    id: unit.id,
-    name: unit.name,
-    min_capacity: unit.min_capacity,
-    max_capacity: unit.max_capacity,
-    quantity: unit.quantity,
-    is_private: unit.is_private,
-  }));
 
   return (
     <div className="space-y-4">
@@ -148,7 +139,7 @@ export function CapacityPage({ storeId }: { storeId?: string }) {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        {units.map((unit) => (
+        {unitRows.map((unit) => (
           <Card key={unit.id}>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
