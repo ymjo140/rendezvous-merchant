@@ -7,5 +7,6 @@ export type Reservation = {
   start_time: string;
   end_time: string;
   unit_id: string;
-  status: "confirmed" | "pending" | "canceled" | string;
+  status: "confirmed" | "pending" | "cancelled" | "no_show" | "blocked" | string;
+  source?: "internal" | "external" | "manual" | string;
 };

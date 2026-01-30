@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -10,40 +10,40 @@ import { fetchWithAuth, baseURL } from "@/lib/api/client";
 import { endpoints } from "@/lib/api/endpoints";
 import { HotDealCard } from "@/components/offers/HotDealCard";
 import { BenefitType } from "@/domain/offers/types";
-import { loadBenefits } from "@/lib/utils/benefitsStore";
-import { loadRules, saveRules } from "@/lib/utils/rulesStore";
+import { useBenefits } from "@/lib/hooks/useBenefits";
+import { useRules } from "@/lib/hooks/useRules";
 
-const dayLabels = ["월", "화", "수", "목", "금", "토", "일"];
+const dayLabels = ["??, "??, "??, "紐?, "湲?, "??, "??];
 
 const benefitTypes = [
-  { value: BenefitType.FREE_MENU_ITEM, label: "메뉴 증정" },
-  { value: BenefitType.SPACE_UPGRADE, label: "룸/좌석 업그레이드" },
-  { value: BenefitType.TIME_EXTENSION, label: "시간 연장" },
-  { value: BenefitType.PERCENT_DISCOUNT, label: "정률 할인" },
-  { value: BenefitType.FIXED_AMOUNT_OFF, label: "정액 할인" },
+  { value: BenefitType.FREE_MENU_ITEM, label: "硫붾돱 利앹젙" },
+  { value: BenefitType.SPACE_UPGRADE, label: "猷?醫뚯꽍 ?낃렇?덉씠?? },
+  { value: BenefitType.TIME_EXTENSION, label: "?쒓컙 ?곗옣" },
+  { value: BenefitType.PERCENT_DISCOUNT, label: "?뺣쪧 ?좎씤" },
+  { value: BenefitType.FIXED_AMOUNT_OFF, label: "?뺤븸 ?좎씤" },
 ];
 
 const benefitTypeLabelMap: Record<BenefitType, string> = {
-  [BenefitType.PERCENT_DISCOUNT]: "정률 할인",
-  [BenefitType.FIXED_AMOUNT_OFF]: "정액 할인",
-  [BenefitType.FREE_MENU_ITEM]: "메뉴 증정",
-  [BenefitType.SIZE_UPGRADE]: "사이즈업",
-  [BenefitType.UNLIMITED_REFILL]: "무제한 리필",
-  [BenefitType.TIME_EXTENSION]: "시간 연장",
-  [BenefitType.EARLY_ACCESS]: "얼리 체크인",
-  [BenefitType.LATE_CHECKOUT]: "레이트 체크아웃",
-  [BenefitType.SPACE_UPGRADE]: "룸/좌석 업그레이드",
-  [BenefitType.FREE_EQUIPMENT]: "장비 대여",
-  [BenefitType.CORKAGE_FREE]: "콜키지 프리",
+  [BenefitType.PERCENT_DISCOUNT]: "?뺣쪧 ?좎씤",
+  [BenefitType.FIXED_AMOUNT_OFF]: "?뺤븸 ?좎씤",
+  [BenefitType.FREE_MENU_ITEM]: "硫붾돱 利앹젙",
+  [BenefitType.SIZE_UPGRADE]: "?ъ씠利덉뾽",
+  [BenefitType.UNLIMITED_REFILL]: "臾댁젣??由ы븘",
+  [BenefitType.TIME_EXTENSION]: "?쒓컙 ?곗옣",
+  [BenefitType.EARLY_ACCESS]: "?쇰━ 泥댄겕??,
+  [BenefitType.LATE_CHECKOUT]: "?덉씠??泥댄겕?꾩썐",
+  [BenefitType.SPACE_UPGRADE]: "猷?醫뚯꽍 ?낃렇?덉씠??,
+  [BenefitType.FREE_EQUIPMENT]: "?λ퉬 ???,
+  [BenefitType.CORKAGE_FREE]: "肄쒗궎吏 ?꾨━",
 };
 
 const mockBenefits = [
-  { id: "1", title: "음료 1잔", type: BenefitType.FREE_MENU_ITEM },
-  { id: "2", title: "창가 좌석", type: BenefitType.SPACE_UPGRADE },
+  { id: "1", title: "?뚮즺 1??, type: BenefitType.FREE_MENU_ITEM },
+  { id: "2", title: "李쎄? 醫뚯꽍", type: BenefitType.SPACE_UPGRADE },
 ];
 
 const mockRule = {
-  name: "평일 저녁 4인",
+  name: "?됱씪 ???4??,
   days: [true, true, true, true, false, false, false],
   timeBlocks: [{ start: "18:00", end: "20:00" }],
   partyMin: "4",
@@ -52,7 +52,7 @@ const mockRule = {
   leadMax: "240",
   benefitId: "1",
   benefitType: BenefitType.FREE_MENU_ITEM,
-  benefitValue: "음료 1잔",
+  benefitValue: "?뚮즺 1??,
   dailyCap: "20",
   minSpend: "30000",
   visibility: "public",
@@ -80,11 +80,11 @@ type RuleResponse = {
 const presets = [
   {
     key: "rainy",
-    label: "🌧️ 비오는 날 공실 채우기",
+    label: "?뙢截?鍮꾩삤????怨듭떎 梨꾩슦湲?,
     apply: (setters: PresetSetters) => {
-      setters.setName("비오는 날 번개");
+      setters.setName("鍮꾩삤????踰덇컻");
       setters.setBenefitType(BenefitType.FREE_MENU_ITEM);
-      setters.setBenefitValue("전/막걸리");
+      setters.setBenefitValue("??留됯구由?);
       setters.setPartyMin("2");
       setters.setPartyMax("4");
       setters.setLeadMin("0");
@@ -93,11 +93,11 @@ const presets = [
   },
   {
     key: "group",
-    label: "👨‍👩‍👧‍👦 단체 회식 유치",
+    label: "?뫅?랅윉⒱랅윉㎮랅윉??⑥껜 ?뚯떇 ?좎튂",
     apply: (setters: PresetSetters) => {
-      setters.setName("단체 회식 우대");
+      setters.setName("?⑥껜 ?뚯떇 ?곕?");
       setters.setBenefitType(BenefitType.FREE_MENU_ITEM);
-      setters.setBenefitValue("소주 2병");
+      setters.setBenefitValue("?뚯＜ 2蹂?);
       setters.setPartyMin("6");
       setters.setPartyMax("12");
       setters.setMinSpend("100000");
@@ -105,9 +105,9 @@ const presets = [
   },
   {
     key: "closing",
-    label: "⏰ 마감 직전 타임세일",
+    label: "??留덇컧 吏곸쟾 ??꾩꽭??,
     apply: (setters: PresetSetters) => {
-      setters.setName("마감 떨이 할인");
+      setters.setName("留덇컧 ?⑥씠 ?좎씤");
       setters.setBenefitType(BenefitType.PERCENT_DISCOUNT);
       setters.setBenefitValue("20%");
       setters.setTimeBlocks([{ start: "21:00", end: "23:00" }]);
@@ -132,29 +132,29 @@ type PresetSetters = {
 function buildBenefitMessage(type: BenefitType, value: string) {
   switch (type) {
     case BenefitType.TIME_EXTENSION:
-      return `⏰ 이용 시간 ${value || "30분"} 연장 혜택!`;
+      return `???댁슜 ?쒓컙 ${value || "30遺?} ?곗옣 ?쒗깮!`;
     case BenefitType.EARLY_ACCESS:
-      return `⏰ ${value || "10분"} 일찍 입장 혜택!`;
+      return `??${value || "10遺?} ?쇱컢 ?낆옣 ?쒗깮!`;
     case BenefitType.LATE_CHECKOUT:
-      return `⏰ ${value || "10분"} 늦게 체크아웃 혜택!`;
+      return `??${value || "10遺?} ??쾶 泥댄겕?꾩썐 ?쒗깮!`;
     case BenefitType.SPACE_UPGRADE:
-      return `✨ ${value || "룸 업그레이드"} 무료 업그레이드!`;
+      return `??${value || "猷??낃렇?덉씠??} 臾대즺 ?낃렇?덉씠??`;
     case BenefitType.FREE_EQUIPMENT:
-      return `✨ ${value || "장비"} 대여 혜택!`;
+      return `??${value || "?λ퉬"} ????쒗깮!`;
     case BenefitType.CORKAGE_FREE:
-      return "✨ 콜키지 프리 혜택!";
+      return "??肄쒗궎吏 ?꾨━ ?쒗깮!";
     case BenefitType.FREE_MENU_ITEM:
-      return `🎁 ${value || "메뉴 증정"} 혜택!`;
+      return `?럞 ${value || "硫붾돱 利앹젙"} ?쒗깮!`;
     case BenefitType.SIZE_UPGRADE:
-      return `🎁 ${value || "사이즈업"} 혜택!`;
+      return `?럞 ${value || "?ъ씠利덉뾽"} ?쒗깮!`;
     case BenefitType.UNLIMITED_REFILL:
-      return "🎁 무제한 리필 혜택!";
+      return "?럞 臾댁젣??由ы븘 ?쒗깮!";
     case BenefitType.PERCENT_DISCOUNT:
-      return `💸 ${value || "10%"} 할인 혜택!`;
+      return `?뮯 ${value || "10%"} ?좎씤 ?쒗깮!`;
     case BenefitType.FIXED_AMOUNT_OFF:
-      return `💸 ${value || "5000원"} 할인 혜택!`;
+      return `?뮯 ${value || "5000??} ?좎씤 ?쒗깮!`;
     default:
-      return value || "혜택";
+      return value || "?쒗깮";
   }
 }
 
@@ -169,6 +169,13 @@ export function RuleBuilderPage({
   const pathname = usePathname();
   const resolvedStoreId =
     storeId ?? (pathname.match(/\/stores\/([^/]+)/)?.[1] ?? "default");
+  const storeName =
+    resolvedStoreId === "dev-store"
+      ? "\uD14C\uC2A4\uD2B8 \uB9E4\uC7A5"
+      : "\uB370\uBAA8 \uC2A4\uD1A0\uC5B4";
+  const storeCategory = "\uC2DD\uB2F9/\uBC25\uC9D1";
+  const { data: benefitRows = [] } = useBenefits(resolvedStoreId);
+  const { data: ruleRows = [], createRule, updateRule } = useRules(resolvedStoreId);
   const [step, setStep] = useState(1);
   const [name, setName] = useState("");
   const [days, setDays] = useState([true, true, true, true, false, false, false]);
@@ -190,34 +197,39 @@ export function RuleBuilderPage({
   const [catalog, setCatalog] = useState<BenefitItem[]>(mockBenefits);
 
   useEffect(() => {
-    let active = true;
-
-    async function loadCatalog() {
-      const local = loadBenefits(resolvedStoreId);
-      if (local && local.length > 0) {
-        setCatalog(local);
-      }
-      if (!resolvedStoreId || resolvedStoreId === "default" || !baseURL) {
-        if (!local || local.length === 0) {
-          setCatalog(mockBenefits);
-        }
-        return;
-      }
-      try {
-        const data = await fetchWithAuth<BenefitItem[]>(
-          endpoints.benefits(resolvedStoreId)
-        );
-        if (active && Array.isArray(data)) {
-          setCatalog(data);
-        }
-      } catch {
-        if (!local || local.length === 0) {
-          setCatalog(mockBenefits);
-        }
-      }
+    if (benefitRows.length > 0) {
+      setCatalog(
+        benefitRows.map((item) => ({
+          id: item.id,
+          title: item.title,
+          type: item.type,
+        }))
+      );
+    } else {
+      setCatalog(mockBenefits);
     }
 
     async function loadRule() {
+      if (ruleId) {
+        const localTarget = ruleRows.find((item) => String(item.id) === String(ruleId));
+        if (localTarget) {
+          setName(localTarget.name ?? "");
+          setDays(localTarget.days ?? days);
+          setTimeBlocks(localTarget.time_blocks ?? timeBlocks);
+          setPartyMin(String(localTarget.party_min ?? partyMin));
+          setPartyMax(String(localTarget.party_max ?? partyMax));
+          setLeadMin(String(localTarget.lead_min ?? leadMin));
+          setLeadMax(String(localTarget.lead_max ?? leadMax));
+          setBenefitId(String(localTarget.benefit_id ?? benefitId));
+          setBenefitType((localTarget.benefit_type ?? benefitType) as BenefitType);
+          setBenefitValue(String(localTarget.benefit_value ?? benefitValue));
+          const guardrails = localTarget.guardrails ?? {};
+          setDailyCap(String(guardrails.daily_cap ?? dailyCap));
+          setMinSpend(String(guardrails.min_spend ?? minSpend));
+          setVisibility((localTarget.visibility as "public" | "private") ?? "public");
+          return;
+        }
+      }
       if (!resolvedStoreId || resolvedStoreId === "default" || !ruleId || !baseURL) {
         if (ruleId) {
           setName(mockRule.name);
@@ -264,13 +276,8 @@ export function RuleBuilderPage({
       }
     }
 
-    void loadCatalog();
     void loadRule();
-
-    return () => {
-      active = false;
-    };
-  }, [resolvedStoreId, ruleId]);
+  }, [resolvedStoreId, ruleId, benefitRows, ruleRows]);
 
   useEffect(() => {
     if (!catalog.length) return;
@@ -292,10 +299,10 @@ export function RuleBuilderPage({
         .map((block) => `${block.start}~${block.end}`)
         .join(", "),
       partySize: `${partyMin}~${partyMax}`,
-      leadTime: `${leadMin}~${leadMax} 분`,
+      leadTime: `${leadMin}~${leadMax} 遺?,
       benefit: benefit ? benefit.title : benefitTypeLabelMap[benefitType],
       benefitValue,
-      guardrails: `하루 선착순 ${dailyCap}팀, 최소 결제 금액 ${minSpend}원`,
+      guardrails: `?섎（ ?좎갑??${dailyCap}?, 理쒖냼 寃곗젣 湲덉븸 ${minSpend}??,
       visibility,
       benefitType: benefit?.type ?? benefitType,
     };
@@ -331,27 +338,37 @@ export function RuleBuilderPage({
       is_private: visibility === "private",
     };
 
-    const localRule = {
-      id: ruleId ?? `rule-${Date.now()}`,
+    const ruleRow = {
+      id: ruleId ?? crypto.randomUUID(),
+      store_id: resolvedStoreId ?? "dev-store",
       name,
       enabled: true,
       days,
-      timeBlocks,
-      partySize: { min: Number(partyMin), max: Number(partyMax) },
-      leadTime: { min: Number(leadMin), max: Number(leadMax) },
-      benefit: { title: summary.benefit },
+      time_blocks: timeBlocks,
+      party_min: Number(partyMin),
+      party_max: Number(partyMax),
+      lead_min: Number(leadMin),
+      lead_max: Number(leadMax),
+      benefit_id: benefitId,
+      benefit_title: summary.benefit,
+      benefit_type: String(benefitType),
+      benefit_value: benefitValue,
+      guardrails: { daily_cap: Number(dailyCap), min_spend: Number(minSpend) },
+      visibility,
     };
 
-    const existing = loadRules(resolvedStoreId) ?? [];
-    const next = ruleId
-      ? existing.map((item) =>
-          String(item.id) === String(ruleId) ? { ...item, ...localRule } : item
-        )
-      : [localRule, ...existing];
-    saveRules(resolvedStoreId, next);
+    try {
+      if (ruleId) {
+        await updateRule.mutateAsync({ id: String(ruleRow.id), ...ruleRow });
+      } else {
+        await createRule.mutateAsync(ruleRow);
+      }
+    } catch {
+      // ignore
+    }
 
     if (!baseURL || resolvedStoreId === "default") {
-      window.alert("성공적으로 저장되었습니다!");
+      window.alert("\uC131\uACF5\uC801\uC73C\uB85C \uC800\uC7A5\uB418\uC5C8\uC2B5\uB2C8\uB2E4!");
       router.push(`/stores/${resolvedStoreId}/offers/rules`);
       return;
     }
@@ -361,10 +378,10 @@ export function RuleBuilderPage({
         method: ruleId ? "PATCH" : "POST",
         body: JSON.stringify({ id: ruleId, ...payload }),
       });
-      window.alert("성공적으로 저장되었습니다!");
+      window.alert("\uC131\uACF5\uC801\uC73C\uB85C \uC800\uC7A5\uB418\uC5C8\uC2B5\uB2C8\uB2E4!");
       router.push(`/stores/${resolvedStoreId}/offers/rules`);
     } catch {
-      window.alert("서버 저장에 실패했습니다. 로컬에 임시 저장되었습니다.");
+      window.alert("\uC11C\uBC84 \uC800\uC7A5\uC740 \uC2E4\uD328\uD588\uC9C0\uB9CC, \uD654\uBA74\uC5D0\uB294 \uBC18\uC601\uB418\uC5C8\uC2B5\uB2C8\uB2E4.");
     }
   }
 
@@ -389,19 +406,19 @@ export function RuleBuilderPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">룰 빌더</h1>
+          <h1 className="text-2xl font-semibold">猷?鍮뚮뜑</h1>
           <p className="text-sm text-slate-500">
-            조건 / 혜택 / 상세 조건 설정 / 미리보기
+            議곌굔 / ?쒗깮 / ?곸꽭 議곌굔 ?ㅼ젙 / 誘몃━蹂닿린
           </p>
         </div>
-        <Button onClick={handleSave}>저장</Button>
+        <Button onClick={handleSave}>???/Button>
       </div>
       <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-4">
-        <div className="text-sm font-medium">단계 {step}</div>
+        <div className="text-sm font-medium">?④퀎 {step}</div>
         {step === 1 && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <div className="text-sm font-medium">⚡ 자주 쓰는 규칙 불러오기</div>
+              <div className="text-sm font-medium">???먯＜ ?곕뒗 洹쒖튃 遺덈윭?ㅺ린</div>
               <div className="flex flex-wrap gap-2">
                 {presets.map((preset) => (
                   <Button
@@ -416,15 +433,15 @@ export function RuleBuilderPage({
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">규칙 이름</label>
+              <label className="text-sm font-medium">洹쒖튃 ?대쫫</label>
               <Input
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                placeholder="평일 저녁 4인"
+                placeholder="?됱씪 ???4??
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">요일</label>
+              <label className="text-sm font-medium">?붿씪</label>
               <div className="flex flex-wrap gap-2">
                 {dayLabels.map((label, index) => (
                   <label key={label} className="flex items-center gap-1 text-sm">
@@ -443,7 +460,7 @@ export function RuleBuilderPage({
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">적용할 시간대</label>
+              <label className="text-sm font-medium">?곸슜???쒓컙?</label>
               <div className="space-y-2">
                 {timeBlocks.map((block, index) => (
                   <div key={`${block.start}-${index}`} className="flex gap-2">
@@ -479,7 +496,7 @@ export function RuleBuilderPage({
                         setTimeBlocks((prev) => prev.filter((_, idx) => idx !== index))
                       }
                     >
-                      삭제
+                      ??젣
                     </Button>
                   </div>
                 ))}
@@ -490,12 +507,12 @@ export function RuleBuilderPage({
                   setTimeBlocks((prev) => [...prev, { start: "18:00", end: "20:00" }])
                 }
               >
-                시간대 추가
+                ?쒓컙? 異붽?
               </Button>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-sm font-medium">인원 제한 (최소)</label>
+                <label className="text-sm font-medium">?몄썝 ?쒗븳 (理쒖냼)</label>
                 <Input
                   type="number"
                   value={partyMin}
@@ -503,7 +520,7 @@ export function RuleBuilderPage({
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">인원 제한 (최대)</label>
+                <label className="text-sm font-medium">?몄썝 ?쒗븳 (理쒕?)</label>
                 <Input
                   type="number"
                   value={partyMax}
@@ -514,7 +531,7 @@ export function RuleBuilderPage({
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <label className="text-sm font-medium">
-                  예약 마감 (방문 N분 전까지)
+                  ?덉빟 留덇컧 (諛⑸Ц N遺??꾧퉴吏)
                 </label>
                 <Input
                   type="number"
@@ -524,7 +541,7 @@ export function RuleBuilderPage({
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">
-                  예약 오픈 (방문 N분 전부터)
+                  ?덉빟 ?ㅽ뵂 (諛⑸Ц N遺??꾨???
                 </label>
                 <Input
                   type="number"
@@ -538,7 +555,7 @@ export function RuleBuilderPage({
         {step === 2 && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">내 혜택 불러오기</label>
+              <label className="text-sm font-medium">???쒗깮 遺덈윭?ㅺ린</label>
               <Select
                 value={benefitId}
                 onChange={(event) => setBenefitId(event.target.value)}
@@ -551,7 +568,7 @@ export function RuleBuilderPage({
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">혜택 종류</label>
+              <label className="text-sm font-medium">?쒗깮 醫낅쪟</label>
               <Select
                 value={benefitType}
                 onChange={(event) => setBenefitType(event.target.value as BenefitType)}
@@ -564,11 +581,11 @@ export function RuleBuilderPage({
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">혜택 내용</label>
+              <label className="text-sm font-medium">?쒗깮 ?댁슜</label>
               <Input
                 value={benefitValue}
                 onChange={(event) => setBenefitValue(event.target.value)}
-                placeholder="예: 전/막걸리, 10% 할인"
+                placeholder="?? ??留됯구由? 10% ?좎씤"
               />
             </div>
           </div>
@@ -576,21 +593,21 @@ export function RuleBuilderPage({
         {step === 3 && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">하루 선착순 (팀)</label>
+              <label className="text-sm font-medium">?섎（ ?좎갑??(?)</label>
               <Input
                 value={dailyCap}
                 onChange={(event) => setDailyCap(event.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">최소 결제 금액 (객단가)</label>
+              <label className="text-sm font-medium">理쒖냼 寃곗젣 湲덉븸 (媛앸떒媛)</label>
               <Input
                 value={minSpend}
                 onChange={(event) => setMinSpend(event.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">상세 조건 설정</label>
+              <label className="text-sm font-medium">?곸꽭 議곌굔 ?ㅼ젙</label>
               <div className="space-y-2 text-sm text-slate-600">
                 <label className="flex items-center gap-2">
                   <input
@@ -600,9 +617,9 @@ export function RuleBuilderPage({
                     checked={visibility === "public"}
                     onChange={() => setVisibility("public")}
                   />
-                  공개
+                  怨듦컻
                   <span className="text-xs text-slate-500">
-                    핫딜 탭에 모든 사람에게 노출합니다. (공실 해결에 최적)
+                    ?ル뵜 ??뿉 紐⑤뱺 ?щ엺?먭쾶 ?몄텧?⑸땲?? (怨듭떎 ?닿껐??理쒖쟻)
                   </span>
                 </label>
                 <label className="flex items-center gap-2">
@@ -613,10 +630,10 @@ export function RuleBuilderPage({
                     checked={visibility === "private"}
                     onChange={() => setVisibility("private")}
                   />
-                  비공개 제안
+                  鍮꾧났媛??쒖븞
                   <span className="text-xs text-slate-500">
-                    핫딜 탭에 노출하지 않고, AI가 적합한 손님에게만 은밀하게 제안합니다.
-                    (브랜드 이미지 보호)
+                    ?ル뵜 ??뿉 ?몄텧?섏? ?딄퀬, AI媛 ?곹빀???먮떂?먭쾶留??諛?섍쾶 ?쒖븞?⑸땲??
+                    (釉뚮옖???대?吏 蹂댄샇)
                   </span>
                 </label>
               </div>
@@ -626,21 +643,23 @@ export function RuleBuilderPage({
         {step === 4 && (
           <Card>
             <CardHeader>
-              <CardTitle>미리보기</CardTitle>
+              <CardTitle>誘몃━蹂닿린</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-sm text-slate-600">
-              <div>사장님, 학생들에게는 이렇게 보입니다.</div>
+              <div>?ъ옣?? ?숈깮?ㅼ뿉寃뚮뒗 ?대젃寃?蹂댁엯?덈떎.</div>
               <HotDealCard
                 title={summary.name || "-"}
                 benefit={previewMessage}
-                timer="마감까지 02:15"
+                timer="\uB9C8\uAC10\uAE4C\uC9C0 02:15"
                 visibility={summary.visibility}
+                storeName={storeName}
+                category={storeCategory}
               />
-              <div>요일: {summary.days || "-"}</div>
-              <div>시간대: {summary.timeBlocks || "-"}</div>
-              <div>인원 제한: {summary.partySize}</div>
-              <div>예약 마감/오픈: {summary.leadTime}</div>
-              <div>상세 조건 설정: {summary.guardrails}</div>
+              <div>?붿씪: {summary.days || "-"}</div>
+              <div>?쒓컙?: {summary.timeBlocks || "-"}</div>
+              <div>?몄썝 ?쒗븳: {summary.partySize}</div>
+              <div>?덉빟 留덇컧/?ㅽ뵂: {summary.leadTime}</div>
+              <div>?곸꽭 議곌굔 ?ㅼ젙: {summary.guardrails}</div>
             </CardContent>
           </Card>
         )}
@@ -650,17 +669,23 @@ export function RuleBuilderPage({
             onClick={() => setStep((prev) => Math.max(1, prev - 1))}
             disabled={step === 1}
           >
-            이전
+            ?댁쟾
           </Button>
           {step < 4 ? (
             <Button onClick={() => setStep((prev) => prev + 1)}>
-              다음
+              ?ㅼ쓬
             </Button>
           ) : (
-            <Button onClick={handleSave}>완료</Button>
+            <Button onClick={handleSave}>?꾨즺</Button>
           )}
         </div>
       </div>
     </div>
   );
 }
+
+
+
+
+
+

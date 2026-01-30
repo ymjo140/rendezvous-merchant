@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -8,23 +8,23 @@ import { BenefitType } from "@/domain/offers/types";
 const mockRules = [
   {
     id: "1",
-    name: "평일 저녁 4인 룰",
+    name: "?됱씪 ???4??猷?,
     benefitType: BenefitType.TIME_EXTENSION,
-    benefitValue: "30분",
+    benefitValue: "30遺?,
     visibility: "public" as const,
   },
   {
     id: "2",
-    name: "주말 점심 룰",
+    name: "二쇰쭚 ?먯떖 猷?,
     benefitType: BenefitType.SPACE_UPGRADE,
-    benefitValue: "4인실 → 6인실",
+    benefitValue: "4?몄떎 ??6?몄떎",
     visibility: "private" as const,
   },
   {
     id: "3",
-    name: "학생 메뉴 제안",
+    name: "?숈깮 硫붾돱 ?쒖븞",
     benefitType: BenefitType.FREE_MENU_ITEM,
-    benefitValue: "음료 1잔",
+    benefitValue: "?뚮즺 1??,
     visibility: "public" as const,
   },
 ];
@@ -32,34 +32,36 @@ const mockRules = [
 function buildBenefitMessage(type: BenefitType, value: string) {
   switch (type) {
     case BenefitType.TIME_EXTENSION:
-      return `⏰ 이용 시간 ${value || "30분"} 연장 혜택!`;
+      return `???댁슜 ?쒓컙 ${value || "30遺?} ?곗옣 ?쒗깮!`;
     case BenefitType.EARLY_ACCESS:
-      return `⏰ ${value || "10분"} 일찍 입장 혜택!`;
+      return `??${value || "10遺?} ?쇱컢 ?낆옣 ?쒗깮!`;
     case BenefitType.LATE_CHECKOUT:
-      return `⏰ ${value || "10분"} 늦게 체크아웃 혜택!`;
+      return `??${value || "10遺?} ??쾶 泥댄겕?꾩썐 ?쒗깮!`;
     case BenefitType.SPACE_UPGRADE:
-      return `✨ ${value || "룸 업그레이드"} 무료 업그레이드!`;
+      return `??${value || "猷??낃렇?덉씠??} 臾대즺 ?낃렇?덉씠??`;
     case BenefitType.FREE_EQUIPMENT:
-      return `✨ ${value || "장비"} 대여 혜택!`;
+      return `??${value || "?λ퉬"} ????쒗깮!`;
     case BenefitType.CORKAGE_FREE:
-      return "✨ 콜키지 프리 혜택!";
+      return "??肄쒗궎吏 ?꾨━ ?쒗깮!";
     case BenefitType.FREE_MENU_ITEM:
-      return `🎁 ${value || "메뉴 증정"} 혜택!`;
+      return `?럞 ${value || "硫붾돱 利앹젙"} ?쒗깮!`;
     case BenefitType.SIZE_UPGRADE:
-      return `🎁 ${value || "사이즈업"} 혜택!`;
+      return `?럞 ${value || "?ъ씠利덉뾽"} ?쒗깮!`;
     case BenefitType.UNLIMITED_REFILL:
-      return "🎁 무제한 리필 혜택!";
+      return "?럞 臾댁젣??由ы븘 ?쒗깮!";
     case BenefitType.PERCENT_DISCOUNT:
-      return `💸 ${value || "10%"} 할인 혜택!`;
+      return `?뮯 ${value || "10%"} ?좎씤 ?쒗깮!`;
     case BenefitType.FIXED_AMOUNT_OFF:
-      return `💸 ${value || "5000원"} 할인 혜택!`;
+      return `?뮯 ${value || "5000??} ?좎씤 ?쒗깮!`;
     default:
-      return value || "혜택";
+      return value || "?쒗깮";
   }
 }
 
 export function RuleSimulatorPage() {
   const [selected, setSelected] = useState(mockRules[0]);
+  const storeName = "\uD14C\uC2A4\uD2B8 \uB9E4\uC7A5";
+  const storeCategory = "\uC2DD\uB2F9/\uBC25\uC9D1";
 
   const previewMessage = useMemo(
     () => buildBenefitMessage(selected.benefitType, selected.benefitValue),
@@ -69,9 +71,9 @@ export function RuleSimulatorPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold">룰 시뮬레이터</h1>
+        <h1 className="text-2xl font-semibold">猷??쒕??덉씠??/h1>
         <p className="text-sm text-slate-500">
-          룰을 선택하면 실제 카드 UI로 어떻게 보이는지 확인할 수 있어요.
+          猷곗쓣 ?좏깮?섎㈃ ?ㅼ젣 移대뱶 UI濡??대뼸寃?蹂댁씠?붿? ?뺤씤?????덉뼱??
         </p>
       </div>
       <div className="flex flex-wrap gap-2">
@@ -88,9 +90,12 @@ export function RuleSimulatorPage() {
       <HotDealCard
         title={selected.name}
         benefit={previewMessage}
-        timer="마감까지 01:20"
+        timer="\uB9C8\uAC10\uAE4C\uC9C0 01:20"
         visibility={selected.visibility}
+        storeName={storeName}
+        category={storeCategory}
       />
     </div>
   );
 }
+

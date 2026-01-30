@@ -1,28 +1,45 @@
 
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, Td, Th } from "@/components/ui/table";
 import { Dialog } from "@/components/ui/dialog";
 import type { TableUnit } from "@/domain/stores/types";
-import { loadTableUnits, saveTableUnits } from "@/lib/utils/tableUnitsStore";
+import { useTableUnits } from "@/lib/hooks/useTableUnits";
+import { useBenefits, type BenefitRow } from "@/lib/hooks/useBenefits";
+import { useRules, type RuleRow } from "@/lib/hooks/useRules";
 import {
-  loadReservations,
-  saveReservations,
-  type StoredReservation,
-} from "@/lib/utils/reservationsStore";
-import { loadBenefits, saveBenefits, type StoredBenefit } from "@/lib/utils/benefitsStore";
-import { loadRules, saveRules, type StoredRule } from "@/lib/utils/rulesStore";
-import {
-  loadTimeDeals,
-  saveTimeDeals,
-  type StoredTimeDeal,
-} from "@/lib/utils/timeDealsStore";
+  useReservations,
+  type ReservationRow,
+} from "@/lib/hooks/useReservations";
+import { useTimeDeals, type TimeDealRow } from "@/lib/hooks/useTimeDeals";
 
-type ReservationEntry = StoredReservation;
+type ReservationEntry = {
+  id: string;
+  store_id: string;
+  guestName: string;
+  partySize: number;
+  date: string;
+  status: "confirmed" | "pending" | "cancelled" | "no_show" | "blocked";
+  unit_id: string;
+  unit_index: number;
+  start_time: string;
+  end_time: string;
+  source?: "internal" | "external" | "manual";
+};
+
+type TimeDealEntry = {
+  id: string;
+  store_id: string;
+  benefitId: string;
+  title: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+};
 
 type RowInfo = {
   id: string;
@@ -42,9 +59,14 @@ type CreateForm = {
   unit_index: number;
 };
 
-type ResizeState = {
-  dealId: string;
-  edge: "start" | "end";
+type TimeDealForm = {
+  mode: "create" | "edit";
+  id?: string;
+  benefitId: string;
+  title: string;
+  date: string;
+  startTime: string;
+  endTime: string;
 };
 
 const mockUnits: TableUnit[] = [
@@ -201,6 +223,7 @@ const statusLabelMap: Record<ReservationEntry["status"], string> = {
   pending: "\uB300\uAE30",
   cancelled: "\uCDE8\uC18C",
   no_show: "\uB178\uC1FC",
+  blocked: "\uC608\uC57D \uB9C9\uC74C",
 };
 
 const statusStyles: Record<ReservationEntry["status"], string> = {
@@ -208,6 +231,7 @@ const statusStyles: Record<ReservationEntry["status"], string> = {
   pending: "bg-amber-100 text-amber-700",
   cancelled: "bg-slate-100 text-slate-500",
   no_show: "bg-rose-100 text-rose-700",
+  blocked: "bg-slate-200 text-slate-700",
 };
 
 const statusOptions = [
@@ -216,6 +240,7 @@ const statusOptions = [
   { value: "pending", label: "\uB300\uAE30" },
   { value: "cancelled", label: "\uCDE8\uC18C" },
   { value: "no_show", label: "\uB178\uC1FC" },
+  { value: "blocked", label: "\uC608\uC57D \uB9C9\uC74C" },
 ];
 
 const startMinutes = 17 * 60;
@@ -295,8 +320,63 @@ function formatDateLabel(dateString: string) {
   return `${year}\uB144 ${month}\uC6D4 ${day}\uC77C (${weekday})`;
 }
 
+function mapRowToEntry(row: ReservationRow): ReservationEntry {
+  return {
+    id: String(row.id),
+    store_id: String(row.store_id),
+    guestName: row.guest_name,
+    partySize: row.party_size,
+    date: row.date,
+    status: row.status,
+    unit_id: row.unit_id,
+    unit_index: row.unit_index,
+    start_time: row.start_time,
+    end_time: row.end_time,
+    source: row.source,
+  };
+}
+
+function mapEntryToRow(entry: ReservationEntry): ReservationRow {
+  return {
+    id: entry.id,
+    store_id: entry.store_id,
+    guest_name: entry.guestName,
+    party_size: entry.partySize,
+    date: entry.date,
+    status: entry.status,
+    unit_id: entry.unit_id,
+    unit_index: entry.unit_index,
+    start_time: entry.start_time,
+    end_time: entry.end_time,
+    source: entry.source,
+  };
+}
+
+function mapTimeDealRowToEntry(row: TimeDealRow): TimeDealEntry {
+  return {
+    id: String(row.id),
+    store_id: String(row.store_id),
+    benefitId: row.benefit_id,
+    title: row.title,
+    date: row.date,
+    start_time: row.start_time,
+    end_time: row.end_time,
+  };
+}
+
+function mapTimeDealEntryToRow(entry: TimeDealEntry): TimeDealRow {
+  return {
+    id: entry.id,
+    store_id: entry.store_id,
+    benefit_id: entry.benefitId,
+    title: entry.title,
+    date: entry.date,
+    start_time: entry.start_time,
+    end_time: entry.end_time,
+  };
+}
+
 export function ReservationsPage({ storeId }: { storeId?: string }) {
-  const router = useRouter();
   const pathname = usePathname();
   const effectiveStoreId = useMemo(() => {
     if (storeId && storeId !== "undefined" && storeId !== "null") return storeId;
@@ -317,18 +397,85 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
   const [view, setView] = useState<"scheduler" | "list">("scheduler");
   const [selectedDate, setSelectedDate] = useState(todayString);
   const [tableUnits, setTableUnits] = useState<TableUnit[]>([]);
-  const [reservations, setReservations] = useState<ReservationEntry[]>([]);
-  const [rules, setRules] = useState<StoredRule[]>([]);
-  const [benefits, setBenefits] = useState<StoredBenefit[]>([]);
-  const [timeDeals, setTimeDeals] = useState<StoredTimeDeal[]>([]);
+  const [rules, setRules] = useState<RuleRow[]>([]);
+  const [benefits, setBenefits] = useState<BenefitRow[]>([]);
   const [selectedReservation, setSelectedReservation] =
     useState<ReservationEntry | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState<CreateForm | null>(null);
-  const [resizeState, setResizeState] = useState<ResizeState | null>(null);
-  const [activeBenefit, setActiveBenefit] = useState<StoredBenefit | null>(null);
-  const timeDealRowRef = useRef<HTMLDivElement | null>(null);
+  const [activeBenefit, setActiveBenefit] = useState<BenefitRow | null>(null);
+  const [timeDealDialogOpen, setTimeDealDialogOpen] = useState(false);
+  const [timeDealForm, setTimeDealForm] = useState<TimeDealForm | null>(null);
+  const [blockMode, setBlockMode] = useState(false);
+  const [isTouch, setIsTouch] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
+
+  const {
+    data: reservationRows = [],
+    error: reservationsError,
+    createReservation,
+    updateReservation,
+    deleteReservation,
+    isSupabaseConfigured: isReservationsSupabaseReady,
+  } = useReservations(resolvedStoreId);
+
+  const {
+    data: unitRows = [],
+    isSupabaseConfigured: isUnitsSupabaseReady,
+  } = useTableUnits(resolvedStoreId);
+
+  const {
+    data: benefitRows = [],
+    isSupabaseConfigured: isBenefitsSupabaseReady,
+  } = useBenefits(resolvedStoreId);
+
+  const {
+    data: ruleRows = [],
+    updateRule,
+    isSupabaseConfigured: isRulesSupabaseReady,
+  } = useRules(resolvedStoreId);
+
+  const {
+    data: timeDealRows = [],
+    error: timeDealsError,
+    createTimeDeal,
+    updateTimeDeal,
+    deleteTimeDeal,
+    isSupabaseConfigured: isTimeDealsSupabaseReady,
+  } = useTimeDeals(resolvedStoreId);
+
+  const storeKey = resolvedStoreId ?? "dev-store";
+  const fallbackReservationRows = useMemo(
+    () =>
+      mockReservations.map((item) =>
+        mapEntryToRow({ ...item, store_id: storeKey })
+      ),
+    [storeKey]
+  );
+  const reservations = useMemo(() => {
+    const baseRows =
+      reservationRows.length > 0
+        ? reservationRows
+        : isReservationsSupabaseReady
+          ? []
+          : fallbackReservationRows;
+    return baseRows.map(mapRowToEntry);
+  }, [reservationRows, fallbackReservationRows, isReservationsSupabaseReady]);
+
+  const timeDeals = useMemo(() => {
+    return timeDealRows.map(mapTimeDealRowToEntry);
+  }, [timeDealRows]);
+
+  const showOfflineBadge =
+    !isOnline ||
+    !isReservationsSupabaseReady ||
+    !isUnitsSupabaseReady ||
+    !isBenefitsSupabaseReady ||
+    !isRulesSupabaseReady ||
+    !isTimeDealsSupabaseReady ||
+    Boolean(reservationsError) ||
+    Boolean(timeDealsError);
 
   useEffect(() => {
     if (effectiveStoreId) {
@@ -347,142 +494,60 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
   }, [effectiveStoreId]);
 
   useEffect(() => {
-    const local = loadReservations(resolvedStoreId);
-    if (local) {
-      setReservations(local);
-      return;
-    }
-    const fallback = loadReservations();
-    if (fallback) {
-      setReservations(fallback);
-      saveReservations(resolvedStoreId, fallback);
-      return;
-    }
-    setReservations(mockReservations);
-    saveReservations(resolvedStoreId, mockReservations);
-  }, [resolvedStoreId]);
+    if (typeof window === "undefined") return;
+    setIsOnline(window.navigator.onLine);
+    setIsTouch(
+      window.matchMedia("(pointer: coarse)").matches ||
+        window.navigator.maxTouchPoints > 0
+    );
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
-    const localUnits = loadTableUnits(resolvedStoreId);
-    if (localUnits && localUnits.length > 0) {
-      setTableUnits(localUnits);
+    if (unitRows.length > 0) {
+      setTableUnits(
+        unitRows.map((unit) => ({
+          id: unit.id,
+          name: unit.name,
+          min_capacity: unit.min_capacity,
+          max_capacity: unit.max_capacity,
+          quantity: unit.quantity,
+          is_private: unit.is_private,
+        }))
+      );
       return;
     }
-    const fallback = loadTableUnits();
-    if (fallback && fallback.length > 0) {
-      setTableUnits(fallback);
-      saveTableUnits(resolvedStoreId, fallback);
+    if (!isUnitsSupabaseReady) {
+      setTableUnits(mockUnits);
       return;
     }
-    setTableUnits(mockUnits);
-    saveTableUnits(resolvedStoreId, mockUnits);
-  }, [resolvedStoreId]);
+    setTableUnits([]);
+  }, [unitRows, isUnitsSupabaseReady]);
 
   useEffect(() => {
-    const localRules = loadRules(resolvedStoreId);
-    if (localRules) {
-      setRules(localRules);
-      return;
-    }
-    const fallback = loadRules();
-    if (fallback) {
-      setRules(fallback);
-      saveRules(resolvedStoreId, fallback);
+    if (ruleRows.length > 0) {
+      setRules(ruleRows);
       return;
     }
     setRules([]);
-  }, [resolvedStoreId]);
+  }, [ruleRows]);
 
   useEffect(() => {
-    const localBenefits = loadBenefits(resolvedStoreId);
-    if (localBenefits) {
-      setBenefits(localBenefits);
-      return;
-    }
-    const fallback = loadBenefits();
-    if (fallback) {
-      setBenefits(fallback);
-      saveBenefits(resolvedStoreId, fallback);
+    if (benefitRows.length > 0) {
+      setBenefits(benefitRows);
       return;
     }
     setBenefits([]);
-  }, [resolvedStoreId]);
+  }, [benefitRows]);
 
-  useEffect(() => {
-    const localDeals = loadTimeDeals(resolvedStoreId);
-    if (localDeals) {
-      setTimeDeals(localDeals);
-      return;
-    }
-    const fallback = loadTimeDeals();
-    if (fallback) {
-      setTimeDeals(fallback);
-      saveTimeDeals(resolvedStoreId, fallback);
-      return;
-    }
-    setTimeDeals([]);
-  }, [resolvedStoreId]);
-  useEffect(() => {
-    if (!resizeState) return;
-    const activeResize = resizeState;
-
-    function handleMove(event: MouseEvent) {
-      const ref = timeDealRowRef.current;
-      if (!ref) return;
-      const rect = ref.getBoundingClientRect();
-      const x = event.clientX - rect.left - labelColumnWidth;
-      const width = rect.width - labelColumnWidth;
-      if (width <= 0) return;
-      const slotsCount = buildSlots().length;
-      const index = Math.min(
-        Math.max(Math.floor((x / width) * slotsCount), 0),
-        slotsCount - 1
-      );
-      const targetMinutes = startMinutes + index * slotMinutes;
-
-      setTimeDeals((prev) => {
-        if (!activeResize) return prev;
-        const next = prev.map((deal) => {
-          if (deal.id !== activeResize.dealId) return deal;
-          const currentStart = timeToMinutes(deal.start_time.slice(11, 16));
-          const currentEnd = timeToMinutes(deal.end_time.slice(11, 16));
-
-          if (activeResize.edge === "start") {
-            const nextStart = Math.min(targetMinutes, currentEnd - slotMinutes);
-            const nextStartTime = minutesToTime(Math.max(startMinutes, nextStart));
-            return {
-              ...deal,
-              start_time: `${deal.date}T${nextStartTime}:00`,
-            };
-          }
-
-          const nextEnd = Math.max(
-            targetMinutes + slotMinutes,
-            currentStart + slotMinutes
-          );
-          const boundedEnd = Math.min(nextEnd, endMinutes);
-          const nextEndTime = minutesToTime(boundedEnd);
-          return {
-            ...deal,
-            end_time: `${deal.date}T${nextEndTime}:00`,
-          };
-        });
-        saveTimeDeals(resolvedStoreId, next);
-        return next;
-      });
-    }
-
-    function handleUp() {
-      setResizeState(null);
-    }
-
-    window.addEventListener("mousemove", handleMove);
-    window.addEventListener("mouseup", handleUp);
-    return () => {
-      window.removeEventListener("mousemove", handleMove);
-      window.removeEventListener("mouseup", handleUp);
-    };
-  }, [resizeState, resolvedStoreId]);
+  
 
   const filtered = useMemo(() => {
     return reservations.filter((item) => {
@@ -500,6 +565,11 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
     [timeDeals, selectedDate]
   );
 
+  const activeReservations = useMemo(
+    () => filtered.filter((item) => item.status !== "cancelled"),
+    [filtered]
+  );
+
   function openDetail(item: ReservationEntry) {
     if (item.source === "external") {
       window.alert(
@@ -515,18 +585,11 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
     reservationId: string,
     nextStatus: ReservationEntry["status"]
   ) {
-    setReservations((prev) => {
-      let next: ReservationEntry[];
-      if (nextStatus === "cancelled") {
-        next = prev.filter((item) => item.id !== reservationId);
-      } else {
-        next = prev.map((item) =>
-          item.id === reservationId ? { ...item, status: nextStatus } : item
-        );
-      }
-      saveReservations(resolvedStoreId, next);
-      return next;
-    });
+    if (nextStatus === "cancelled") {
+      deleteReservation.mutate({ id: reservationId });
+    } else {
+      updateReservation.mutate({ id: reservationId, status: nextStatus });
+    }
     setDialogOpen(false);
   }
 
@@ -585,6 +648,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
 
     const newReservation: ReservationEntry = {
       id: id.trim(),
+      store_id: storeKey,
       guestName: guestName.trim(),
       partySize: Number(partySize) || 1,
       date,
@@ -596,26 +660,18 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
       source: "internal",
     };
 
-    setReservations((prev) => {
-      const next = [newReservation, ...prev];
-      saveReservations(resolvedStoreId, next);
-      return next;
-    });
+    createReservation.mutate(mapEntryToRow(newReservation));
 
     setCreateOpen(false);
   }
 
-  function toggleRule(ruleId: StoredRule["id"]) {
-    setRules((prev) => {
-      const next = prev.map((rule) =>
-        rule.id === ruleId ? { ...rule, enabled: !rule.enabled } : rule
-      );
-      saveRules(resolvedStoreId, next);
-      return next;
-    });
+  function toggleRule(ruleId: RuleRow["id"]) {
+    const target = rules.find((rule) => String(rule.id) === String(ruleId));
+    if (!target) return;
+    updateRule.mutate({ id: String(ruleId), enabled: !target.enabled });
   }
 
-  function handleBenefitDragStart(benefit: StoredBenefit, event: React.DragEvent) {
+  function handleBenefitDragStart(benefit: BenefitRow, event: React.DragEvent) {
     event.dataTransfer.setData("benefitId", String(benefit.id));
     event.dataTransfer.setData("benefitTitle", benefit.title);
   }
@@ -633,20 +689,17 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
     const startTime = minutesToTime(start);
     const endTime = minutesToTime(end);
 
-    const newDeal: StoredTimeDeal = {
+    const newDeal: TimeDealEntry = {
       id: `deal-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      benefitId,
+      store_id: storeKey,
+      benefitId: String(benefitId),
       title: benefitTitle,
       date: selectedDate,
       start_time: `${selectedDate}T${startTime}:00`,
       end_time: `${selectedDate}T${endTime}:00`,
     };
 
-    setTimeDeals((prev) => {
-      const next = [newDeal, ...prev];
-      saveTimeDeals(resolvedStoreId, next);
-      return next;
-    });
+    createTimeDeal.mutate(mapTimeDealEntryToRow(newDeal));
   }
 
   function createDealFromSlot(slot: string) {
@@ -660,8 +713,9 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
 
     const startTime = minutesToTime(start);
     const endTime = minutesToTime(end);
-    const newDeal: StoredTimeDeal = {
+    const newDeal: TimeDealEntry = {
       id: `deal-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      store_id: storeKey,
       benefitId: String(activeBenefit.id),
       title: activeBenefit.title,
       date: selectedDate,
@@ -669,21 +723,123 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
       end_time: `${selectedDate}T${endTime}:00`,
     };
 
-    setTimeDeals((prev) => {
-      const next = [newDeal, ...prev];
-      saveTimeDeals(resolvedStoreId, next);
-      return next;
-    });
+    createTimeDeal.mutate(mapTimeDealEntryToRow(newDeal));
   }
 
-  const activeReservations = filtered.filter((item) => item.status !== "cancelled");
+  function openTimeDealCreate(benefit: BenefitRow) {
+    const startTime = slots[0] ?? "18:00";
+    const endTime = minutesToTime(timeToMinutes(startTime) + 60);
+    setTimeDealForm({
+      mode: "create",
+      benefitId: String(benefit.id),
+      title: benefit.title,
+      date: selectedDate,
+      startTime,
+      endTime,
+    });
+    setTimeDealDialogOpen(true);
+  }
+
+  function openTimeDealEdit(deal: TimeDealEntry) {
+    setTimeDealForm({
+      mode: "edit",
+      id: deal.id,
+      benefitId: deal.benefitId,
+      title: deal.title,
+      date: deal.date,
+      startTime: deal.start_time.slice(11, 16),
+      endTime: deal.end_time.slice(11, 16),
+    });
+    setTimeDealDialogOpen(true);
+  }
+
+  function handleTimeDealSubmit() {
+    if (!timeDealForm) return;
+    const start = timeToMinutes(timeDealForm.startTime);
+    const end = timeToMinutes(timeDealForm.endTime);
+    if (end <= start) {
+      window.alert(
+        "\uC885\uB8CC \uC2DC\uAC04\uC740 \uC2DC\uC791 \uC2DC\uAC04\uBCF4\uB2E4 \uB2A6\uC5B4\uC57C \uD569\uB2C8\uB2E4."
+      );
+      return;
+    }
+    if (timeDealForm.mode === "edit" && timeDealForm.id) {
+      updateTimeDeal.mutate({
+        id: timeDealForm.id,
+        start_time: `${timeDealForm.date}T${timeDealForm.startTime}:00`,
+        end_time: `${timeDealForm.date}T${timeDealForm.endTime}:00`,
+      });
+    } else {
+      const newDeal: TimeDealEntry = {
+        id: `deal-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        store_id: storeKey,
+        benefitId: timeDealForm.benefitId,
+        title: timeDealForm.title,
+        date: timeDealForm.date,
+        start_time: `${timeDealForm.date}T${timeDealForm.startTime}:00`,
+        end_time: `${timeDealForm.date}T${timeDealForm.endTime}:00`,
+      };
+      createTimeDeal.mutate(mapTimeDealEntryToRow(newDeal));
+    }
+    setTimeDealDialogOpen(false);
+  }
+
+  function handleTimeDealDelete() {
+    if (!timeDealForm?.id) return;
+    deleteTimeDeal.mutate({ id: timeDealForm.id });
+    setTimeDealDialogOpen(false);
+  }
+
+  function createBlockedSlot(row: RowInfo, slot: string) {
+    const startTime = slot;
+    const endTime = minutesToTime(timeToMinutes(slot) + 60);
+    const start = timeToMinutes(startTime);
+    const end = timeToMinutes(endTime);
+    const overlap = reservations.some((item) => {
+      if (item.date !== selectedDate) return false;
+      if (item.unit_id !== row.unit_id) return false;
+      if (item.unit_index !== row.unit_index) return false;
+      if (item.status === "cancelled" || item.status === "no_show") return false;
+      const itemStart = timeToMinutes(item.start_time.slice(11, 16));
+      const itemEnd = timeToMinutes(item.end_time.slice(11, 16));
+      return start < itemEnd && end > itemStart;
+    });
+    if (overlap) {
+      window.alert(
+        "\uD574\uB2F9 \uC2DC\uAC04\uC5D0 \uC774\uBBF8 \uC608\uC57D \uB610\uB294 \uB9C9\uC74C \uC0C1\uD0DC\uC785\uB2C8\uB2E4."
+      );
+      return;
+    }
+
+    const newBlock: ReservationEntry = {
+      id: `B-${Date.now()}`,
+      store_id: storeKey,
+      guestName: "\uC678\uBD80 \uC608\uC57D/\uB9C8\uAC10",
+      partySize: 0,
+      date: selectedDate,
+      status: "blocked",
+      unit_id: row.unit_id,
+      unit_index: row.unit_index,
+      start_time: `${selectedDate}T${startTime}:00`,
+      end_time: `${selectedDate}T${endTime}:00`,
+      source: "manual",
+    };
+    createReservation.mutate(mapEntryToRow(newBlock));
+  }
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-2xl font-semibold">{"\uC608\uC57D \uBAA9\uB85D"}</h1>
-          <p className="text-sm text-slate-500">{`\uB9E4\uC7A5 #${resolvedStoreId ?? ""}`}</p>
+          <div className="flex items-center gap-2 text-sm text-slate-500">
+            <span>{`\uB9E4\uC7A5 #${resolvedStoreId ?? ""}`}</span>
+            {showOfflineBadge ? (
+              <Badge className="bg-amber-100 text-amber-700">
+                {"\uC624\uD504\uB77C\uC778 \uC0C1\uD0DC"}
+              </Badge>
+            ) : null}
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2 py-1 text-sm">
@@ -731,6 +887,13 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
               </option>
             ))}
           </select>
+          <Button
+            variant={blockMode ? "primary" : "secondary"}
+            className="h-9"
+            onClick={() => setBlockMode((prev) => !prev)}
+          >
+            {"\u26D4 \uC608\uC57D \uB9C9\uAE30 \uBAA8\uB4DC"}
+          </Button>
           <Button
             variant={view === "scheduler" ? "primary" : "secondary"}
             onClick={() => setView("scheduler")}
@@ -786,9 +949,14 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
               <div className="text-sm font-semibold">{"\uD61C\uD0DD \uBC84\uD2BC"}</div>
               <p className="text-xs text-slate-500">
                 {
-                  "\uB4DC\uB798\uADF8\uD574\uC11C \uC2A4\uCF00\uC904\uB7EC\uC5D0 \uB193\uC73C\uBA74 \uD0C0\uC784\uC138\uC77C\uC774 \uC0DD\uC131\uB429\uB2C8\uB2E4."
+                  "\uB4DC\uB798\uADF8 \uB610\uB294 \uD0ED\uD558\uC5EC \uD0C0\uC784\uC138\uC77C\uC744 \uB9CC\uB4E4\uC5B4 \uBCF4\uC138\uC694."
                 }
               </p>
+              {isTouch ? (
+                <p className="text-xs text-slate-400">
+                  {"\uD0ED \uD6C4 \uC2DC\uAC04\uC744 \uC120\uD0DD\uD558\uBA74 \uC989\uC2DC \uC0DD\uC131\uB429\uB2C8\uB2E4."}
+                </p>
+              ) : null}
               {benefits.length === 0 ? (
                 <p className="text-xs text-slate-500">
                   {
@@ -806,9 +974,13 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                         className="h-8 rounded-full px-3 text-xs"
                         draggable
                         onDragStart={(event) => handleBenefitDragStart(benefit, event)}
-                        onClick={() =>
-                          setActiveBenefit(isActive ? null : benefit)
-                        }
+                        onClick={() => {
+                          if (isTouch) {
+                            openTimeDealCreate(benefit);
+                            return;
+                          }
+                          setActiveBenefit(isActive ? null : benefit);
+                        }}
                       >
                         {benefit.title}
                       </Button>
@@ -839,7 +1011,6 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
             ))}
 
             <div
-              ref={timeDealRowRef}
               className="col-span-full grid"
               style={{
                 gridTemplateColumns: `${labelColumnWidth}px repeat(${slots.length}, minmax(24px, 1fr))`,
@@ -852,7 +1023,10 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                     className="bg-white p-2 border-l border-slate-100"
                     onDragOver={(event) => event.preventDefault()}
                     onDrop={(event) => handleBenefitDrop(slot, event)}
-                    onClick={() => createDealFromSlot(slot)}
+                    onClick={() => {
+                      if (isTouch) return;
+                      createDealFromSlot(slot);
+                    }}
                   />
                 ))}
               {timeDealsForDate.map((deal) => {
@@ -880,31 +1054,10 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                       }}
                       onClick={(event) => {
                         event.stopPropagation();
-                        if (!window.confirm("\uD0C0\uC784\uC138\uC77C\uC744 \uC0AD\uC81C\uD560\uAE4C\uC694?")) {
-                          return;
-                        }
-                        setTimeDeals((prev) => {
-                          const next = prev.filter((item) => item.id !== deal.id);
-                          saveTimeDeals(resolvedStoreId, next);
-                          return next;
-                        });
+                        openTimeDealEdit(deal);
                       }}
                     >
-                    <button
-                      type="button"
-                      className="absolute left-0 top-0 h-full w-2 cursor-ew-resize rounded-l-md bg-indigo-200"
-                      onMouseDown={() =>
-                        setResizeState({ dealId: deal.id, edge: "start" })
-                      }
-                    />
                     <span className="truncate">{deal.title}</span>
-                    <button
-                      type="button"
-                      className="absolute right-0 top-0 h-full w-2 cursor-ew-resize rounded-r-md bg-indigo-200"
-                      onMouseDown={() =>
-                        setResizeState({ dealId: deal.id, edge: "end" })
-                      }
-                    />
                   </div>
                 );
               })}
@@ -946,6 +1099,10 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                         }`}
                         onClick={() => {
                           if (occupied) return;
+                          if (blockMode) {
+                            createBlockedSlot(row, slot);
+                            return;
+                          }
                           openCreate(row, slot);
                         }}
                       />
@@ -965,25 +1122,28 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                     const columnStart = 2 + startIndex;
                     const columnEnd = Math.max(columnStart + 1, 2 + endIndex);
                     const isExternal = reservation.source === "external";
+                    const isBlocked = reservation.status === "blocked";
                     const isNoShow = reservation.status === "no_show";
 
                     return (
                       <div
                         key={reservation.id}
                         className={`z-10 flex items-center justify-between rounded-md px-2 py-1 text-xs ${
-                          isExternal
+                          isBlocked
                             ? "bg-slate-200 text-slate-700"
-                            : isNoShow
-                              ? "bg-rose-100 text-rose-700"
-                              : "bg-slate-900 text-white"
-                        } ${isExternal ? "cursor-pointer" : ""} ${
+                            : isExternal
+                              ? "bg-slate-200 text-slate-700"
+                              : isNoShow
+                                ? "bg-rose-100 text-rose-700"
+                                : "bg-slate-900 text-white"
+                        } ${isExternal || isBlocked ? "cursor-pointer" : ""} ${
                           isNoShow ? "pointer-events-none" : ""
                         }`}
                         style={{
                           gridColumn: `${columnStart} / ${columnEnd}`,
                           gridRow: "1",
                           alignSelf: "center",
-                          backgroundImage: isExternal
+                          backgroundImage: isExternal || isBlocked
                             ? "repeating-linear-gradient(45deg, rgba(148,163,184,0.35), rgba(148,163,184,0.35) 6px, rgba(255,255,255,0.4) 6px, rgba(255,255,255,0.4) 12px)"
                             : undefined,
                         }}
@@ -992,9 +1152,9 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                             window.alert(
                               "\uC678\uBD80 \uD50C\uB7AB\uD3FC\uC5D0\uC11C \uAD00\uB9AC\uB418\uB294 \uC608\uC57D\uC785\uB2C8\uB2E4."
                             );
-                          } else {
-                            openDetail(reservation);
+                            return;
                           }
+                          openDetail(reservation);
                         }}
                       >
                         <span>{reservation.guestName}</span>
@@ -1092,33 +1252,46 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                 {selectedReservation.end_time.slice(11, 16)}
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                onClick={() =>
-                  updateReservationStatus(selectedReservation.id, "confirmed")
-                }
-              >
-                {"\uD655\uC815"}
-              </Button>
-              <Button
-                variant="secondary"
-                className="bg-rose-50 text-rose-600 hover:bg-rose-100"
-                onClick={() =>
-                  updateReservationStatus(selectedReservation.id, "no_show")
-                }
-              >
-                {"\uB178\uC1FC"}
-              </Button>
-              <Button
-                variant="ghost"
-                className="text-rose-600 hover:bg-rose-50"
-                onClick={() =>
-                  updateReservationStatus(selectedReservation.id, "cancelled")
-                }
-              >
-                {"\uCDE8\uC18C"}
-              </Button>
-            </div>
+            {selectedReservation.status === "blocked" ? (
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={() =>
+                    updateReservationStatus(selectedReservation.id, "cancelled")
+                  }
+                >
+                  {"\uB9C9\uC74C \uD574\uC81C"}
+                </Button>
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={() =>
+                    updateReservationStatus(selectedReservation.id, "confirmed")
+                  }
+                >
+                  {"\uD655\uC815"}
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="bg-rose-50 text-rose-600 hover:bg-rose-100"
+                  onClick={() =>
+                    updateReservationStatus(selectedReservation.id, "no_show")
+                  }
+                >
+                  {"\uB178\uC1FC"}
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="text-rose-600 hover:bg-rose-50"
+                  onClick={() =>
+                    updateReservationStatus(selectedReservation.id, "cancelled")
+                  }
+                >
+                  {"\uCDE8\uC18C"}
+                </Button>
+              </div>
+            )}
           </div>
         ) : null}
       </Dialog>
@@ -1225,6 +1398,90 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                 {"\uCDE8\uC18C"}
               </Button>
               <Button onClick={handleCreateSubmit}>{"\uCD94\uAC00"}</Button>
+            </div>
+          </div>
+        ) : null}
+      </Dialog>
+
+      <Dialog open={timeDealDialogOpen}>
+        {timeDealForm ? (
+          <div className="space-y-4">
+            <div className="text-lg font-semibold">
+              {timeDealForm.mode === "edit"
+                ? "\uD0C0\uC784\uC138\uC77C \uC218\uC815"
+                : "\uD0C0\uC784\uC138\uC77C \uC0DD\uC131"}
+            </div>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                <span className="font-medium">{timeDealForm.title}</span>
+                <Badge className="bg-indigo-100 text-indigo-700">
+                  {"\uD61C\uD0DD"}
+                </Badge>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-500">
+                    {"\uC2DC\uC791 \uC2DC\uAC04"}
+                  </label>
+                  <select
+                    className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
+                    value={timeDealForm.startTime}
+                    onChange={(event) =>
+                      setTimeDealForm({
+                        ...timeDealForm,
+                        startTime: event.target.value,
+                      })
+                    }
+                  >
+                    {slots.map((slot) => (
+                      <option key={`deal-start-${slot}`} value={slot}>
+                        {slot}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-500">
+                    {"\uC885\uB8CC \uC2DC\uAC04"}
+                  </label>
+                  <select
+                    className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
+                    value={timeDealForm.endTime}
+                    onChange={(event) =>
+                      setTimeDealForm({
+                        ...timeDealForm,
+                        endTime: event.target.value,
+                      })
+                    }
+                  >
+                    {slots.map((slot) => (
+                      <option key={`deal-end-${slot}`} value={slot}>
+                        {slot}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-wrap justify-end gap-2">
+              {timeDealForm.mode === "edit" ? (
+                <Button
+                  variant="ghost"
+                  className="text-rose-600 hover:bg-rose-50"
+                  onClick={handleTimeDealDelete}
+                >
+                  {"\uC0AD\uC81C"}
+                </Button>
+              ) : null}
+              <Button
+                variant="secondary"
+                onClick={() => setTimeDealDialogOpen(false)}
+              >
+                {"\uCDE8\uC18C"}
+              </Button>
+              <Button onClick={handleTimeDealSubmit}>
+                {timeDealForm.mode === "edit" ? "\uC800\uC7A5" : "\uC0DD\uC131"}
+              </Button>
             </div>
           </div>
         ) : null}
