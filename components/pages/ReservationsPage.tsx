@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, Td, Th } from "@/components/ui/table";
@@ -297,6 +297,16 @@ function formatDateLabel(dateString: string) {
 
 export function ReservationsPage({ storeId }: { storeId?: string }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const effectiveStoreId = useMemo(() => {
+    if (storeId) return storeId;
+    const parts = pathname?.split("/").filter(Boolean) ?? [];
+    const storesIndex = parts.indexOf("stores");
+    if (storesIndex >= 0 && parts[storesIndex + 1]) {
+      return parts[storesIndex + 1];
+    }
+    return undefined;
+  }, [storeId, pathname]);
   const [statusFilter, setStatusFilter] = useState("all");
   const [view, setView] = useState<"scheduler" | "list">("scheduler");
   const [selectedDate, setSelectedDate] = useState(todayString);
@@ -314,51 +324,51 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
   const timeDealRowRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const local = loadReservations(storeId);
+    const local = loadReservations(effectiveStoreId);
     if (local) {
       setReservations(local);
     } else {
       setReservations(mockReservations);
-      saveReservations(storeId, mockReservations);
+      saveReservations(effectiveStoreId, mockReservations);
     }
-  }, [storeId]);
+  }, [effectiveStoreId]);
 
   useEffect(() => {
-    const localUnits = loadTableUnits(storeId);
+    const localUnits = loadTableUnits(effectiveStoreId);
     if (localUnits && localUnits.length > 0) {
       setTableUnits(localUnits);
     } else {
       setTableUnits(mockUnits);
-      saveTableUnits(storeId, mockUnits);
+      saveTableUnits(effectiveStoreId, mockUnits);
     }
-  }, [storeId]);
+  }, [effectiveStoreId]);
 
   useEffect(() => {
-    const localRules = loadRules(storeId);
+    const localRules = loadRules(effectiveStoreId);
     if (localRules) {
       setRules(localRules);
     } else {
       setRules([]);
     }
-  }, [storeId]);
+  }, [effectiveStoreId]);
 
   useEffect(() => {
-    const localBenefits = loadBenefits(storeId);
+    const localBenefits = loadBenefits(effectiveStoreId);
     if (localBenefits) {
       setBenefits(localBenefits);
     } else {
       setBenefits([]);
     }
-  }, [storeId]);
+  }, [effectiveStoreId]);
 
   useEffect(() => {
-    const localDeals = loadTimeDeals(storeId);
+    const localDeals = loadTimeDeals(effectiveStoreId);
     if (localDeals) {
       setTimeDeals(localDeals);
     } else {
       setTimeDeals([]);
     }
-  }, [storeId]);
+  }, [effectiveStoreId]);
   useEffect(() => {
     if (!resizeState) return;
     const activeResize = resizeState;
@@ -404,7 +414,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
             end_time: `${deal.date}T${nextEndTime}:00`,
           };
         });
-        saveTimeDeals(storeId, next);
+        saveTimeDeals(effectiveStoreId, next);
         return next;
       });
     }
@@ -419,7 +429,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
       window.removeEventListener("mousemove", handleMove);
       window.removeEventListener("mouseup", handleUp);
     };
-  }, [resizeState, storeId]);
+  }, [resizeState, effectiveStoreId]);
 
   const filtered = useMemo(() => {
     return reservations.filter((item) => {
@@ -461,7 +471,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
           item.id === reservationId ? { ...item, status: nextStatus } : item
         );
       }
-      saveReservations(storeId, next);
+      saveReservations(effectiveStoreId, next);
       return next;
     });
     setDialogOpen(false);
@@ -535,7 +545,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
 
     setReservations((prev) => {
       const next = [newReservation, ...prev];
-      saveReservations(storeId, next);
+      saveReservations(effectiveStoreId, next);
       return next;
     });
 
@@ -547,7 +557,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
       const next = prev.map((rule) =>
         rule.id === ruleId ? { ...rule, enabled: !rule.enabled } : rule
       );
-      saveRules(storeId, next);
+      saveRules(effectiveStoreId, next);
       return next;
     });
   }
@@ -581,7 +591,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
 
     setTimeDeals((prev) => {
       const next = [newDeal, ...prev];
-      saveTimeDeals(storeId, next);
+      saveTimeDeals(effectiveStoreId, next);
       return next;
     });
   }
@@ -593,7 +603,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-2xl font-semibold">{"\uC608\uC57D \uBAA9\uB85D"}</h1>
-          <p className="text-sm text-slate-500">{`\uB9E4\uC7A5 #${storeId ?? ""}`}</p>
+          <p className="text-sm text-slate-500">{`\uB9E4\uC7A5 #${effectiveStoreId ?? ""}`}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2 py-1 text-sm">
@@ -656,69 +666,85 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
         </div>
       </div>
       {view === "scheduler" ? (
-        <div className="grid gap-4 lg:grid-cols-[260px_1fr_260px]">
-          <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
-            <div className="text-sm font-semibold">{"\uADDC\uCE59 \uBAA9\uB85D"}</div>
-            {rules.length === 0 ? (
-              <p className="text-xs text-slate-500">
-                {
-                  "\uB4F1\uB85D\uB41C \uADDC\uCE59\uC774 \uC5C6\uC2B5\uB2C8\uB2E4. \uB8F0 \uC124\uC815\uC5D0\uC11C \uC0C8 \uADDC\uCE59\uC744 \uB9CC\uB4E4\uC5B4\uC8FC\uC138\uC694."
-                }
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {rules.map((rule) => (
-                  <div
-                    key={String(rule.id)}
-                    className="flex items-center justify-between gap-2 rounded-md border border-slate-200 px-3 py-2"
-                  >
-                    <div className="text-sm">
-                      <div className="font-medium text-slate-900">{rule.name}</div>
-                      <div className="text-xs text-slate-500">
-                        {rule.enabled ? "\uD65C\uC131" : "\uBE44\uD65C\uC131"}
-                      </div>
-                    </div>
-                    <Button
-                      variant={rule.enabled ? "primary" : "secondary"}
-                      className="h-8 px-3 text-xs"
-                      onClick={() => toggleRule(rule.id)}
-                    >
-                      {rule.enabled ? "\uCF1C\uC9D0" : "\uAEBC\uC9D0"}
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-3">
-            <div className="text-sm text-slate-500">
-              {
-                "\uBE48 \uC2DC\uAC04\uB300\uB294 AI\uAC00 \uC608\uC57D\uC744 \uCD94\uCC9C\uD560 \uC218 \uC788\uB294 \uC2AC\uB86F\uC785\uB2C8\uB2E4."
-              }
-            </div>
-            {filtered.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-slate-200 bg-white p-6 text-center space-y-3">
-                <div className="text-lg font-semibold">
-                  {`\uD83D\uDCC5 ${dateLabel}\uC5D0\uB294 \uC544\uC9C1 \uC608\uC57D\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.`}
-                </div>
-                <p className="text-sm text-slate-500">
+        <div className="space-y-4">
+          <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
+            <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
+              <div className="text-sm font-semibold">{"\uADDC\uCE59 \uBAA9\uB85D"}</div>
+              {rules.length === 0 ? (
+                <p className="text-xs text-slate-500">
                   {
-                    "\uD0C0\uC784\uC138\uC77C \uD61C\uD0DD\uC744 \uB04C\uC5B4\uC11C \uC190\uB2D8\uC744 \uBAA8\uC544\uBCF4\uC138\uC694."
+                    "\uB4F1\uB85D\uB41C \uADDC\uCE59\uC774 \uC5C6\uC2B5\uB2C8\uB2E4. \uB8F0 \uC124\uC815\uC5D0\uC11C \uC0C8 \uADDC\uCE59\uC744 \uB9CC\uB4E4\uC5B4\uC8FC\uC138\uC694."
                   }
                 </p>
-                <Button onClick={() => router.push(`/stores/${storeId}/offers/benefits`)}>
-                  {"\uD61C\uD0DD \uCE74\uD0C8\uB85C\uADF8 \uBCF4\uAE30"}
-                </Button>
-              </div>
-            ) : null}
+              ) : (
+                <div className="grid gap-2 md:grid-cols-2">
+                  {rules.map((rule) => (
+                    <div
+                      key={String(rule.id)}
+                      className="flex items-center justify-between gap-2 rounded-md border border-slate-200 px-3 py-2"
+                    >
+                      <div className="text-sm">
+                        <div className="font-medium text-slate-900">{rule.name}</div>
+                        <div className="text-xs text-slate-500">
+                          {rule.enabled ? "\uD65C\uC131" : "\uBE44\uD65C\uC131"}
+                        </div>
+                      </div>
+                      <Button
+                        variant={rule.enabled ? "primary" : "secondary"}
+                        className="h-8 px-3 text-xs"
+                        onClick={() => toggleRule(rule.id)}
+                      >
+                        {rule.enabled ? "\uCF1C\uC9D0" : "\uAEBC\uC9D0"}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
-            <div
-              className="grid gap-px rounded-lg border border-slate-200 bg-slate-200 text-xs"
-              style={{
-                gridTemplateColumns: `${labelColumnWidth}px repeat(${slots.length}, minmax(24px, 1fr))`,
-              }}
-            >
+            <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
+              <div className="text-sm font-semibold">{"\uD61C\uD0DD \uBC84\uD2BC"}</div>
+              <p className="text-xs text-slate-500">
+                {
+                  "\uB4DC\uB798\uADF8\uD574\uC11C \uC2A4\uCF00\uC904\uB7EC\uC5D0 \uB193\uC73C\uBA74 \uD0C0\uC784\uC138\uC77C\uC774 \uC0DD\uC131\uB429\uB2C8\uB2E4."
+                }
+              </p>
+              {benefits.length === 0 ? (
+                <p className="text-xs text-slate-500">
+                  {
+                    "\uD61C\uD0DD \uCE74\uD0C8\uB85C\uADF8\uC5D0\uC11C \uD61C\uD0DD\uC744 \uCD94\uAC00\uD574\uC8FC\uC138\uC694."
+                  }
+                </p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {benefits.map((benefit) => (
+                    <Button
+                      key={String(benefit.id)}
+                      variant="secondary"
+                      className="h-8 rounded-full px-3 text-xs"
+                      draggable
+                      onDragStart={(event) => handleBenefitDragStart(benefit, event)}
+                    >
+                      {benefit.title}
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="text-sm text-slate-500">
+            {
+              "\uBE48 \uC2DC\uAC04\uB300\uB294 AI\uAC00 \uC608\uC57D\uC744 \uCD94\uCC9C\uD560 \uC218 \uC788\uB294 \uC2AC\uB86F\uC785\uB2C8\uB2E4."
+            }
+          </div>
+
+          <div
+            className="grid gap-px rounded-lg border border-slate-200 bg-slate-200 text-xs"
+            style={{
+              gridTemplateColumns: `${labelColumnWidth}px repeat(${slots.length}, minmax(24px, 1fr))`,
+            }}
+          >
               <div className="bg-white p-2 font-medium">{"\uD14C\uC774\uBE14"}</div>
               {slots.map((slot) => (
                 <div key={slot} className="bg-white p-2 text-center text-slate-500">
@@ -885,35 +911,6 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
             </div>
           </div>
 
-          <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
-            <div className="text-sm font-semibold">{"\uD61C\uD0DD \uBC84\uD2BC"}</div>
-            <p className="text-xs text-slate-500">
-              {
-                "\uB4DC\uB798\uADF8\uD574\uC11C \uC2A4\uCF00\uC904\uB7EC\uC5D0 \uB193\uC73C\uBA74 \uD0C0\uC784\uC138\uC77C\uC774 \uC0DD\uC131\uB429\uB2C8\uB2E4."
-              }
-            </p>
-            {benefits.length === 0 ? (
-              <p className="text-xs text-slate-500">
-                {
-                  "\uD61C\uD0DD \uCE74\uD0C8\uB85C\uADF8\uC5D0\uC11C \uD61C\uD0DD\uC744 \uCD94\uAC00\uD574\uC8FC\uC138\uC694."
-                }
-              </p>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {benefits.map((benefit) => (
-                  <Button
-                    key={String(benefit.id)}
-                    variant="secondary"
-                    className="h-8 rounded-full px-3 text-xs"
-                    draggable
-                    onDragStart={(event) => handleBenefitDragStart(benefit, event)}
-                  >
-                    {benefit.title}
-                  </Button>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
       ) : null}
 
