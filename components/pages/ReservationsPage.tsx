@@ -1,24 +1,19 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, Td, Th } from "@/components/ui/table";
+import { Dialog } from "@/components/ui/dialog";
 import type { TableUnit } from "@/domain/stores/types";
+import {
+  loadReservations,
+  saveReservations,
+  type StoredReservation,
+} from "@/lib/utils/reservationsStore";
 
-type ReservationEntry = {
-  id: string;
-  guestName: string;
-  partySize: number;
-  date: string;
-  status: "confirmed" | "pending" | "cancelled" | "no_show";
-  unit_id: string;
-  unit_index: number;
-  start_time: string;
-  end_time: string;
-  source?: "internal" | "external";
-};
+type ReservationEntry = StoredReservation;
 
 const mockUnits: TableUnit[] = [
   {
@@ -254,18 +249,64 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [view, setView] = useState<"scheduler" | "list">("scheduler");
   const [selectedDate, setSelectedDate] = useState(todayString);
+  const [reservations, setReservations] = useState<ReservationEntry[]>([]);
+  const [selectedReservation, setSelectedReservation] =
+    useState<ReservationEntry | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  useEffect(() => {
+    const local = loadReservations(storeId);
+    if (local) {
+      setReservations(local);
+    } else {
+      setReservations(mockReservations);
+      saveReservations(storeId, mockReservations);
+    }
+  }, [storeId]);
 
   const filtered = useMemo(() => {
-    return mockReservations.filter((item) => {
+    return reservations.filter((item) => {
       const statusMatch = statusFilter === "all" || item.status === statusFilter;
       const dateMatch = item.date === selectedDate;
       return statusMatch && dateMatch;
     });
-  }, [statusFilter, selectedDate]);
+  }, [reservations, statusFilter, selectedDate]);
 
   const slots = useMemo(() => buildSlots(), []);
   const rows = useMemo(() => buildRows(mockUnits), []);
   const dateLabel = formatDateLabel(selectedDate);
+
+  function openDetail(item: ReservationEntry) {
+    if (item.source === "external") {
+      window.alert("외부 플랫폼에서 관리되는 예약입니다.");
+      return;
+    }
+    setSelectedReservation(item);
+    setDialogOpen(true);
+  }
+
+  function updateReservationStatus(
+    reservationId: string,
+    nextStatus: ReservationEntry["status"]
+  ) {
+    setReservations((prev) => {
+      let next: ReservationEntry[];
+      if (nextStatus === "cancelled") {
+        next = prev.filter((item) => item.id !== reservationId);
+      } else {
+        next = prev.map((item) =>
+          item.id === reservationId ? { ...item, status: nextStatus } : item
+        );
+      }
+      saveReservations(storeId, next);
+      return next;
+    });
+    setDialogOpen(false);
+  }
+
+  const schedulerItems = filtered.filter(
+    (item) => item.status !== "cancelled" && item.status !== "no_show"
+  );
 
   return (
     <div className="space-y-4">
@@ -365,7 +406,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
               </div>
             ))}
             {rows.map((row) => {
-              const rowReservations = filtered.filter(
+              const rowReservations = schedulerItems.filter(
                 (reservation) =>
                   reservation.unit_id === row.unit_id &&
                   reservation.unit_index === row.unit_index
@@ -420,6 +461,8 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                         onClick={() => {
                           if (isExternal) {
                             window.alert("외부 플랫폼에서 관리되는 예약입니다.");
+                          } else {
+                            openDetail(reservation);
                           }
                         }}
                       >
@@ -473,12 +516,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                   </span>
                 </Td>
                 <Td>
-                  <Button
-                    variant="ghost"
-                    onClick={() =>
-                      router.push(`/stores/${storeId}/reservations/${row.id}`)
-                    }
-                  >
+                  <Button variant="ghost" onClick={() => openDetail(row)}>
                     상세
                   </Button>
                 </Td>
@@ -487,6 +525,55 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
           </tbody>
         </Table>
       )}
+
+      <Dialog open={dialogOpen}>
+        {selectedReservation ? (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="text-lg font-semibold">예약 상세</div>
+              <Badge className={statusStyles[selectedReservation.status]}>
+                {statusLabelMap[selectedReservation.status]}
+              </Badge>
+            </div>
+            <div className="space-y-2 text-sm text-slate-600">
+              <div>예약 번호: {selectedReservation.id}</div>
+              <div>고객: {selectedReservation.guestName}</div>
+              <div>인원: {selectedReservation.partySize}명</div>
+              <div>
+                시간: {selectedReservation.start_time.slice(11, 16)}~
+                {selectedReservation.end_time.slice(11, 16)}
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                onClick={() =>
+                  updateReservationStatus(selectedReservation.id, "confirmed")
+                }
+              >
+                확정
+              </Button>
+              <Button
+                variant="secondary"
+                className="bg-rose-50 text-rose-600 hover:bg-rose-100"
+                onClick={() =>
+                  updateReservationStatus(selectedReservation.id, "no_show")
+                }
+              >
+                노쇼
+              </Button>
+              <Button
+                variant="ghost"
+                className="text-rose-600 hover:bg-rose-50"
+                onClick={() =>
+                  updateReservationStatus(selectedReservation.id, "cancelled")
+                }
+              >
+                취소
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </Dialog>
     </div>
   );
 }
