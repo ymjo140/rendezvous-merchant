@@ -745,172 +745,169 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
               gridTemplateColumns: `${labelColumnWidth}px repeat(${slots.length}, minmax(24px, 1fr))`,
             }}
           >
-              <div className="bg-white p-2 font-medium">{"\uD14C\uC774\uBE14"}</div>
-              {slots.map((slot) => (
-                <div key={slot} className="bg-white p-2 text-center text-slate-500">
-                  {slot}
-                </div>
-              ))}
-
-              <div
-                ref={timeDealRowRef}
-                className="col-span-full grid"
-                style={{
-                  gridTemplateColumns: `${labelColumnWidth}px repeat(${slots.length}, minmax(24px, 1fr))`,
-                }}
-              >
-                <div className="bg-white p-2 text-slate-700">{"\uD0C0\uC784\uC138\uC77C"}</div>
-                {slots.map((slot) => (
-                  <div
-                    key={`deal-slot-${slot}`}
-                    className="bg-white p-2 border-l border-slate-100"
-                    onDragOver={(event) => event.preventDefault()}
-                    onDrop={(event) => handleBenefitDrop(slot, event)}
-                  />
-                ))}
-                {timeDealsForDate.map((deal) => {
-                  const start = toMinutes(deal.start_time);
-                  const end = toMinutes(deal.end_time);
-                  const startIndex = Math.max(
-                    0,
-                    Math.floor((start - startMinutes) / slotMinutes)
-                  );
-                  const endIndex = Math.min(
-                    slots.length,
-                    Math.ceil((end - startMinutes) / slotMinutes)
-                  );
-                  const columnStart = 2 + startIndex;
-                  const columnEnd = Math.max(columnStart + 1, 2 + endIndex);
-
-                  return (
-                    <div
-                      key={deal.id}
-                      className="relative z-10 flex items-center gap-2 rounded-md bg-indigo-50 px-2 py-1 text-xs text-indigo-700"
-                      style={{
-                        gridColumn: `${columnStart} / ${columnEnd}`,
-                        gridRow: "1",
-                        alignSelf: "center",
-                      }}
-                    >
-                      <button
-                        type="button"
-                        className="absolute left-0 top-0 h-full w-2 cursor-ew-resize rounded-l-md bg-indigo-200"
-                        onMouseDown={() =>
-                          setResizeState({ dealId: deal.id, edge: "start" })
-                        }
-                      />
-                      <span className="truncate">{deal.title}</span>
-                      <button
-                        type="button"
-                        className="absolute right-0 top-0 h-full w-2 cursor-ew-resize rounded-r-md bg-indigo-200"
-                        onMouseDown={() =>
-                          setResizeState({ dealId: deal.id, edge: "end" })
-                        }
-                      />
-                    </div>
-                  );
-                })}
+            <div className="bg-white p-2 font-medium">{"\uD14C\uC774\uBE14"}</div>
+            {slots.map((slot) => (
+              <div key={slot} className="bg-white p-2 text-center text-slate-500">
+                {slot}
               </div>
+            ))}
 
-              {rows.map((row) => {
-                const rowReservations = activeReservations.filter(
-                  (reservation) =>
-                    reservation.unit_id === row.unit_id &&
-                    reservation.unit_index === row.unit_index
+            <div
+              ref={timeDealRowRef}
+              className="col-span-full grid"
+              style={{
+                gridTemplateColumns: `${labelColumnWidth}px repeat(${slots.length}, minmax(24px, 1fr))`,
+              }}
+            >
+              <div className="bg-white p-2 text-slate-700">{"\uD0C0\uC784\uC138\uC77C"}</div>
+              {slots.map((slot) => (
+                <div
+                  key={`deal-slot-${slot}`}
+                  className="bg-white p-2 border-l border-slate-100"
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={(event) => handleBenefitDrop(slot, event)}
+                />
+              ))}
+              {timeDealsForDate.map((deal) => {
+                const start = toMinutes(deal.start_time);
+                const end = toMinutes(deal.end_time);
+                const startIndex = Math.max(
+                  0,
+                  Math.floor((start - startMinutes) / slotMinutes)
                 );
-                const occupiedReservations = rowReservations.filter(
-                  (reservation) => reservation.status !== "no_show"
+                const endIndex = Math.min(
+                  slots.length,
+                  Math.ceil((end - startMinutes) / slotMinutes)
                 );
+                const columnStart = 2 + startIndex;
+                const columnEnd = Math.max(columnStart + 1, 2 + endIndex);
 
                 return (
                   <div
-                    key={row.id}
-                    className="col-span-full grid"
+                    key={deal.id}
+                    className="relative z-10 flex items-center gap-2 rounded-md bg-indigo-50 px-2 py-1 text-xs text-indigo-700"
                     style={{
-                      gridTemplateColumns: `${labelColumnWidth}px repeat(${slots.length}, minmax(24px, 1fr))`,
+                      gridColumn: `${columnStart} / ${columnEnd}`,
+                      gridRow: "1",
+                      alignSelf: "center",
                     }}
                   >
-                    <div className="bg-white p-2 text-slate-700">{row.label}</div>
-                    {slots.map((slot) => {
-                      const slotMinutesValue = timeToMinutes(slot);
-                      const occupied = occupiedReservations.some((reservation) => {
-                        const start = timeToMinutes(reservation.start_time.slice(11, 16));
-                        const end = timeToMinutes(reservation.end_time.slice(11, 16));
-                        return slotMinutesValue >= start && slotMinutesValue < end;
-                      });
-
-                      return (
-                        <button
-                          key={`${row.id}-${slot}`}
-                          type="button"
-                          className={`bg-white p-2 border-l border-slate-100 ${
-                            occupied ? "cursor-not-allowed" : "hover:bg-slate-50"
-                          }`}
-                          onClick={() => {
-                            if (occupied) return;
-                            openCreate(row, slot);
-                          }}
-                        />
-                      );
-                    })}
-                    {rowReservations.map((reservation) => {
-                      const start = toMinutes(reservation.start_time);
-                      const end = toMinutes(reservation.end_time);
-                      const startIndex = Math.max(
-                        0,
-                        Math.floor((start - startMinutes) / slotMinutes)
-                      );
-                      const endIndex = Math.min(
-                        slots.length,
-                        Math.ceil((end - startMinutes) / slotMinutes)
-                      );
-                      const columnStart = 2 + startIndex;
-                      const columnEnd = Math.max(columnStart + 1, 2 + endIndex);
-                      const isExternal = reservation.source === "external";
-
-                      const isNoShow = reservation.status === "no_show";
-
-                      return (
-                        <div
-                          key={reservation.id}
-                          className={`z-10 flex items-center justify-between rounded-md px-2 py-1 text-xs ${
-                            isExternal
-                              ? "bg-slate-200 text-slate-700"
-                              : isNoShow
-                                ? "bg-rose-100 text-rose-700"
-                                : "bg-slate-900 text-white"
-                          } ${isExternal ? "cursor-pointer" : ""} ${
-                            isNoShow ? "pointer-events-none" : ""
-                          }`}
-                          style={{
-                            gridColumn: `${columnStart} / ${columnEnd}`,
-                            gridRow: "1",
-                            alignSelf: "center",
-                            backgroundImage: isExternal
-                              ? "repeating-linear-gradient(45deg, rgba(148,163,184,0.35), rgba(148,163,184,0.35) 6px, rgba(255,255,255,0.4) 6px, rgba(255,255,255,0.4) 12px)"
-                              : undefined,
-                          }}
-                          onClick={() => {
-                            if (isExternal) {
-                              window.alert(
-                                "\uC678\uBD80 \uD50C\uB7AB\uD3FC\uC5D0\uC11C \uAD00\uB9AC\uB418\uB294 \uC608\uC57D\uC785\uB2C8\uB2E4."
-                              );
-                            } else {
-                              openDetail(reservation);
-                            }
-                          }}
-                        >
-                          <span>{reservation.guestName}</span>
-                          <span>{`${reservation.partySize}\uBA85`}</span>
-                        </div>
-                      );
-                    })}
+                    <button
+                      type="button"
+                      className="absolute left-0 top-0 h-full w-2 cursor-ew-resize rounded-l-md bg-indigo-200"
+                      onMouseDown={() =>
+                        setResizeState({ dealId: deal.id, edge: "start" })
+                      }
+                    />
+                    <span className="truncate">{deal.title}</span>
+                    <button
+                      type="button"
+                      className="absolute right-0 top-0 h-full w-2 cursor-ew-resize rounded-r-md bg-indigo-200"
+                      onMouseDown={() =>
+                        setResizeState({ dealId: deal.id, edge: "end" })
+                      }
+                    />
                   </div>
                 );
               })}
             </div>
-          </div>
 
+            {rows.map((row) => {
+              const rowReservations = activeReservations.filter(
+                (reservation) =>
+                  reservation.unit_id === row.unit_id &&
+                  reservation.unit_index === row.unit_index
+              );
+              const occupiedReservations = rowReservations.filter(
+                (reservation) => reservation.status !== "no_show"
+              );
+
+              return (
+                <div
+                  key={row.id}
+                  className="col-span-full grid"
+                  style={{
+                    gridTemplateColumns: `${labelColumnWidth}px repeat(${slots.length}, minmax(24px, 1fr))`,
+                  }}
+                >
+                  <div className="bg-white p-2 text-slate-700">{row.label}</div>
+                  {slots.map((slot) => {
+                    const slotMinutesValue = timeToMinutes(slot);
+                    const occupied = occupiedReservations.some((reservation) => {
+                      const start = timeToMinutes(reservation.start_time.slice(11, 16));
+                      const end = timeToMinutes(reservation.end_time.slice(11, 16));
+                      return slotMinutesValue >= start && slotMinutesValue < end;
+                    });
+
+                    return (
+                      <button
+                        key={`${row.id}-${slot}`}
+                        type="button"
+                        className={`bg-white p-2 border-l border-slate-100 ${
+                          occupied ? "cursor-not-allowed" : "hover:bg-slate-50"
+                        }`}
+                        onClick={() => {
+                          if (occupied) return;
+                          openCreate(row, slot);
+                        }}
+                      />
+                    );
+                  })}
+                  {rowReservations.map((reservation) => {
+                    const start = toMinutes(reservation.start_time);
+                    const end = toMinutes(reservation.end_time);
+                    const startIndex = Math.max(
+                      0,
+                      Math.floor((start - startMinutes) / slotMinutes)
+                    );
+                    const endIndex = Math.min(
+                      slots.length,
+                      Math.ceil((end - startMinutes) / slotMinutes)
+                    );
+                    const columnStart = 2 + startIndex;
+                    const columnEnd = Math.max(columnStart + 1, 2 + endIndex);
+                    const isExternal = reservation.source === "external";
+                    const isNoShow = reservation.status === "no_show";
+
+                    return (
+                      <div
+                        key={reservation.id}
+                        className={`z-10 flex items-center justify-between rounded-md px-2 py-1 text-xs ${
+                          isExternal
+                            ? "bg-slate-200 text-slate-700"
+                            : isNoShow
+                              ? "bg-rose-100 text-rose-700"
+                              : "bg-slate-900 text-white"
+                        } ${isExternal ? "cursor-pointer" : ""} ${
+                          isNoShow ? "pointer-events-none" : ""
+                        }`}
+                        style={{
+                          gridColumn: `${columnStart} / ${columnEnd}`,
+                          gridRow: "1",
+                          alignSelf: "center",
+                          backgroundImage: isExternal
+                            ? "repeating-linear-gradient(45deg, rgba(148,163,184,0.35), rgba(148,163,184,0.35) 6px, rgba(255,255,255,0.4) 6px, rgba(255,255,255,0.4) 12px)"
+                            : undefined,
+                        }}
+                        onClick={() => {
+                          if (isExternal) {
+                            window.alert(
+                              "\uC678\uBD80 \uD50C\uB7AB\uD3FC\uC5D0\uC11C \uAD00\uB9AC\uB418\uB294 \uC608\uC57D\uC785\uB2C8\uB2E4."
+                            );
+                          } else {
+                            openDetail(reservation);
+                          }
+                        }}
+                      >
+                        <span>{reservation.guestName}</span>
+                        <span>{`${reservation.partySize}\uBA85`}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
         </div>
       ) : null}
 
