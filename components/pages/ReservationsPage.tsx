@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +14,13 @@ import {
   saveReservations,
   type StoredReservation,
 } from "@/lib/utils/reservationsStore";
+import { loadBenefits, type StoredBenefit } from "@/lib/utils/benefitsStore";
+import { loadRules, saveRules, type StoredRule } from "@/lib/utils/rulesStore";
+import {
+  loadTimeDeals,
+  saveTimeDeals,
+  type StoredTimeDeal,
+} from "@/lib/utils/timeDealsStore";
 
 type ReservationEntry = StoredReservation;
 
@@ -34,10 +42,15 @@ type CreateForm = {
   unit_index: number;
 };
 
+type ResizeState = {
+  dealId: string;
+  edge: "start" | "end";
+};
+
 const mockUnits: TableUnit[] = [
   {
     id: "unit-hall-4",
-    name: "홀 4인석",
+    name: "\uD640 4\uC778\uC11D",
     min_capacity: 2,
     max_capacity: 4,
     quantity: 4,
@@ -45,7 +58,7 @@ const mockUnits: TableUnit[] = [
   },
   {
     id: "unit-terrace-2",
-    name: "테라스 2인석",
+    name: "\uD14C\uB77C\uC2A4 2\uC778\uC11D",
     min_capacity: 1,
     max_capacity: 2,
     quantity: 2,
@@ -53,7 +66,7 @@ const mockUnits: TableUnit[] = [
   },
   {
     id: "unit-vip",
-    name: "VIP 룸",
+    name: "VIP \uB8F8",
     min_capacity: 4,
     max_capacity: 8,
     quantity: 2,
@@ -64,7 +77,7 @@ const mockUnits: TableUnit[] = [
 const mockReservations: ReservationEntry[] = [
   {
     id: "R-101",
-    guestName: "김민수",
+    guestName: "\uAE40\uBBFC\uC218",
     partySize: 4,
     date: "2026-02-01",
     status: "confirmed",
@@ -76,7 +89,7 @@ const mockReservations: ReservationEntry[] = [
   },
   {
     id: "R-102",
-    guestName: "이지현",
+    guestName: "\uC774\uC9C0\uD604",
     partySize: 2,
     date: "2026-02-01",
     status: "pending",
@@ -88,7 +101,7 @@ const mockReservations: ReservationEntry[] = [
   },
   {
     id: "R-103",
-    guestName: "박성준",
+    guestName: "\uBC15\uC131\uC900",
     partySize: 6,
     date: "2026-02-01",
     status: "confirmed",
@@ -100,7 +113,7 @@ const mockReservations: ReservationEntry[] = [
   },
   {
     id: "R-104",
-    guestName: "네이버 예약(김철수)",
+    guestName: "\uB124\uC774\uBC84 \uC608\uC57D(\uAE40\uCCA0\uC218)",
     partySize: 2,
     date: "2026-02-01",
     status: "confirmed",
@@ -112,7 +125,7 @@ const mockReservations: ReservationEntry[] = [
   },
   {
     id: "R-201",
-    guestName: "최하늘",
+    guestName: "\uCD5C\uD558\uB9BC",
     partySize: 2,
     date: "2026-02-02",
     status: "confirmed",
@@ -124,7 +137,7 @@ const mockReservations: ReservationEntry[] = [
   },
   {
     id: "R-202",
-    guestName: "오지훈",
+    guestName: "\uBC15\uC9C4\uC6C5",
     partySize: 4,
     date: "2026-02-02",
     status: "cancelled",
@@ -136,7 +149,7 @@ const mockReservations: ReservationEntry[] = [
   },
   {
     id: "R-203",
-    guestName: "서지은",
+    guestName: "\uC724\uC9C4\uC11C",
     partySize: 3,
     date: "2026-02-02",
     status: "pending",
@@ -148,7 +161,7 @@ const mockReservations: ReservationEntry[] = [
   },
   {
     id: "R-204",
-    guestName: "구글 캘린더(이정아)",
+    guestName: "\uAD6C\uAE00 \uCE98\uB9B0\uB354 \uC678\uBD80\uC608\uC57D",
     partySize: 4,
     date: "2026-02-02",
     status: "confirmed",
@@ -160,7 +173,7 @@ const mockReservations: ReservationEntry[] = [
   },
   {
     id: "R-301",
-    guestName: "황도윤",
+    guestName: "\uD64D\uB3C4\uD61C",
     partySize: 5,
     date: "2026-02-03",
     status: "confirmed",
@@ -172,7 +185,7 @@ const mockReservations: ReservationEntry[] = [
   },
   {
     id: "R-302",
-    guestName: "강유진",
+    guestName: "\uAC15\uC720\uC9C4",
     partySize: 2,
     date: "2026-02-03",
     status: "no_show",
@@ -183,12 +196,11 @@ const mockReservations: ReservationEntry[] = [
     source: "internal",
   },
 ];
-
 const statusLabelMap: Record<ReservationEntry["status"], string> = {
-  confirmed: "확정",
-  pending: "대기",
-  cancelled: "취소",
-  no_show: "노쇼",
+  confirmed: "\uD655\uC815",
+  pending: "\uB300\uAE30",
+  cancelled: "\uCDE8\uC18C",
+  no_show: "\uB178\uC1FC",
 };
 
 const statusStyles: Record<ReservationEntry["status"], string> = {
@@ -199,17 +211,26 @@ const statusStyles: Record<ReservationEntry["status"], string> = {
 };
 
 const statusOptions = [
-  { value: "all", label: "전체" },
-  { value: "confirmed", label: "확정" },
-  { value: "pending", label: "대기" },
-  { value: "cancelled", label: "취소" },
-  { value: "no_show", label: "노쇼" },
+  { value: "all", label: "\uC804\uCCB4" },
+  { value: "confirmed", label: "\uD655\uC815" },
+  { value: "pending", label: "\uB300\uAE30" },
+  { value: "cancelled", label: "\uCDE8\uC18C" },
+  { value: "no_show", label: "\uB178\uC1FC" },
 ];
 
 const startMinutes = 17 * 60;
 const endMinutes = 24 * 60;
 const slotMinutes = 30;
-const dayLabels = ["일", "월", "화", "수", "목", "금", "토"];
+const labelColumnWidth = 160;
+const dayLabels = [
+  "\uC77C",
+  "\uC6D4",
+  "\uD654",
+  "\uC218",
+  "\uBAA9",
+  "\uAE08",
+  "\uD1A0",
+];
 
 function toMinutes(dateString: string) {
   const date = new Date(dateString);
@@ -271,7 +292,7 @@ function formatDateLabel(dateString: string) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   const weekday = dayLabels[date.getDay()];
-  return `${year}년 ${month}월 ${day}일 (${weekday})`;
+  return `${year}\uB144 ${month}\uC6D4 ${day}\uC77C (${weekday})`;
 }
 
 export function ReservationsPage({ storeId }: { storeId?: string }) {
@@ -281,11 +302,16 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
   const [selectedDate, setSelectedDate] = useState(todayString);
   const [tableUnits, setTableUnits] = useState<TableUnit[]>([]);
   const [reservations, setReservations] = useState<ReservationEntry[]>([]);
+  const [rules, setRules] = useState<StoredRule[]>([]);
+  const [benefits, setBenefits] = useState<StoredBenefit[]>([]);
+  const [timeDeals, setTimeDeals] = useState<StoredTimeDeal[]>([]);
   const [selectedReservation, setSelectedReservation] =
     useState<ReservationEntry | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState<CreateForm | null>(null);
+  const [resizeState, setResizeState] = useState<ResizeState | null>(null);
+  const timeDealRowRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const local = loadReservations(storeId);
@@ -307,6 +333,92 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
     }
   }, [storeId]);
 
+  useEffect(() => {
+    const localRules = loadRules(storeId);
+    if (localRules) {
+      setRules(localRules);
+    } else {
+      setRules([]);
+    }
+  }, [storeId]);
+
+  useEffect(() => {
+    const localBenefits = loadBenefits(storeId);
+    if (localBenefits) {
+      setBenefits(localBenefits);
+    } else {
+      setBenefits([]);
+    }
+  }, [storeId]);
+
+  useEffect(() => {
+    const localDeals = loadTimeDeals(storeId);
+    if (localDeals) {
+      setTimeDeals(localDeals);
+    } else {
+      setTimeDeals([]);
+    }
+  }, [storeId]);
+  useEffect(() => {
+    if (!resizeState) return;
+
+    function handleMove(event: MouseEvent) {
+      const ref = timeDealRowRef.current;
+      if (!ref) return;
+      const rect = ref.getBoundingClientRect();
+      const x = event.clientX - rect.left - labelColumnWidth;
+      const width = rect.width - labelColumnWidth;
+      if (width <= 0) return;
+      const slotsCount = buildSlots().length;
+      const index = Math.min(
+        Math.max(Math.floor((x / width) * slotsCount), 0),
+        slotsCount - 1
+      );
+      const targetMinutes = startMinutes + index * slotMinutes;
+
+      setTimeDeals((prev) => {
+        const next = prev.map((deal) => {
+          if (deal.id !== resizeState.dealId) return deal;
+          const currentStart = timeToMinutes(deal.start_time.slice(11, 16));
+          const currentEnd = timeToMinutes(deal.end_time.slice(11, 16));
+
+          if (resizeState.edge === "start") {
+            const nextStart = Math.min(targetMinutes, currentEnd - slotMinutes);
+            const nextStartTime = minutesToTime(Math.max(startMinutes, nextStart));
+            return {
+              ...deal,
+              start_time: `${deal.date}T${nextStartTime}:00`,
+            };
+          }
+
+          const nextEnd = Math.max(
+            targetMinutes + slotMinutes,
+            currentStart + slotMinutes
+          );
+          const boundedEnd = Math.min(nextEnd, endMinutes);
+          const nextEndTime = minutesToTime(boundedEnd);
+          return {
+            ...deal,
+            end_time: `${deal.date}T${nextEndTime}:00`,
+          };
+        });
+        saveTimeDeals(storeId, next);
+        return next;
+      });
+    }
+
+    function handleUp() {
+      setResizeState(null);
+    }
+
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+    };
+  }, [resizeState, storeId]);
+
   const filtered = useMemo(() => {
     return reservations.filter((item) => {
       const statusMatch = statusFilter === "all" || item.status === statusFilter;
@@ -318,10 +430,16 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
   const slots = useMemo(() => buildSlots(), []);
   const rows = useMemo(() => buildRows(tableUnits), [tableUnits]);
   const dateLabel = formatDateLabel(selectedDate);
+  const timeDealsForDate = useMemo(
+    () => timeDeals.filter((deal) => deal.date === selectedDate),
+    [timeDeals, selectedDate]
+  );
 
   function openDetail(item: ReservationEntry) {
     if (item.source === "external") {
-      window.alert("외부 플랫폼에서 관리되는 예약입니다.");
+      window.alert(
+        "\uC678\uBD80 \uD50C\uB7AB\uD3FC\uC5D0\uC11C \uAD00\uB9AC\uB418\uB294 \uC608\uC57D\uC785\uB2C8\uB2E4."
+      );
       return;
     }
     setSelectedReservation(item);
@@ -368,14 +486,18 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
     const { id, guestName, partySize, date, startTime, endTime } = createForm;
 
     if (!id.trim() || !guestName.trim()) {
-      window.alert("예약 번호와 고객 이름을 입력해 주세요.");
+      window.alert(
+        "\uC608\uC57D \uBC88\uD638\uC640 \uACE0\uAC1D \uC774\uB984\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694."
+      );
       return;
     }
 
     const start = timeToMinutes(startTime);
     const end = timeToMinutes(endTime);
     if (end <= start) {
-      window.alert("종료 시간이 시작 시간보다 늦어야 합니다.");
+      window.alert(
+        "\uC885\uB8CC \uC2DC\uAC04\uC740 \uC2DC\uC791 \uC2DC\uAC04\uBCF4\uB2E4 \uB2A6\uC5B4\uC57C \uD569\uB2C8\uB2E4."
+      );
       return;
     }
 
@@ -390,7 +512,9 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
     });
 
     if (overlap) {
-      window.alert("해당 시간대에 이미 예약이 있습니다.");
+      window.alert(
+        "\uD574\uB2F9 \uC2DC\uAC04\uC5D0 \uC774\uBBF8 \uC608\uC57D\uC774 \uC788\uC2B5\uB2C8\uB2E4."
+      );
       return;
     }
 
@@ -416,16 +540,58 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
     setCreateOpen(false);
   }
 
-  const schedulerItems = filtered.filter(
-    (item) => item.status !== "cancelled" && item.status !== "no_show"
-  );
+  function toggleRule(ruleId: StoredRule["id"]) {
+    setRules((prev) => {
+      const next = prev.map((rule) =>
+        rule.id === ruleId ? { ...rule, enabled: !rule.enabled } : rule
+      );
+      saveRules(storeId, next);
+      return next;
+    });
+  }
+
+  function handleBenefitDragStart(benefit: StoredBenefit, event: React.DragEvent) {
+    event.dataTransfer.setData("benefitId", String(benefit.id));
+    event.dataTransfer.setData("benefitTitle", benefit.title);
+  }
+
+  function handleBenefitDrop(slot: string, event: React.DragEvent) {
+    event.preventDefault();
+    const benefitId = event.dataTransfer.getData("benefitId");
+    const benefitTitle = event.dataTransfer.getData("benefitTitle");
+    if (!benefitId || !benefitTitle) return;
+
+    const start = timeToMinutes(slot);
+    const end = Math.min(start + 60, endMinutes);
+    if (end <= start) return;
+
+    const startTime = minutesToTime(start);
+    const endTime = minutesToTime(end);
+
+    const newDeal: StoredTimeDeal = {
+      id: `deal-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      benefitId,
+      title: benefitTitle,
+      date: selectedDate,
+      start_time: `${selectedDate}T${startTime}:00`,
+      end_time: `${selectedDate}T${endTime}:00`,
+    };
+
+    setTimeDeals((prev) => {
+      const next = [newDeal, ...prev];
+      saveTimeDeals(storeId, next);
+      return next;
+    });
+  }
+
+  const activeReservations = filtered.filter((item) => item.status !== "cancelled");
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-semibold">예약 목록</h1>
-          <p className="text-sm text-slate-500">매장 #{storeId}</p>
+          <h1 className="text-2xl font-semibold">{"\uC608\uC57D \uBAA9\uB85D"}</h1>
+          <p className="text-sm text-slate-500">{`\uB9E4\uC7A5 #${storeId ?? ""}`}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2 py-1 text-sm">
@@ -455,10 +621,12 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
             variant="ghost"
             className="border border-slate-300 text-slate-700"
             onClick={() =>
-              window.alert("구글/네이버 캘린더와 연동하여 중복 예약을 방지합니다.")
+              window.alert(
+                "\uAD6C\uAE00/\uB124\uC774\uBC84 \uCE98\uB9B0\uB354\uC640 \uC5F0\uB3D9\uD558\uC5EC \uC911\uBCF5 \uC608\uC57D\uC744 \uBC29\uC9C0\uD569\uB2C8\uB2E4."
+              )
             }
           >
-            📅 외부 캘린더 연동
+            {"\uD83D\uDCC5 \uC678\uBD80 \uCE98\uB9B0\uB354 \uC5F0\uB3D9"}
           </Button>
           <select
             className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm"
@@ -475,150 +643,289 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
             variant={view === "scheduler" ? "primary" : "secondary"}
             onClick={() => setView("scheduler")}
           >
-            스케줄러 보기
+            {"\uC2A4\uCF00\uC904\uB7EC \uBCF4\uAE30"}
           </Button>
           <Button
             variant={view === "list" ? "primary" : "secondary"}
             onClick={() => setView("list")}
           >
-            리스트 보기
+            {"\uB9AC\uC2A4\uD2B8 \uBCF4\uAE30"}
           </Button>
         </div>
       </div>
-
-      {filtered.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-slate-200 bg-white p-6 text-center space-y-3">
-          <div className="text-lg font-semibold">
-            📅 {dateLabel}에는 아직 예약이 없습니다.
+      {view === "scheduler" ? (
+        <div className="grid gap-4 lg:grid-cols-[260px_1fr_260px]">
+          <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
+            <div className="text-sm font-semibold">{"\uADDC\uCE59 \uBAA9\uB85D"}</div>
+            {rules.length === 0 ? (
+              <p className="text-xs text-slate-500">
+                {
+                  "\uB4F1\uB85D\uB41C \uADDC\uCE59\uC774 \uC5C6\uC2B5\uB2C8\uB2E4. \uB8F0 \uC124\uC815\uC5D0\uC11C \uC0C8 \uADDC\uCE59\uC744 \uB9CC\uB4E4\uC5B4\uC8FC\uC138\uC694."
+                }
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {rules.map((rule) => (
+                  <div
+                    key={String(rule.id)}
+                    className="flex items-center justify-between gap-2 rounded-md border border-slate-200 px-3 py-2"
+                  >
+                    <div className="text-sm">
+                      <div className="font-medium text-slate-900">{rule.name}</div>
+                      <div className="text-xs text-slate-500">
+                        {rule.enabled ? "\uD65C\uC131" : "\uBE44\uD65C\uC131"}
+                      </div>
+                    </div>
+                    <Button
+                      variant={rule.enabled ? "primary" : "secondary"}
+                      className="h-8 px-3 text-xs"
+                      onClick={() => toggleRule(rule.id)}
+                    >
+                      {rule.enabled ? "\uCF1C\uC9D0" : "\uAEBC\uC9D0"}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-          <p className="text-sm text-slate-500">
-            지금 이 시간대에 타임세일을 걸어 손님을 모아보세요!
-          </p>
-          <Button onClick={() => router.push(`/stores/${storeId}/offers/rules/new`)}>
-            새 룰 만들기
-          </Button>
+
+          <div className="space-y-3">
+            <div className="text-sm text-slate-500">
+              {
+                "\uBE48 \uC2DC\uAC04\uB300\uB294 AI\uAC00 \uC608\uC57D\uC744 \uCD94\uCC9C\uD560 \uC218 \uC788\uB294 \uC2AC\uB86F\uC785\uB2C8\uB2E4."
+              }
+            </div>
+            {filtered.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-slate-200 bg-white p-6 text-center space-y-3">
+                <div className="text-lg font-semibold">
+                  {`\uD83D\uDCC5 ${dateLabel}\uC5D0\uB294 \uC544\uC9C1 \uC608\uC57D\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.`}
+                </div>
+                <p className="text-sm text-slate-500">
+                  {
+                    "\uD0C0\uC784\uC138\uC77C \uD61C\uD0DD\uC744 \uB04C\uC5B4\uC11C \uC190\uB2D8\uC744 \uBAA8\uC544\uBCF4\uC138\uC694."
+                  }
+                </p>
+                <Button onClick={() => router.push(`/stores/${storeId}/offers/benefits`)}>
+                  {"\uD61C\uD0DD \uCE74\uD0C8\uB85C\uADF8 \uBCF4\uAE30"}
+                </Button>
+              </div>
+            ) : null}
+
+            <div
+              className="grid gap-px rounded-lg border border-slate-200 bg-slate-200 text-xs"
+              style={{
+                gridTemplateColumns: `${labelColumnWidth}px repeat(${slots.length}, minmax(24px, 1fr))`,
+              }}
+            >
+              <div className="bg-white p-2 font-medium">{"\uD14C\uC774\uBE14"}</div>
+              {slots.map((slot) => (
+                <div key={slot} className="bg-white p-2 text-center text-slate-500">
+                  {slot}
+                </div>
+              ))}
+
+              <div
+                ref={timeDealRowRef}
+                className="col-span-full grid"
+                style={{
+                  gridTemplateColumns: `${labelColumnWidth}px repeat(${slots.length}, minmax(24px, 1fr))`,
+                }}
+              >
+                <div className="bg-white p-2 text-slate-700">{"\uD0C0\uC784\uC138\uC77C"}</div>
+                {slots.map((slot) => (
+                  <div
+                    key={`deal-slot-${slot}`}
+                    className="bg-white p-2 border-l border-slate-100"
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={(event) => handleBenefitDrop(slot, event)}
+                  />
+                ))}
+                {timeDealsForDate.map((deal) => {
+                  const start = toMinutes(deal.start_time);
+                  const end = toMinutes(deal.end_time);
+                  const startIndex = Math.max(
+                    0,
+                    Math.floor((start - startMinutes) / slotMinutes)
+                  );
+                  const endIndex = Math.min(
+                    slots.length,
+                    Math.ceil((end - startMinutes) / slotMinutes)
+                  );
+                  const columnStart = 2 + startIndex;
+                  const columnEnd = Math.max(columnStart + 1, 2 + endIndex);
+
+                  return (
+                    <div
+                      key={deal.id}
+                      className="relative z-10 flex items-center gap-2 rounded-md bg-indigo-50 px-2 py-1 text-xs text-indigo-700"
+                      style={{
+                        gridColumn: `${columnStart} / ${columnEnd}`,
+                        gridRow: "1",
+                        alignSelf: "center",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        className="absolute left-0 top-0 h-full w-2 cursor-ew-resize rounded-l-md bg-indigo-200"
+                        onMouseDown={() =>
+                          setResizeState({ dealId: deal.id, edge: "start" })
+                        }
+                      />
+                      <span className="truncate">{deal.title}</span>
+                      <button
+                        type="button"
+                        className="absolute right-0 top-0 h-full w-2 cursor-ew-resize rounded-r-md bg-indigo-200"
+                        onMouseDown={() =>
+                          setResizeState({ dealId: deal.id, edge: "end" })
+                        }
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+
+              {rows.map((row) => {
+                const rowReservations = activeReservations.filter(
+                  (reservation) =>
+                    reservation.unit_id === row.unit_id &&
+                    reservation.unit_index === row.unit_index
+                );
+                const occupiedReservations = rowReservations.filter(
+                  (reservation) => reservation.status !== "no_show"
+                );
+
+                return (
+                  <div
+                    key={row.id}
+                    className="col-span-full grid"
+                    style={{
+                      gridTemplateColumns: `${labelColumnWidth}px repeat(${slots.length}, minmax(24px, 1fr))`,
+                    }}
+                  >
+                    <div className="bg-white p-2 text-slate-700">{row.label}</div>
+                    {slots.map((slot) => {
+                      const slotMinutesValue = timeToMinutes(slot);
+                      const occupied = occupiedReservations.some((reservation) => {
+                        const start = timeToMinutes(reservation.start_time.slice(11, 16));
+                        const end = timeToMinutes(reservation.end_time.slice(11, 16));
+                        return slotMinutesValue >= start && slotMinutesValue < end;
+                      });
+
+                      return (
+                        <button
+                          key={`${row.id}-${slot}`}
+                          type="button"
+                          className={`bg-white p-2 border-l border-slate-100 ${
+                            occupied ? "cursor-not-allowed" : "hover:bg-slate-50"
+                          }`}
+                          onClick={() => {
+                            if (occupied) return;
+                            openCreate(row, slot);
+                          }}
+                        />
+                      );
+                    })}
+                    {rowReservations.map((reservation) => {
+                      const start = toMinutes(reservation.start_time);
+                      const end = toMinutes(reservation.end_time);
+                      const startIndex = Math.max(
+                        0,
+                        Math.floor((start - startMinutes) / slotMinutes)
+                      );
+                      const endIndex = Math.min(
+                        slots.length,
+                        Math.ceil((end - startMinutes) / slotMinutes)
+                      );
+                      const columnStart = 2 + startIndex;
+                      const columnEnd = Math.max(columnStart + 1, 2 + endIndex);
+                      const isExternal = reservation.source === "external";
+
+                      const isNoShow = reservation.status === "no_show";
+
+                      return (
+                        <div
+                          key={reservation.id}
+                          className={`z-10 flex items-center justify-between rounded-md px-2 py-1 text-xs ${
+                            isExternal
+                              ? "bg-slate-200 text-slate-700"
+                              : isNoShow
+                                ? "bg-rose-100 text-rose-700"
+                                : "bg-slate-900 text-white"
+                          } ${isExternal ? "cursor-pointer" : ""} ${
+                            isNoShow ? "pointer-events-none" : ""
+                          }`}
+                          style={{
+                            gridColumn: `${columnStart} / ${columnEnd}`,
+                            gridRow: "1",
+                            alignSelf: "center",
+                            backgroundImage: isExternal
+                              ? "repeating-linear-gradient(45deg, rgba(148,163,184,0.35), rgba(148,163,184,0.35) 6px, rgba(255,255,255,0.4) 6px, rgba(255,255,255,0.4) 12px)"
+                              : undefined,
+                          }}
+                          onClick={() => {
+                            if (isExternal) {
+                              window.alert(
+                                "\uC678\uBD80 \uD50C\uB7AB\uD3FC\uC5D0\uC11C \uAD00\uB9AC\uB418\uB294 \uC608\uC57D\uC785\uB2C8\uB2E4."
+                              );
+                            } else {
+                              openDetail(reservation);
+                            }
+                          }}
+                        >
+                          <span>{reservation.guestName}</span>
+                          <span>{`${reservation.partySize}\uBA85`}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
+            <div className="text-sm font-semibold">{"\uD61C\uD0DD \uBC84\uD2BC"}</div>
+            <p className="text-xs text-slate-500">
+              {
+                "\uB4DC\uB798\uADF8\uD574\uC11C \uC2A4\uCF00\uC904\uB7EC\uC5D0 \uB193\uC73C\uBA74 \uD0C0\uC784\uC138\uC77C\uC774 \uC0DD\uC131\uB429\uB2C8\uB2E4."
+              }
+            </p>
+            {benefits.length === 0 ? (
+              <p className="text-xs text-slate-500">
+                {
+                  "\uD61C\uD0DD \uCE74\uD0C8\uB85C\uADF8\uC5D0\uC11C \uD61C\uD0DD\uC744 \uCD94\uAC00\uD574\uC8FC\uC138\uC694."
+                }
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {benefits.map((benefit) => (
+                  <Button
+                    key={String(benefit.id)}
+                    variant="secondary"
+                    className="h-8 rounded-full px-3 text-xs"
+                    draggable
+                    onDragStart={(event) => handleBenefitDragStart(benefit, event)}
+                  >
+                    {benefit.title}
+                  </Button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       ) : null}
-
-      {view === "scheduler" && (
-        <div className="space-y-3">
-          <div className="text-sm text-slate-500">
-            빈 시간대는 AI가 예약을 추천할 수 있는 슬롯입니다.
-          </div>
-          <div
-            className="grid gap-px rounded-lg border border-slate-200 bg-slate-200 text-xs"
-            style={{
-              gridTemplateColumns: `160px repeat(${slots.length}, minmax(24px, 1fr))`,
-            }}
-          >
-            <div className="bg-white p-2 font-medium">테이블</div>
-            {slots.map((slot) => (
-              <div key={slot} className="bg-white p-2 text-center text-slate-500">
-                {slot}
-              </div>
-            ))}
-            {rows.map((row) => {
-              const rowReservations = schedulerItems.filter(
-                (reservation) =>
-                  reservation.unit_id === row.unit_id &&
-                  reservation.unit_index === row.unit_index
-              );
-
-              return (
-                <div
-                  key={row.id}
-                  className="col-span-full grid"
-                  style={{
-                    gridTemplateColumns: `160px repeat(${slots.length}, minmax(24px, 1fr))`,
-                  }}
-                >
-                  <div className="bg-white p-2 text-slate-700">{row.label}</div>
-                  {slots.map((slot) => {
-                    const slotMinutesValue = timeToMinutes(slot);
-                    const occupied = rowReservations.some((reservation) => {
-                      const start = timeToMinutes(reservation.start_time.slice(11, 16));
-                      const end = timeToMinutes(reservation.end_time.slice(11, 16));
-                      return slotMinutesValue >= start && slotMinutesValue < end;
-                    });
-
-                    return (
-                      <button
-                        key={`${row.id}-${slot}`}
-                        type="button"
-                        className={`bg-white p-2 border-l border-slate-100 ${
-                          occupied ? "cursor-not-allowed" : "hover:bg-slate-50"
-                        }`}
-                        onClick={() => {
-                          if (occupied) return;
-                          openCreate(row, slot);
-                        }}
-                      />
-                    );
-                  })}
-                  {rowReservations.map((reservation) => {
-                    const start = toMinutes(reservation.start_time);
-                    const end = toMinutes(reservation.end_time);
-                    const startIndex = Math.max(
-                      0,
-                      Math.floor((start - startMinutes) / slotMinutes)
-                    );
-                    const endIndex = Math.min(
-                      slots.length,
-                      Math.ceil((end - startMinutes) / slotMinutes)
-                    );
-                    const columnStart = 2 + startIndex;
-                    const columnEnd = Math.max(columnStart + 1, 2 + endIndex);
-                    const isExternal = reservation.source === "external";
-
-                    return (
-                      <div
-                        key={reservation.id}
-                        className={`z-10 flex items-center justify-between rounded-md px-2 py-1 text-xs ${
-                          isExternal
-                            ? "bg-slate-200 text-slate-700"
-                            : reservation.status === "no_show"
-                              ? "bg-rose-100 text-rose-700"
-                              : "bg-slate-900 text-white"
-                        } ${isExternal ? "cursor-pointer" : ""}`}
-                        style={{
-                          gridColumn: `${columnStart} / ${columnEnd}`,
-                          gridRow: "1",
-                          alignSelf: "center",
-                          backgroundImage: isExternal
-                            ? "repeating-linear-gradient(45deg, rgba(148,163,184,0.35), rgba(148,163,184,0.35) 6px, rgba(255,255,255,0.4) 6px, rgba(255,255,255,0.4) 12px)"
-                            : undefined,
-                        }}
-                        onClick={() => {
-                          if (isExternal) {
-                            window.alert("외부 플랫폼에서 관리되는 예약입니다.");
-                          } else {
-                            openDetail(reservation);
-                          }
-                        }}
-                      >
-                        <span>{reservation.guestName}</span>
-                        <span>{reservation.partySize}명</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {view === "list" && (
         <Table>
           <thead>
             <tr>
-              <Th>예약 번호</Th>
-              <Th>고객</Th>
-              <Th>인원</Th>
-              <Th>날짜</Th>
-              <Th>시간</Th>
-              <Th>상태</Th>
-              <Th>조치</Th>
+              <Th>{"\uC608\uC57D \uBC88\uD638"}</Th>
+              <Th>{"\uACE0\uAC1D"}</Th>
+              <Th>{"\uC778\uC6D0"}</Th>
+              <Th>{"\uB0A0\uC9DC"}</Th>
+              <Th>{"\uC2DC\uAC04"}</Th>
+              <Th>{"\uC0C1\uD0DC"}</Th>
+              <Th>{"\uC870\uCE58"}</Th>
             </tr>
           </thead>
           <tbody>
@@ -626,7 +933,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
               <tr>
                 <Td colSpan={7}>
                   <div className="py-6 text-center text-sm text-slate-500">
-                    선택한 날짜에 예약이 없습니다.
+                    {"\uC120\uD0DD\uD55C \uB0A0\uC9DC\uC5D0\uB294 \uC608\uC57D\uC774 \uC5C6\uC2B5\uB2C8\uB2E4."}
                   </div>
                 </Td>
               </tr>
@@ -638,7 +945,9 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                     <div className="flex items-center gap-2">
                       <span>{row.guestName}</span>
                       {row.source === "external" ? (
-                        <Badge className="bg-slate-200 text-slate-600">외부</Badge>
+                        <Badge className="bg-slate-200 text-slate-600">
+                          {"\uC678\uBD80"}
+                        </Badge>
                       ) : null}
                     </div>
                   </Td>
@@ -656,7 +965,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                   </Td>
                   <Td>
                     <Button variant="ghost" onClick={() => openDetail(row)}>
-                      상세
+                      {"\uC0C1\uC138"}
                     </Button>
                   </Td>
                 </tr>
@@ -665,22 +974,27 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
           </tbody>
         </Table>
       )}
-
       <Dialog open={dialogOpen}>
         {selectedReservation ? (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <div className="text-lg font-semibold">예약 상세</div>
+              <div className="text-lg font-semibold">{"\uC608\uC57D \uC0C1\uC138"}</div>
               <Badge className={statusStyles[selectedReservation.status]}>
                 {statusLabelMap[selectedReservation.status]}
               </Badge>
             </div>
             <div className="space-y-2 text-sm text-slate-600">
-              <div>예약 번호: {selectedReservation.id}</div>
-              <div>고객: {selectedReservation.guestName}</div>
-              <div>인원: {selectedReservation.partySize}명</div>
               <div>
-                시간: {selectedReservation.start_time.slice(11, 16)}~
+                {"\uC608\uC57D \uBC88\uD638"}: {selectedReservation.id}
+              </div>
+              <div>
+                {"\uACE0\uAC1D"}: {selectedReservation.guestName}
+              </div>
+              <div>
+                {"\uC778\uC6D0"}: {selectedReservation.partySize}\uBA85
+              </div>
+              <div>
+                {"\uC2DC\uAC04"}: {selectedReservation.start_time.slice(11, 16)}~
                 {selectedReservation.end_time.slice(11, 16)}
               </div>
             </div>
@@ -690,7 +1004,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                   updateReservationStatus(selectedReservation.id, "confirmed")
                 }
               >
-                확정
+                {"\uD655\uC815"}
               </Button>
               <Button
                 variant="secondary"
@@ -699,7 +1013,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                   updateReservationStatus(selectedReservation.id, "no_show")
                 }
               >
-                노쇼
+                {"\uB178\uC1FC"}
               </Button>
               <Button
                 variant="ghost"
@@ -708,7 +1022,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                   updateReservationStatus(selectedReservation.id, "cancelled")
                 }
               >
-                취소
+                {"\uCDE8\uC18C"}
               </Button>
             </div>
           </div>
@@ -718,10 +1032,12 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
       <Dialog open={createOpen}>
         {createForm ? (
           <div className="space-y-4">
-            <div className="text-lg font-semibold">새 예약 추가</div>
+            <div className="text-lg font-semibold">{"\uC0C8 \uC608\uC57D \uCD94\uAC00"}</div>
             <div className="grid gap-3 text-sm">
               <div className="space-y-1">
-                <label className="text-xs text-slate-500">예약 번호</label>
+                <label className="text-xs text-slate-500">
+                  {"\uC608\uC57D \uBC88\uD638"}
+                </label>
                 <input
                   className="h-10 w-full rounded-md border border-slate-200 px-3"
                   value={createForm.id}
@@ -732,7 +1048,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-slate-500">고객</label>
+                <label className="text-xs text-slate-500">{"\uACE0\uAC1D"}</label>
                 <input
                   className="h-10 w-full rounded-md border border-slate-200 px-3"
                   value={createForm.guestName}
@@ -742,12 +1058,12 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                       guestName: event.target.value,
                     })
                   }
-                  placeholder="김민수"
+                  placeholder="\uAE40\uBBFC\uC218"
                 />
               </div>
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1">
-                  <label className="text-xs text-slate-500">인원</label>
+                  <label className="text-xs text-slate-500">{"\uC778\uC6D0"}</label>
                   <input
                     type="number"
                     className="h-10 w-full rounded-md border border-slate-200 px-3"
@@ -761,7 +1077,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-slate-500">날짜</label>
+                  <label className="text-xs text-slate-500">{"\uB0A0\uC9DC"}</label>
                   <input
                     type="date"
                     className="h-10 w-full rounded-md border border-slate-200 px-3"
@@ -774,7 +1090,9 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
               </div>
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1">
-                  <label className="text-xs text-slate-500">시작 시간</label>
+                  <label className="text-xs text-slate-500">
+                    {"\uC2DC\uC791 \uC2DC\uAC04"}
+                  </label>
                   <input
                     type="time"
                     className="h-10 w-full rounded-md border border-slate-200 px-3"
@@ -788,7 +1106,9 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-slate-500">종료 시간</label>
+                  <label className="text-xs text-slate-500">
+                    {"\uC885\uB8CC \uC2DC\uAC04"}
+                  </label>
                   <input
                     type="time"
                     className="h-10 w-full rounded-md border border-slate-200 px-3"
@@ -803,14 +1123,14 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                 </div>
               </div>
               <div className="text-xs text-slate-500">
-                테이블: {createForm.unit_id}-{createForm.unit_index}
+                {`\uD14C\uC774\uBE14 ${createForm.unit_id}-${createForm.unit_index}`}
               </div>
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="secondary" onClick={() => setCreateOpen(false)}>
-                취소
+                {"\uCDE8\uC18C"}
               </Button>
-              <Button onClick={handleCreateSubmit}>추가</Button>
+              <Button onClick={handleCreateSubmit}>{"\uCD94\uAC00"}</Button>
             </div>
           </div>
         ) : null}
