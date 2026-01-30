@@ -14,7 +14,7 @@ import {
   saveReservations,
   type StoredReservation,
 } from "@/lib/utils/reservationsStore";
-import { loadBenefits, type StoredBenefit } from "@/lib/utils/benefitsStore";
+import { loadBenefits, saveBenefits, type StoredBenefit } from "@/lib/utils/benefitsStore";
 import { loadRules, saveRules, type StoredRule } from "@/lib/utils/rulesStore";
 import {
   loadTimeDeals,
@@ -299,14 +299,20 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const effectiveStoreId = useMemo(() => {
-    if (storeId) return storeId;
+    if (storeId && storeId !== "undefined" && storeId !== "null") return storeId;
     const parts = pathname?.split("/").filter(Boolean) ?? [];
     const storesIndex = parts.indexOf("stores");
     if (storesIndex >= 0 && parts[storesIndex + 1]) {
-      return parts[storesIndex + 1];
+      const candidate = parts[storesIndex + 1];
+      if (candidate && candidate !== "undefined" && candidate !== "null") {
+        return candidate;
+      }
     }
     return undefined;
   }, [storeId, pathname]);
+  const [resolvedStoreId, setResolvedStoreId] = useState<string | undefined>(
+    undefined
+  );
   const [statusFilter, setStatusFilter] = useState("all");
   const [view, setView] = useState<"scheduler" | "list">("scheduler");
   const [selectedDate, setSelectedDate] = useState(todayString);
@@ -324,51 +330,97 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
   const timeDealRowRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const local = loadReservations(effectiveStoreId);
+    if (effectiveStoreId) {
+      setResolvedStoreId(effectiveStoreId);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("rendezvous_last_store", effectiveStoreId);
+      }
+      return;
+    }
+    if (typeof window !== "undefined") {
+      const lastStore = window.localStorage.getItem("rendezvous_last_store");
+      if (lastStore) {
+        setResolvedStoreId(lastStore);
+      }
+    }
+  }, [effectiveStoreId]);
+
+  useEffect(() => {
+    const local = loadReservations(resolvedStoreId);
     if (local) {
       setReservations(local);
-    } else {
-      setReservations(mockReservations);
-      saveReservations(effectiveStoreId, mockReservations);
+      return;
     }
-  }, [effectiveStoreId]);
+    const fallback = loadReservations();
+    if (fallback) {
+      setReservations(fallback);
+      saveReservations(resolvedStoreId, fallback);
+      return;
+    }
+    setReservations(mockReservations);
+    saveReservations(resolvedStoreId, mockReservations);
+  }, [resolvedStoreId]);
 
   useEffect(() => {
-    const localUnits = loadTableUnits(effectiveStoreId);
+    const localUnits = loadTableUnits(resolvedStoreId);
     if (localUnits && localUnits.length > 0) {
       setTableUnits(localUnits);
-    } else {
-      setTableUnits(mockUnits);
-      saveTableUnits(effectiveStoreId, mockUnits);
+      return;
     }
-  }, [effectiveStoreId]);
+    const fallback = loadTableUnits();
+    if (fallback && fallback.length > 0) {
+      setTableUnits(fallback);
+      saveTableUnits(resolvedStoreId, fallback);
+      return;
+    }
+    setTableUnits(mockUnits);
+    saveTableUnits(resolvedStoreId, mockUnits);
+  }, [resolvedStoreId]);
 
   useEffect(() => {
-    const localRules = loadRules(effectiveStoreId);
+    const localRules = loadRules(resolvedStoreId);
     if (localRules) {
       setRules(localRules);
-    } else {
-      setRules([]);
+      return;
     }
-  }, [effectiveStoreId]);
+    const fallback = loadRules();
+    if (fallback) {
+      setRules(fallback);
+      saveRules(resolvedStoreId, fallback);
+      return;
+    }
+    setRules([]);
+  }, [resolvedStoreId]);
 
   useEffect(() => {
-    const localBenefits = loadBenefits(effectiveStoreId);
+    const localBenefits = loadBenefits(resolvedStoreId);
     if (localBenefits) {
       setBenefits(localBenefits);
-    } else {
-      setBenefits([]);
+      return;
     }
-  }, [effectiveStoreId]);
+    const fallback = loadBenefits();
+    if (fallback) {
+      setBenefits(fallback);
+      saveBenefits(resolvedStoreId, fallback);
+      return;
+    }
+    setBenefits([]);
+  }, [resolvedStoreId]);
 
   useEffect(() => {
-    const localDeals = loadTimeDeals(effectiveStoreId);
+    const localDeals = loadTimeDeals(resolvedStoreId);
     if (localDeals) {
       setTimeDeals(localDeals);
-    } else {
-      setTimeDeals([]);
+      return;
     }
-  }, [effectiveStoreId]);
+    const fallback = loadTimeDeals();
+    if (fallback) {
+      setTimeDeals(fallback);
+      saveTimeDeals(resolvedStoreId, fallback);
+      return;
+    }
+    setTimeDeals([]);
+  }, [resolvedStoreId]);
   useEffect(() => {
     if (!resizeState) return;
     const activeResize = resizeState;
@@ -414,7 +466,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
             end_time: `${deal.date}T${nextEndTime}:00`,
           };
         });
-        saveTimeDeals(effectiveStoreId, next);
+        saveTimeDeals(resolvedStoreId, next);
         return next;
       });
     }
@@ -429,7 +481,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
       window.removeEventListener("mousemove", handleMove);
       window.removeEventListener("mouseup", handleUp);
     };
-  }, [resizeState, effectiveStoreId]);
+  }, [resizeState, resolvedStoreId]);
 
   const filtered = useMemo(() => {
     return reservations.filter((item) => {
@@ -471,7 +523,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
           item.id === reservationId ? { ...item, status: nextStatus } : item
         );
       }
-      saveReservations(effectiveStoreId, next);
+      saveReservations(resolvedStoreId, next);
       return next;
     });
     setDialogOpen(false);
@@ -545,7 +597,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
 
     setReservations((prev) => {
       const next = [newReservation, ...prev];
-      saveReservations(effectiveStoreId, next);
+      saveReservations(resolvedStoreId, next);
       return next;
     });
 
@@ -557,7 +609,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
       const next = prev.map((rule) =>
         rule.id === ruleId ? { ...rule, enabled: !rule.enabled } : rule
       );
-      saveRules(effectiveStoreId, next);
+      saveRules(resolvedStoreId, next);
       return next;
     });
   }
@@ -591,7 +643,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
 
     setTimeDeals((prev) => {
       const next = [newDeal, ...prev];
-      saveTimeDeals(effectiveStoreId, next);
+      saveTimeDeals(resolvedStoreId, next);
       return next;
     });
   }
@@ -603,7 +655,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-2xl font-semibold">{"\uC608\uC57D \uBAA9\uB85D"}</h1>
-          <p className="text-sm text-slate-500">{`\uB9E4\uC7A5 #${effectiveStoreId ?? ""}`}</p>
+          <p className="text-sm text-slate-500">{`\uB9E4\uC7A5 #${resolvedStoreId ?? ""}`}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2 py-1 text-sm">

@@ -16,19 +16,36 @@ export function Layout({ children }: { children: React.ReactNode }) {
     const match = pathname.match(/\/stores\/([^/]+)/);
     return match ? match[1] : null;
   }, [pathname]);
+  const normalizedStoreId = useMemo(() => {
+    if (!storeId) return null;
+    if (storeId === "undefined" || storeId === "null") return null;
+    return storeId;
+  }, [storeId]);
 
   useEffect(() => {
     const isSelect = pathname.startsWith("/stores/select");
     const isOnboarding = pathname.startsWith("/onboarding");
-    if (!storeId && !isSelect && !isOnboarding) {
-      router.replace("/stores/select");
+    if (normalizedStoreId) {
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("rendezvous_last_store", normalizedStoreId);
+      }
+      return;
     }
-  }, [storeId, pathname, router]);
+    if (isSelect || isOnboarding) return;
+    if (typeof window !== "undefined") {
+      const lastStore = window.localStorage.getItem("rendezvous_last_store");
+      if (lastStore) {
+        router.replace(`/stores/${lastStore}`);
+        return;
+      }
+    }
+    router.replace("/stores/select");
+  }, [normalizedStoreId, pathname, router]);
 
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900">
       <aside className="hidden w-64 border-r border-slate-200 bg-white lg:block">
-        <SidebarNav storeId={storeId} />
+        <SidebarNav storeId={normalizedStoreId} />
       </aside>
 
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -42,13 +59,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
               닫기
             </button>
           </div>
-          <SidebarNav storeId={storeId} onNavigate={() => setMobileOpen(false)} />
+          <SidebarNav
+            storeId={normalizedStoreId}
+            onNavigate={() => setMobileOpen(false)}
+          />
         </SheetContent>
       </Sheet>
 
       <div className="flex flex-1 flex-col">
         <Topbar onMenuClick={() => setMobileOpen(true)}>
-          <StoreSwitcher currentStoreId={storeId} />
+          <StoreSwitcher currentStoreId={normalizedStoreId} />
         </Topbar>
         <main className="flex-1 p-4 lg:p-6">{children}</main>
       </div>

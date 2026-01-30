@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -9,6 +9,7 @@ import type { StoreSummary } from "@/domain/stores/types";
 const mockStores: StoreSummary[] = [
   { id: 1, name: "데모 스토어" },
   { id: 2, name: "샘플 분점" },
+  { id: "dev-store", name: "테스트 매장" },
 ];
 
 export function StoreSwitcher({ currentStoreId }: { currentStoreId: string | null }) {
@@ -31,7 +32,19 @@ export function StoreSwitcher({ currentStoreId }: { currentStoreId: string | nul
     };
   }, []);
 
-  const selectedId = currentStoreId ?? String(stores[0]?.id ?? "");
+  useEffect(() => {
+    if (!currentStoreId) return;
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("rendezvous_last_store", currentStoreId);
+    }
+  }, [currentStoreId]);
+
+  const storedId =
+    typeof window !== "undefined"
+      ? window.localStorage.getItem("rendezvous_last_store")
+      : null;
+  const selectedId =
+    currentStoreId ?? storedId ?? String(stores[0]?.id ?? "");
 
   return (
     <select
@@ -40,6 +53,9 @@ export function StoreSwitcher({ currentStoreId }: { currentStoreId: string | nul
       onChange={(event) => {
         const nextId = event.target.value;
         if (!nextId) return;
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem("rendezvous_last_store", nextId);
+        }
         router.push(`/stores/${nextId}`);
       }}
     >
@@ -51,4 +67,3 @@ export function StoreSwitcher({ currentStoreId }: { currentStoreId: string | nul
     </select>
   );
 }
-

@@ -9,6 +9,7 @@ import { actionMap } from "@/domain/analytics/actionMap";
 import { setToken } from "@/lib/auth/tokenStore";
 
 const MASTER_KEY = "dev1234";
+const DEV_STORE_ID = "dev-store";
 
 export function LoginPage() {
   const router = useRouter();
@@ -61,7 +62,10 @@ export function LoginPage() {
                 return;
               }
               setToken("master-token");
-              router.push("/onboarding");
+              if (typeof window !== "undefined") {
+                window.localStorage.setItem("rendezvous_last_store", DEV_STORE_ID);
+              }
+              router.push(`/stores/${DEV_STORE_ID}`);
             }}
           >
             🚀 즉시 진입
