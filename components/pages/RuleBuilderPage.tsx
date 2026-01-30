@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -166,7 +166,9 @@ export function RuleBuilderPage({
   ruleId?: string;
 }) {
   const router = useRouter();
-  const resolvedStoreId = storeId ?? "1";
+  const pathname = usePathname();
+  const resolvedStoreId =
+    storeId ?? (pathname.match(/\/stores\/([^/]+)/)?.[1] ?? "default");
   const [step, setStep] = useState(1);
   const [name, setName] = useState("");
   const [days, setDays] = useState([true, true, true, true, false, false, false]);
@@ -191,18 +193,20 @@ export function RuleBuilderPage({
     let active = true;
 
     async function loadCatalog() {
-      const local = loadBenefits(storeId);
+      const local = loadBenefits(resolvedStoreId);
       if (local && local.length > 0) {
         setCatalog(local);
       }
-      if (!storeId || !baseURL) {
+      if (!resolvedStoreId || resolvedStoreId === "default" || !baseURL) {
         if (!local || local.length === 0) {
           setCatalog(mockBenefits);
         }
         return;
       }
       try {
-        const data = await fetchWithAuth<BenefitItem[]>(endpoints.benefits(storeId));
+        const data = await fetchWithAuth<BenefitItem[]>(
+          endpoints.benefits(resolvedStoreId)
+        );
         if (active && Array.isArray(data)) {
           setCatalog(data);
         }
@@ -214,7 +218,7 @@ export function RuleBuilderPage({
     }
 
     async function loadRule() {
-      if (!storeId || !ruleId || !baseURL) {
+      if (!resolvedStoreId || resolvedStoreId === "default" || !ruleId || !baseURL) {
         if (ruleId) {
           setName(mockRule.name);
           setDays(mockRule.days);
@@ -235,7 +239,7 @@ export function RuleBuilderPage({
 
       try {
         const data = await fetchWithAuth<RuleResponse[] | RuleResponse>(
-          endpoints.offerRules(storeId)
+          endpoints.offerRules(resolvedStoreId)
         );
         const target = Array.isArray(data)
           ? data.find((item) => String(item.id) === String(ruleId))
@@ -266,7 +270,7 @@ export function RuleBuilderPage({
     return () => {
       active = false;
     };
-  }, [storeId, ruleId]);
+  }, [resolvedStoreId, ruleId]);
 
   useEffect(() => {
     if (!catalog.length) return;
@@ -346,7 +350,7 @@ export function RuleBuilderPage({
       : [localRule, ...existing];
     saveRules(resolvedStoreId, next);
 
-    if (!baseURL) {
+    if (!baseURL || resolvedStoreId === "default") {
       window.alert("성공적으로 저장되었습니다!");
       router.push(`/stores/${resolvedStoreId}/offers/rules`);
       return;

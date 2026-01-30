@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { fetchWithAuth, baseURL } from "@/lib/api/client";
@@ -48,27 +48,35 @@ function formatTimeBlocks(blocks: Array<{ start: string; end: string }>) {
 
 export function OfferRulesPage({ storeId }: { storeId?: string }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const resolvedStoreId = useMemo(() => {
+    if (storeId) return storeId;
+    const match = pathname.match(/\/stores\/([^/]+)/);
+    return match ? match[1] : "default";
+  }, [storeId, pathname]);
   const [rules, setRules] = useState<Rule[]>([]);
 
   useEffect(() => {
-    const local = loadRules(storeId);
+    const local = loadRules(resolvedStoreId);
     if (local !== null) {
       setRules(local);
       return;
     }
     setRules(fallbackRules);
-  }, [storeId]);
+  }, [resolvedStoreId]);
 
   useEffect(() => {
     let active = true;
 
     async function load() {
-      if (!storeId || !baseURL) return;
+      if (!resolvedStoreId || resolvedStoreId === "default" || !baseURL) return;
       try {
-        const data = await fetchWithAuth<Rule[]>(endpoints.offerRules(storeId));
+        const data = await fetchWithAuth<Rule[]>(
+          endpoints.offerRules(resolvedStoreId)
+        );
         if (active && Array.isArray(data)) {
           setRules(data);
-          saveRules(storeId, data);
+          saveRules(resolvedStoreId, data);
         }
       } catch {
         // keep local fallback
@@ -79,23 +87,23 @@ export function OfferRulesPage({ storeId }: { storeId?: string }) {
     return () => {
       active = false;
     };
-  }, [storeId]);
+  }, [resolvedStoreId]);
 
   async function toggleRule(ruleId: number | string) {
     setRules((prev) => {
       const next = prev.map((item) =>
         item.id === ruleId ? { ...item, enabled: !item.enabled } : item
       );
-      saveRules(storeId, next);
+      saveRules(resolvedStoreId, next);
       return next;
     });
 
-    if (!storeId || !baseURL) return;
+    if (!resolvedStoreId || resolvedStoreId === "default" || !baseURL) return;
 
     try {
       const target = rules.find((item) => item.id === ruleId);
       if (!target) return;
-      await fetchWithAuth(endpoints.offerRules(storeId), {
+      await fetchWithAuth(endpoints.offerRules(resolvedStoreId), {
         method: "PATCH",
         body: JSON.stringify({ id: ruleId, enabled: !target.enabled }),
       });
@@ -110,20 +118,20 @@ export function OfferRulesPage({ storeId }: { storeId?: string }) {
     const prev = rules;
     setRules((current) => {
       const next = current.filter((item) => item.id !== ruleId);
-      saveRules(storeId, next);
+      saveRules(resolvedStoreId, next);
       return next;
     });
 
-    if (!storeId || !baseURL) return;
+    if (!resolvedStoreId || resolvedStoreId === "default" || !baseURL) return;
 
     try {
-      await fetchWithAuth(endpoints.offerRules(storeId), {
+      await fetchWithAuth(endpoints.offerRules(resolvedStoreId), {
         method: "DELETE",
         body: JSON.stringify({ id: ruleId }),
       });
     } catch {
       setRules(prev);
-      saveRules(storeId, prev);
+      saveRules(resolvedStoreId, prev);
       window.alert("삭제에 실패했습니다. 다시 시도해 주세요.");
     }
   }
@@ -133,9 +141,11 @@ export function OfferRulesPage({ storeId }: { storeId?: string }) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">룰 목록</h1>
-          <p className="text-sm text-slate-500">매장 #{storeId}</p>
+          <p className="text-sm text-slate-500">매장 #{resolvedStoreId}</p>
         </div>
-        <Button onClick={() => router.push(`/stores/${storeId}/offers/rules/new`)}>
+        <Button
+          onClick={() => router.push(`/stores/${resolvedStoreId}/offers/rules/new`)}
+        >
           새 룰 만들기
         </Button>
       </div>
