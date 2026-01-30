@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, Td, Th } from "@/components/ui/table";
 import { Dialog } from "@/components/ui/dialog";
 import type { TableUnit } from "@/domain/stores/types";
+import { loadTableUnits, saveTableUnits } from "@/lib/utils/tableUnitsStore";
 import {
   loadReservations,
   saveReservations,
@@ -278,6 +279,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [view, setView] = useState<"scheduler" | "list">("scheduler");
   const [selectedDate, setSelectedDate] = useState(todayString);
+  const [tableUnits, setTableUnits] = useState<TableUnit[]>([]);
   const [reservations, setReservations] = useState<ReservationEntry[]>([]);
   const [selectedReservation, setSelectedReservation] =
     useState<ReservationEntry | null>(null);
@@ -295,6 +297,16 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
     }
   }, [storeId]);
 
+  useEffect(() => {
+    const localUnits = loadTableUnits(storeId);
+    if (localUnits && localUnits.length > 0) {
+      setTableUnits(localUnits);
+    } else {
+      setTableUnits(mockUnits);
+      saveTableUnits(storeId, mockUnits);
+    }
+  }, [storeId]);
+
   const filtered = useMemo(() => {
     return reservations.filter((item) => {
       const statusMatch = statusFilter === "all" || item.status === statusFilter;
@@ -304,7 +316,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
   }, [reservations, statusFilter, selectedDate]);
 
   const slots = useMemo(() => buildSlots(), []);
-  const rows = useMemo(() => buildRows(mockUnits), []);
+  const rows = useMemo(() => buildRows(tableUnits), [tableUnits]);
   const dateLabel = formatDateLabel(selectedDate);
 
   function openDetail(item: ReservationEntry) {

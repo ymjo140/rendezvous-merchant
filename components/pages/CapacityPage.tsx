@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
 import type { TableUnit } from "@/domain/stores/types";
+import { loadTableUnits, saveTableUnits } from "@/lib/utils/tableUnitsStore";
 
 const initialUnits: TableUnit[] = [
   {
@@ -34,33 +36,90 @@ const initialUnits: TableUnit[] = [
   },
 ];
 
-export function CapacityPage() {
-  const [units, setUnits] = useState<TableUnit[]>(initialUnits);
+type FormState = {
+  id?: string;
+  name: string;
+  minCapacity: string;
+  maxCapacity: string;
+  quantity: string;
+  isPrivate: boolean;
+};
+
+export function CapacityPage({ storeId }: { storeId?: string }) {
+  const pathname = usePathname();
+  const resolvedStoreId = useMemo(() => {
+    if (storeId) return storeId;
+    const match = pathname.match(/\/stores\/([^/]+)/);
+    return match ? match[1] : "default";
+  }, [storeId, pathname]);
+
+  const [units, setUnits] = useState<TableUnit[]>([]);
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [minCapacity, setMinCapacity] = useState("2");
-  const [maxCapacity, setMaxCapacity] = useState("4");
-  const [quantity, setQuantity] = useState("1");
-  const [isPrivate, setIsPrivate] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState<FormState>({
+    name: "",
+    minCapacity: "2",
+    maxCapacity: "4",
+    quantity: "1",
+    isPrivate: false,
+  });
+
+  useEffect(() => {
+    const local = loadTableUnits(resolvedStoreId);
+    if (local && local.length > 0) {
+      setUnits(local);
+    } else {
+      setUnits(initialUnits);
+      saveTableUnits(resolvedStoreId, initialUnits);
+    }
+  }, [resolvedStoreId]);
 
   function resetForm() {
-    setName("");
-    setMinCapacity("2");
-    setMaxCapacity("4");
-    setQuantity("1");
-    setIsPrivate(false);
+    setForm({
+      name: "",
+      minCapacity: "2",
+      maxCapacity: "4",
+      quantity: "1",
+      isPrivate: false,
+    });
+    setEditingId(null);
   }
 
-  function handleAdd() {
-    const next: TableUnit = {
-      id: `unit-${Date.now()}`,
-      name: name.trim() || "테이블",
-      min_capacity: Number(minCapacity) || 1,
-      max_capacity: Number(maxCapacity) || 2,
-      quantity: Number(quantity) || 1,
-      is_private: isPrivate,
+  function openAdd() {
+    resetForm();
+    setOpen(true);
+  }
+
+  function openEdit(unit: TableUnit) {
+    setEditingId(unit.id);
+    setForm({
+      name: unit.name,
+      minCapacity: String(unit.min_capacity),
+      maxCapacity: String(unit.max_capacity),
+      quantity: String(unit.quantity),
+      isPrivate: unit.is_private,
+    });
+    setOpen(true);
+  }
+
+  function handleSave() {
+    const nextUnit: TableUnit = {
+      id: editingId ?? `unit-${Date.now()}`,
+      name: form.name.trim() || "테이블",
+      min_capacity: Number(form.minCapacity) || 1,
+      max_capacity: Number(form.maxCapacity) || 2,
+      quantity: Number(form.quantity) || 1,
+      is_private: form.isPrivate,
     };
-    setUnits((prev) => [...prev, next]);
+
+    setUnits((prev) => {
+      const next = editingId
+        ? prev.map((item) => (item.id === editingId ? nextUnit : item))
+        : [...prev, nextUnit];
+      saveTableUnits(resolvedStoreId, next);
+      return next;
+    });
+
     setOpen(false);
     resetForm();
   }
@@ -74,7 +133,7 @@ export function CapacityPage() {
             테이블 유형과 좌석 수량을 등록해 주세요.
           </p>
         </div>
-        <Button onClick={() => setOpen(true)}>테이블 타입 추가</Button>
+        <Button onClick={openAdd}>테이블 타입 추가</Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -92,6 +151,11 @@ export function CapacityPage() {
               <div>최소 인원: {unit.min_capacity}명</div>
               <div>최대 인원: {unit.max_capacity}명</div>
               <div>보유 수량: {unit.quantity}개</div>
+              <div className="pt-2">
+                <Button variant="secondary" onClick={() => openEdit(unit)}>
+                  수정
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -99,13 +163,17 @@ export function CapacityPage() {
 
       <Dialog open={open}>
         <div className="space-y-4">
-          <div className="text-lg font-semibold">테이블 타입 추가</div>
+          <div className="text-lg font-semibold">
+            {editingId ? "테이블 타입 수정" : "테이블 타입 추가"}
+          </div>
           <div className="grid gap-3">
             <div className="space-y-1">
               <label className="text-xs text-slate-500">이름</label>
               <Input
-                value={name}
-                onChange={(event) => setName(event.target.value)}
+                value={form.name}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, name: event.target.value }))
+                }
                 placeholder="홀 4인석"
               />
             </div>
@@ -114,16 +182,26 @@ export function CapacityPage() {
                 <label className="text-xs text-slate-500">최소 인원</label>
                 <Input
                   type="number"
-                  value={minCapacity}
-                  onChange={(event) => setMinCapacity(event.target.value)}
+                  value={form.minCapacity}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      minCapacity: event.target.value,
+                    }))
+                  }
                 />
               </div>
               <div className="space-y-1">
                 <label className="text-xs text-slate-500">최대 인원</label>
                 <Input
                   type="number"
-                  value={maxCapacity}
-                  onChange={(event) => setMaxCapacity(event.target.value)}
+                  value={form.maxCapacity}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      maxCapacity: event.target.value,
+                    }))
+                  }
                 />
               </div>
             </div>
@@ -132,16 +210,26 @@ export function CapacityPage() {
                 <label className="text-xs text-slate-500">보유 수량</label>
                 <Input
                   type="number"
-                  value={quantity}
-                  onChange={(event) => setQuantity(event.target.value)}
+                  value={form.quantity}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      quantity: event.target.value,
+                    }))
+                  }
                 />
               </div>
               <div className="space-y-1">
                 <label className="text-xs text-slate-500">룸 여부</label>
                 <select
                   className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
-                  value={isPrivate ? "yes" : "no"}
-                  onChange={(event) => setIsPrivate(event.target.value === "yes")}
+                  value={form.isPrivate ? "yes" : "no"}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      isPrivate: event.target.value === "yes",
+                    }))
+                  }
                 >
                   <option value="no">일반 홀</option>
                   <option value="yes">프라이빗 룸</option>
@@ -153,7 +241,7 @@ export function CapacityPage() {
             <Button variant="secondary" onClick={() => setOpen(false)}>
               취소
             </Button>
-            <Button onClick={handleAdd}>저장</Button>
+            <Button onClick={handleSave}>저장</Button>
           </div>
         </div>
       </Dialog>
