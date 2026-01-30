@@ -166,6 +166,7 @@ export function RuleBuilderPage({
   ruleId?: string;
 }) {
   const router = useRouter();
+  const resolvedStoreId = storeId ?? "1";
   const [step, setStep] = useState(1);
   const [name, setName] = useState("");
   const [days, setDays] = useState([true, true, true, true, false, false, false]);
@@ -312,8 +313,6 @@ export function RuleBuilderPage({
   ]);
 
   async function handleSave() {
-    if (!storeId) return;
-
     const payload = {
       name,
       days,
@@ -339,27 +338,27 @@ export function RuleBuilderPage({
       benefit: { title: summary.benefit },
     };
 
-    const existing = loadRules(storeId) ?? [];
+    const existing = loadRules(resolvedStoreId) ?? [];
     const next = ruleId
       ? existing.map((item) =>
           String(item.id) === String(ruleId) ? { ...item, ...localRule } : item
         )
       : [localRule, ...existing];
-    saveRules(storeId, next);
+    saveRules(resolvedStoreId, next);
 
     if (!baseURL) {
       window.alert("성공적으로 저장되었습니다!");
-      router.push(`/stores/${storeId}/offers/rules`);
+      router.push(`/stores/${resolvedStoreId}/offers/rules`);
       return;
     }
 
     try {
-      await fetchWithAuth(endpoints.offerRules(storeId), {
+      await fetchWithAuth(endpoints.offerRules(resolvedStoreId), {
         method: ruleId ? "PATCH" : "POST",
         body: JSON.stringify({ id: ruleId, ...payload }),
       });
       window.alert("성공적으로 저장되었습니다!");
-      router.push(`/stores/${storeId}/offers/rules`);
+      router.push(`/stores/${resolvedStoreId}/offers/rules`);
     } catch {
       window.alert("서버 저장에 실패했습니다. 로컬에 임시 저장되었습니다.");
     }

@@ -52,11 +52,11 @@ export function OfferRulesPage({ storeId }: { storeId?: string }) {
 
   useEffect(() => {
     const local = loadRules(storeId);
-    if (local && local.length > 0) {
+    if (local !== null) {
       setRules(local);
-    } else {
-      setRules(fallbackRules);
+      return;
     }
+    setRules(fallbackRules);
   }, [storeId]);
 
   useEffect(() => {
@@ -140,6 +140,11 @@ export function OfferRulesPage({ storeId }: { storeId?: string }) {
         </Button>
       </div>
       <div className="space-y-3">
+        {rules.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
+            등록된 룰이 없습니다. 새 룰을 만들어 주세요.
+          </div>
+        ) : null}
         {rules.map((rule) => (
           <div
             key={rule.id}
