@@ -61,6 +61,14 @@ function mapMainCategory(value?: string | null) {
   return "\uC2DD\uB2F9/\uBC25\uC9D1";
 }
 
+function mapMainCategoryToDb(value: string) {
+  if (value.includes("\uCE74\uD398")) return "CAFE";
+  if (value.includes("\uC2A4\uD130\uB514\uB8F8") || value.includes("\uACF5\uAC04")) return "STUDY";
+  if (value.includes("\uD30C\uD2F0")) return "PARTY";
+  if (value.includes("\uC220\uC9D1") || value.includes("\uD3EC\uCC28")) return "BAR";
+  return "FOOD";
+}
+
 export function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -68,6 +76,8 @@ export function OnboardingPage() {
   const [category, setCategory] = useState("\uC2DD\uB2F9/\uBC25\uC9D1");
   const [location, setLocation] = useState("\uC548\uC554\uB3D9");
   const [autoFilled, setAutoFilled] = useState(false);
+  const [lat, setLat] = useState(37.5866076);
+  const [lng, setLng] = useState(127.0294157);
 
   const [searchResults, setSearchResults] = useState<Place[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -162,6 +172,8 @@ export function OnboardingPage() {
     setStoreName(place.name);
     setLocation(place.address ?? "");
     setCategory(mapMainCategory(place.main_category));
+    if (typeof place.lat === "number") setLat(place.lat);
+    if (typeof place.lng === "number") setLng(place.lng);
     setAutoFilled(true);
     setShowResults(false);
   }
@@ -176,7 +188,7 @@ export function OnboardingPage() {
     const payload = {
       name: storeName,
       category,
-      main_category: "FOOD",
+      main_category: mapMainCategoryToDb(category),
       address: location,
     };
 
@@ -187,17 +199,50 @@ export function OnboardingPage() {
         return;
       }
 
+      if (selectedPlace?.id) {
+        const { data: store, error } = await supabase
+          .from("places")
+          .update({ owner_id: userData.user.id })
+          .eq("id", selectedPlace.id)
+          .select("id")
+          .single();
+
+        if (error || !store?.id) {
+          if (error) console.error(error);
+          window.alert(
+            `\uC11C\uBC84 \uC800\uC7A5\uC744 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.${
+              error?.message ? ` (${error.message})` : ""
+            }`
+          );
+          return;
+        }
+
+        window.alert("\uD83C\uDF89 \uC0AC\uC7A5\uB2D8, \uC900\uBE44\uAC00 \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4!");
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem("rendezvous_last_store", String(store.id));
+        }
+        router.push(`/stores/${store.id}`);
+        return;
+      }
+
       const { data: store, error } = await supabase
         .from("places")
         .insert({
           ...payload,
           owner_id: userData.user.id,
+          lat,
+          lng,
         })
         .select("id")
         .single();
 
       if (error || !store?.id) {
-        window.alert("\uC11C\uBC84 \uC800\uC7A5\uC744 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
+        if (error) console.error(error);
+        window.alert(
+          `\uC11C\uBC84 \uC800\uC7A5\uC744 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.${
+            error?.message ? ` (${error.message})` : ""
+          }`
+        );
         return;
       }
 

@@ -6,6 +6,8 @@ export type Place = {
   address: string | null;
   category: string | null;
   main_category: string | null;
+  lat?: number | null;
+  lng?: number | null;
 };
 
 export async function searchPlaces(query: string): Promise<Place[]> {
@@ -20,7 +22,7 @@ export async function searchPlaces(query: string): Promise<Place[]> {
 
   const { data, error } = await supabase
     .from("places")
-    .select("id, name, address, category, main_category")
+    .select("id, name, address, category, main_category, lat, lng")
     .ilike("name", `%${trimmed}%`)
     .limit(10);
 
