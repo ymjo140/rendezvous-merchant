@@ -6,8 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { fetchWithAuth, baseURL } from "@/lib/api/client";
-import { endpoints } from "@/lib/api/endpoints";
 import { HotDealCard } from "@/components/offers/HotDealCard";
 import { BenefitType } from "@/domain/offers/types";
 import { useBenefits } from "@/lib/hooks/useBenefits";
@@ -253,50 +251,22 @@ export function RuleBuilderPage({
         }
       }
 
-      if (!ruleId || !baseURL) {
-        if (ruleId) {
-          setName(mockRule.name);
-          setDays(mockRule.days);
-          setTimeBlocks(mockRule.timeBlocks);
-          setPartyMin(mockRule.partyMin);
-          setPartyMax(mockRule.partyMax);
-          setLeadMin(mockRule.leadMin);
-          setLeadMax(mockRule.leadMax);
-          setBenefitId(mockRule.benefitId);
-          setBenefitType(mockRule.benefitType);
-          setBenefitValue(mockRule.benefitValue);
-          setDailyCap(mockRule.dailyCap);
-          setMinSpend(mockRule.minSpend);
-          setVisibility(mockRule.visibility as "public" | "private");
-        }
-        return;
+      if (ruleId) {
+        setName(mockRule.name);
+        setDays(mockRule.days);
+        setTimeBlocks(mockRule.timeBlocks);
+        setPartyMin(mockRule.partyMin);
+        setPartyMax(mockRule.partyMax);
+        setLeadMin(mockRule.leadMin);
+        setLeadMax(mockRule.leadMax);
+        setBenefitId(mockRule.benefitId);
+        setBenefitType(mockRule.benefitType);
+        setBenefitValue(mockRule.benefitValue);
+        setDailyCap(mockRule.dailyCap);
+        setMinSpend(mockRule.minSpend);
+        setVisibility(mockRule.visibility as "public" | "private");
       }
-
-      try {
-        const data = await fetchWithAuth<RuleResponse[] | RuleResponse>(
-          endpoints.offerRules(storeIdValue)
-        );
-        const target = Array.isArray(data)
-          ? data.find((item) => String(item.id) === String(ruleId))
-          : null;
-        if (target) {
-          setName(target.name ?? "");
-          setDays(target.days ?? days);
-          setTimeBlocks(target.timeBlocks ?? timeBlocks);
-          setPartyMin(String(target.partySize?.min ?? partyMin));
-          setPartyMax(String(target.partySize?.max ?? partyMax));
-          setLeadMin(String(target.leadTime?.min ?? leadMin));
-          setLeadMax(String(target.leadTime?.max ?? leadMax));
-          setBenefitId(String(target.benefit?.id ?? benefitId));
-          setBenefitType((target.benefit?.type ?? benefitType) as BenefitType);
-          setBenefitValue(String(target.benefitValue ?? benefitValue));
-          setDailyCap(String(target.guardrails?.dailyCap ?? dailyCap));
-          setMinSpend(String(target.guardrails?.minSpend ?? minSpend));
-          setVisibility((target.visibility as "public" | "private") ?? "public");
-        }
-      } catch {
-        // ignore
-      }
+      return;
     }
 
     void loadRule();
@@ -388,25 +358,11 @@ export function RuleBuilderPage({
       } else {
         await createRule.mutateAsync(ruleRow);
       }
-    } catch {
-      // ignore
-    }
-
-    if (!baseURL) {
       window.alert("\uC131\uACF5\uC801\uC73C\uB85C \uC800\uC7A5\uB418\uC5C8\uC2B5\uB2C8\uB2E4!");
       router.push(`/stores/${storeIdValue}/offers/rules`);
-      return;
-    }
-
-    try {
-      await fetchWithAuth(endpoints.offerRules(storeIdValue), {
-        method: ruleId ? "PATCH" : "POST",
-        body: JSON.stringify({ id: ruleId, ...payload }),
-      });
-      window.alert("\uC131\uACF5\uC801\uC73C\uB85C \uC800\uC7A5\uB418\uC5C8\uC2B5\uB2C8\uB2E4!");
-      router.push(`/stores/${storeIdValue}/offers/rules`);
-    } catch {
-      window.alert("\uC11C\uBC84 \uC800\uC7A5\uC740 \uC2E4\uD328\uD588\uC9C0\uB9CC, \uD654\uBA74\uC5D0\uB294 \uBC18\uC601\uB418\uC5C8\uC2B5\uB2C8\uB2E4.");
+    } catch (error) {
+      console.error(error);
+      window.alert("\uC11C\uBC84 \uC800\uC7A5\uC744 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
     }
   }
 
