@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { searchPlaces, type Place } from "@/lib/api/places";
+import { supabase } from "@/lib/supabase/client";
 
 const steps = [
   { id: 1, label: "\uAE30\uBCF8 \uC815\uBCF4" },
@@ -173,31 +174,42 @@ export function OnboardingPage() {
 
   async function handleComplete() {
     const payload = {
-      storeName,
+      name: storeName,
       category,
-      location,
-      capacity: { seat1, seat2, seat4, seat6, room: roomCount },
-      menus,
+      main_category: "FOOD",
+      address: location,
     };
 
     try {
-      const response = await fetch("/api/stores", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (response.ok) {
-        const data = await response.json();
-        const nextId = data?.id ?? "1";
-        window.alert("\uD83C\uDF89 \uC0AC\uC7A5\uB2D8, \uC900\uBE44\uAC00 \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4!");
-        router.push(`/stores/${nextId}`);
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData?.user) {
+        window.alert("\uB85C\uADF8\uC778 \uC0C1\uD0DC\uB97C \uD655\uC778\uD574 \uC8FC\uC138\uC694.");
         return;
       }
+
+      const { data: store, error } = await supabase
+        .from("places")
+        .insert({
+          ...payload,
+          owner_id: userData.user.id,
+        })
+        .select("id")
+        .single();
+
+      if (error || !store?.id) {
+        window.alert("\uC11C\uBC84 \uC800\uC7A5\uC744 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
+        return;
+      }
+
+      window.alert("\uD83C\uDF89 \uC0AC\uC7A5\uB2D8, \uC900\uBE44\uAC00 \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4!");
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("rendezvous_last_store", String(store.id));
+      }
+      router.push(`/stores/${store.id}`);
+      return;
     } catch {
-      // ignore
+      window.alert("\uC11C\uBC84 \uC800\uC7A5\uC744 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
     }
-    window.alert("\uC11C\uBC84 \uC800\uC7A5\uC740 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4. \uC784\uC2DC\uB85C \uB85C\uCEEC \uD654\uBA74\uC744 \uC9C4\uD589\uD569\uB2C8\uB2E4.");
-    router.push("/stores/select");
   }
 
   const canGoNext = storeName.trim().length > 0 || step !== 1;
