@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
 
 const navItems = [
@@ -24,6 +24,11 @@ export function SidebarNav({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const params = useParams<{ storeId?: string }>();
+  const resolvedStoreId =
+    storeId && storeId !== "undefined" && storeId !== "null"
+      ? storeId
+      : params?.storeId ?? null;
 
   return (
     <nav className="flex h-full flex-col gap-4 p-6">
@@ -33,10 +38,10 @@ export function SidebarNav({
       </div>
       <div className="mt-4 flex flex-col gap-1">
         {navItems.map((item) => {
-          const href = storeId
+          const href = resolvedStoreId
             ? item.slug
-              ? `/stores/${storeId}/${item.slug}`
-              : `/stores/${storeId}`
+              ? `/stores/${resolvedStoreId}/${item.slug}`
+              : `/stores/${resolvedStoreId}`
             : "/stores/select";
           const isActive = pathname === href;
           return (

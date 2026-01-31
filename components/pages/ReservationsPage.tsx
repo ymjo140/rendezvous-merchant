@@ -382,7 +382,6 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
   const [timeDealDialogOpen, setTimeDealDialogOpen] = useState(false);
   const [timeDealForm, setTimeDealForm] = useState<TimeDealForm | null>(null);
   const [blockMode, setBlockMode] = useState(false);
-  const [isTouch, setIsTouch] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
 
   const {
@@ -420,10 +419,25 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
     isSupabaseConfigured: isTimeDealsSupabaseReady,
   } = useTimeDeals(resolvedStoreId);
 
+  const hasDataAccessError = Boolean(
+    reservationsError ||
+      unitsError ||
+      timeDealsError ||
+      (!isReservationsSupabaseReady && !isUnitsSupabaseReady)
+  );
+
   if (!resolvedStoreId) {
     return (
       <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600">
         {"\uAC00\uAC8C \uC815\uBCF4\uB97C \uBD88\uB7EC\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uB9E4\uC7A5\uC744 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694."}
+      </div>
+    );
+  }
+
+  if (hasDataAccessError) {
+    return (
+      <div className="rounded-lg border border-rose-200 bg-white p-6 text-sm text-rose-600">
+        {"\uB370\uC774\uD130 \uC811\uADFC\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4. \uC11C\uBC84 \uAD8C\uD55C(RLS) \uC124\uC815\uACFC \uB85C\uADF8\uC778 \uC138\uC158\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694."}
       </div>
     );
   }
@@ -465,10 +479,6 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     setIsOnline(window.navigator.onLine);
-    setIsTouch(
-      window.matchMedia("(pointer: coarse)").matches ||
-        window.navigator.maxTouchPoints > 0
-    );
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
     window.addEventListener("online", handleOnline);
@@ -646,63 +656,13 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
     updateRule.mutate({ id: String(ruleId), enabled: !target.enabled });
   }
 
-  function handleBenefitDragStart(benefit: BenefitRow, event: React.DragEvent) {
-    event.dataTransfer.setData("benefitId", String(benefit.id));
-    event.dataTransfer.setData("benefitTitle", benefit.title);
-  }
-
-  function handleBenefitDrop(slot: string, event: React.DragEvent) {
-    event.preventDefault();
-    const benefitId = event.dataTransfer.getData("benefitId");
-    const benefitTitle = event.dataTransfer.getData("benefitTitle");
-    if (!benefitId || !benefitTitle) return;
-
-    const start = timeToMinutes(slot);
-    const end = Math.min(start + 60, endMinutes);
-    if (end <= start) return;
-
-    const startTime = minutesToTime(start);
-    const endTime = minutesToTime(end);
-
-    const newDeal: TimeDealEntry = {
-      id: `deal-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      store_id: storeKey,
-      benefitId: String(benefitId),
-      title: benefitTitle,
-      date: selectedDate,
-      start_time: `${selectedDate}T${startTime}:00`,
-      end_time: `${selectedDate}T${endTime}:00`,
-    };
-
-    createTimeDeal.mutate(mapTimeDealEntryToRow(newDeal));
-  }
-
-  function createDealFromSlot(slot: string) {
-    if (!activeBenefit) {
-      window.alert("\uC801\uC6A9\uD560 \uD61C\uD0DD\uC744 \uBA3C\uC800 \uC120\uD0DD\uD574\uC8FC\uC138\uC694.");
+  function openTimeDealCreate(slot?: string) {
+    const benefit = activeBenefit ?? benefits[0];
+    if (!benefit) {
+      window.alert("\uD0C0\uC784\uC138\uC77C\uC744 \uB9CC\uB4E4 \uD61C\uD0DD\uC744 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.");
       return;
     }
-    const start = timeToMinutes(slot);
-    const end = Math.min(start + 60, endMinutes);
-    if (end <= start) return;
-
-    const startTime = minutesToTime(start);
-    const endTime = minutesToTime(end);
-    const newDeal: TimeDealEntry = {
-      id: `deal-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      store_id: storeKey,
-      benefitId: String(activeBenefit.id),
-      title: activeBenefit.title,
-      date: selectedDate,
-      start_time: `${selectedDate}T${startTime}:00`,
-      end_time: `${selectedDate}T${endTime}:00`,
-    };
-
-    createTimeDeal.mutate(mapTimeDealEntryToRow(newDeal));
-  }
-
-  function openTimeDealCreate(benefit: BenefitRow) {
-    const startTime = slots[0] ?? "18:00";
+    const startTime = slot ?? slots[0] ?? "18:00";
     const endTime = minutesToTime(timeToMinutes(startTime) + 60);
     setTimeDealForm({
       mode: "create",
@@ -741,6 +701,8 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
     if (timeDealForm.mode === "edit" && timeDealForm.id) {
       updateTimeDeal.mutate({
         id: timeDealForm.id,
+        benefit_id: timeDealForm.benefitId,
+        title: timeDealForm.title,
         start_time: `${timeDealForm.date}T${timeDealForm.startTime}:00`,
         end_time: `${timeDealForm.date}T${timeDealForm.endTime}:00`,
       });
@@ -924,14 +886,9 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
               <div className="text-sm font-semibold">{"\uD61C\uD0DD \uBC84\uD2BC"}</div>
               <p className="text-xs text-slate-500">
                 {
-                  "\uB4DC\uB798\uADF8 \uB610\uB294 \uD0ED\uD558\uC5EC \uD0C0\uC784\uC138\uC77C\uC744 \uB9CC\uB4E4\uC5B4 \uBCF4\uC138\uC694."
+                  "\uD0C0\uC784\uC138\uC77C\uC740 \uC2DC\uAC04\uB300\uB97C \uD074\uB9AD\uD55C \uD6C4 \uC2DC\uAC04\uC744 \uC124\uC815\uD574\uC11C \uC0DD\uC131\uD569\uB2C8\uB2E4."
                 }
               </p>
-              {isTouch ? (
-                <p className="text-xs text-slate-400">
-                  {"\uD0ED \uD6C4 \uC2DC\uAC04\uC744 \uC120\uD0DD\uD558\uBA74 \uC989\uC2DC \uC0DD\uC131\uB429\uB2C8\uB2E4."}
-                </p>
-              ) : null}
               {benefits.length === 0 ? (
                 <p className="text-xs text-slate-500">
                   {
@@ -947,13 +904,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                         key={String(benefit.id)}
                         variant={isActive ? "primary" : "secondary"}
                         className="h-8 rounded-full px-3 text-xs"
-                        draggable
-                        onDragStart={(event) => handleBenefitDragStart(benefit, event)}
                         onClick={() => {
-                          if (isTouch) {
-                            openTimeDealCreate(benefit);
-                            return;
-                          }
                           setActiveBenefit(isActive ? null : benefit);
                         }}
                       >
@@ -995,13 +946,8 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                 {slots.map((slot) => (
                   <div
                     key={`deal-slot-${slot}`}
-                    className="bg-white p-2 border-l border-slate-100"
-                    onDragOver={(event) => event.preventDefault()}
-                    onDrop={(event) => handleBenefitDrop(slot, event)}
-                    onClick={() => {
-                      if (isTouch) return;
-                      createDealFromSlot(slot);
-                    }}
+                    className="bg-white p-2 border-l border-slate-100 cursor-pointer"
+                    onClick={() => openTimeDealCreate(slot)}
                   />
                 ))}
               {timeDealsForDate.map((deal) => {
@@ -1387,11 +1333,30 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                 : "\uD0C0\uC784\uC138\uC77C \uC0DD\uC131"}
             </div>
             <div className="space-y-2 text-sm">
-              <div className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-                <span className="font-medium">{timeDealForm.title}</span>
-                <Badge className="bg-indigo-100 text-indigo-700">
-                  {"\uD61C\uD0DD"}
-                </Badge>
+              <div className="space-y-1">
+                <label className="text-xs text-slate-500">
+                  {"\uD61C\uD0DD \uC120\uD0DD"}
+                </label>
+                <select
+                  className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
+                  value={timeDealForm.benefitId}
+                  onChange={(event) => {
+                    const next = benefits.find(
+                      (item) => String(item.id) === event.target.value
+                    );
+                    setTimeDealForm({
+                      ...timeDealForm,
+                      benefitId: event.target.value,
+                      title: next?.title ?? timeDealForm.title,
+                    });
+                  }}
+                >
+                  {benefits.map((benefit) => (
+                    <option key={String(benefit.id)} value={String(benefit.id)}>
+                      {benefit.title}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1">

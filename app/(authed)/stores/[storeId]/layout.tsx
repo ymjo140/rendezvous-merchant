@@ -5,8 +5,8 @@ export default async function StoreLayout({
   params,
 }: {
   children: React.ReactNode;
-  params: Promise<{ storeId: string }>;
+  params: { storeId: string };
 }) {
-  const { storeId } = await params;
+  const { storeId } = params;
   return <StoreIdProvider storeId={storeId}>{children}</StoreIdProvider>;
 }
