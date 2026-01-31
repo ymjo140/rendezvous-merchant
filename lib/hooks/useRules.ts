@@ -23,6 +23,28 @@ export type RuleRow = {
   created_at?: string;
 };
 
+type DbRuleRow = {
+  id: number | string;
+  place_id?: number | null;
+  store_id?: string | null;
+  rule_name?: string | null;
+  day_of_week_mask?: number | null;
+  time_blocks_json?: Array<{ start: string; end: string }> | null;
+  party_size_min?: number | null;
+  party_size_max?: number | null;
+  lead_time_thresholds_json?: { min?: number; max?: number } | null;
+  base_benefit_json?: { id?: string; type?: string; value?: string; title?: string } | null;
+  enabled?: boolean | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  benefit_id?: string | null;
+  benefit_title?: string | null;
+  benefit_type?: string | null;
+  benefit_value?: string | null;
+  guardrails?: { daily_cap?: number; min_spend?: number } | null;
+  visibility?: string | null;
+};
+
 const isSupabaseConfigured = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL &&
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -37,7 +59,75 @@ async function fetchRules(storeId?: string) {
     .eq("place_id", Number.isFinite(placeId) ? placeId : storeId)
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return (data ?? []) as RuleRow[];
+  const rows = (data ?? []) as DbRuleRow[];
+  return rows.map(mapDbRuleToRuleRow);
+}
+
+function maskToDays(mask?: number | null) {
+  const result = Array.from({ length: 7 }, () => false);
+  if (!mask) return result;
+  for (let index = 0; index < 7; index += 1) {
+    result[index] = (mask & (1 << index)) !== 0;
+  }
+  return result;
+}
+
+function daysToMask(days: boolean[]) {
+  return days.reduce((acc, enabled, index) => (enabled ? acc | (1 << index) : acc), 0);
+}
+
+function mapDbRuleToRuleRow(row: DbRuleRow): RuleRow {
+  const benefitFromJson = row.base_benefit_json ?? {};
+  const lead = row.lead_time_thresholds_json ?? {};
+  return {
+    id: String(row.id),
+    store_id: row.store_id ?? undefined,
+    place_id: row.place_id ?? undefined,
+    name: row.rule_name ?? "",
+    enabled: row.enabled ?? true,
+    days: row.day_of_week_mask ? maskToDays(row.day_of_week_mask) : [],
+    time_blocks: row.time_blocks_json ?? [],
+    party_min: row.party_size_min ?? null,
+    party_max: row.party_size_max ?? null,
+    lead_min: lead.min ?? null,
+    lead_max: lead.max ?? null,
+    benefit_id: row.benefit_id ?? benefitFromJson.id ?? null,
+    benefit_title: row.benefit_title ?? benefitFromJson.title ?? null,
+    benefit_type: row.benefit_type ?? benefitFromJson.type ?? null,
+    benefit_value: row.benefit_value ?? benefitFromJson.value ?? null,
+    guardrails: row.guardrails ?? null,
+    visibility: (row.visibility as "public" | "private" | null) ?? null,
+    created_at: row.created_at ?? undefined,
+  };
+}
+
+function mapRuleRowToDb(row: RuleRow): DbRuleRow {
+  return {
+    place_id: row.place_id ?? null,
+    store_id: row.store_id ?? null,
+    rule_name: row.name,
+    day_of_week_mask: daysToMask(row.days ?? []),
+    time_blocks_json: row.time_blocks ?? [],
+    party_size_min: row.party_min ?? null,
+    party_size_max: row.party_max ?? null,
+    lead_time_thresholds_json: {
+      min: row.lead_min ?? undefined,
+      max: row.lead_max ?? undefined,
+    },
+    base_benefit_json: {
+      id: row.benefit_id ?? undefined,
+      type: row.benefit_type ?? undefined,
+      value: row.benefit_value ?? undefined,
+      title: row.benefit_title ?? undefined,
+    },
+    enabled: row.enabled ?? true,
+    benefit_id: row.benefit_id ?? null,
+    benefit_title: row.benefit_title ?? null,
+    benefit_type: row.benefit_type ?? null,
+    benefit_value: row.benefit_value ?? null,
+    guardrails: row.guardrails ?? null,
+    visibility: row.visibility ?? null,
+  };
 }
 
 export function useRules(storeId?: string) {
@@ -53,6 +143,7 @@ export function useRules(storeId?: string) {
   useEffect(() => {
     if (!storeId || !isSupabaseConfigured) return;
     const placeId = Number(storeId);
+    const filterValue = Number.isFinite(placeId) ? placeId : storeId;
     const channel = supabase
       .channel(`rules-${storeId}`)
       .on(
@@ -61,7 +152,7 @@ export function useRules(storeId?: string) {
           event: "*",
           schema: "public",
           table: "offer_rules",
-          filter: `place_id=eq.${Number.isFinite(placeId) ? placeId : storeId}`,
+          filter: `place_id=eq.${filterValue}`,
         },
         () => {
           queryClient.invalidateQueries({ queryKey });
@@ -77,7 +168,8 @@ export function useRules(storeId?: string) {
   const createRule = useMutation({
     mutationFn: async (payload: RuleRow) => {
       if (!isSupabaseConfigured) return payload;
-      const { error } = await supabase.from("offer_rules").insert(payload);
+      const dbPayload = mapRuleRowToDb(payload);
+      const { error } = await supabase.from("offer_rules").insert(dbPayload);
       if (error) throw error;
       return payload;
     },
@@ -103,10 +195,30 @@ export function useRules(storeId?: string) {
   const updateRule = useMutation({
     mutationFn: async (payload: Partial<RuleRow> & { id: string }) => {
       if (!isSupabaseConfigured) return payload;
+      const { id, ...rest } = payload;
+      const dbPayload = mapRuleRowToDb({
+        id,
+        store_id: payload.store_id,
+        place_id: payload.place_id,
+        name: payload.name ?? "",
+        enabled: payload.enabled ?? true,
+        days: payload.days ?? [],
+        time_blocks: payload.time_blocks ?? [],
+        party_min: payload.party_min ?? null,
+        party_max: payload.party_max ?? null,
+        lead_min: payload.lead_min ?? null,
+        lead_max: payload.lead_max ?? null,
+        benefit_id: payload.benefit_id ?? null,
+        benefit_title: payload.benefit_title ?? null,
+        benefit_type: payload.benefit_type ?? null,
+        benefit_value: payload.benefit_value ?? null,
+        guardrails: payload.guardrails ?? null,
+        visibility: payload.visibility ?? null,
+      });
       const { error } = await supabase
         .from("offer_rules")
-        .update(payload)
-        .eq("id", payload.id);
+        .update(dbPayload)
+        .eq("id", id);
       if (error) throw error;
       return payload;
     },
