@@ -9,6 +9,10 @@ export type RuleRow = {
   name: string;
   enabled: boolean;
   days: boolean[];
+  recurrence_days?: string[] | null;
+  active_time_start?: string | null;
+  active_time_end?: string | null;
+  is_auto_apply?: boolean | null;
   time_blocks: Array<{ start: string; end: string }>;
   party_min?: number | null;
   party_max?: number | null;
@@ -29,6 +33,10 @@ type DbRuleRow = {
   store_id?: string | null;
   rule_name?: string | null;
   day_of_week_mask?: number | null;
+  recurrence_days?: string[] | null;
+  active_time_start?: string | null;
+  active_time_end?: string | null;
+  is_auto_apply?: boolean | null;
   time_blocks_json?: Array<{ start: string; end: string }> | null;
   party_size_min?: number | null;
   party_size_max?: number | null;
@@ -86,6 +94,10 @@ function mapDbRuleToRuleRow(row: DbRuleRow): RuleRow {
     name: row.rule_name ?? "",
     enabled: row.enabled ?? true,
     days: row.day_of_week_mask ? maskToDays(row.day_of_week_mask) : [],
+    recurrence_days: row.recurrence_days ?? null,
+    active_time_start: row.active_time_start ?? null,
+    active_time_end: row.active_time_end ?? null,
+    is_auto_apply: row.is_auto_apply ?? null,
     time_blocks: row.time_blocks_json ?? [],
     party_min: row.party_size_min ?? null,
     party_max: row.party_size_max ?? null,
@@ -107,6 +119,10 @@ function mapRuleRowToDb(row: RuleRow): DbRuleRow {
     store_id: row.store_id ?? null,
     rule_name: row.name,
     day_of_week_mask: daysToMask(row.days ?? []),
+    recurrence_days: row.recurrence_days ?? [],
+    active_time_start: row.active_time_start ?? null,
+    active_time_end: row.active_time_end ?? null,
+    is_auto_apply: row.is_auto_apply ?? null,
     time_blocks_json: row.time_blocks ?? [],
     party_size_min: row.party_min ?? null,
     party_size_max: row.party_max ?? null,
@@ -136,6 +152,13 @@ function mapRuleUpdateToDb(payload: Partial<RuleRow>) {
   if (payload.store_id !== undefined) update.store_id = payload.store_id ?? null;
   if (payload.name !== undefined) update.rule_name = payload.name;
   if (payload.days !== undefined) update.day_of_week_mask = daysToMask(payload.days);
+  if (payload.recurrence_days !== undefined) update.recurrence_days = payload.recurrence_days ?? [];
+  if (payload.active_time_start !== undefined)
+    update.active_time_start = payload.active_time_start ?? null;
+  if (payload.active_time_end !== undefined)
+    update.active_time_end = payload.active_time_end ?? null;
+  if (payload.is_auto_apply !== undefined)
+    update.is_auto_apply = payload.is_auto_apply ?? null;
   if (payload.time_blocks !== undefined) update.time_blocks_json = payload.time_blocks;
   if (payload.party_min !== undefined) update.party_size_min = payload.party_min ?? null;
   if (payload.party_max !== undefined) update.party_size_max = payload.party_max ?? null;

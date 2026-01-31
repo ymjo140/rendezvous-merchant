@@ -44,6 +44,10 @@ create table if not exists public.offer_rules (
   name text not null,
   enabled boolean not null default true,
   days boolean[] not null default '{}',
+  recurrence_days jsonb not null default '[]',
+  active_time_start time,
+  active_time_end time,
+  is_auto_apply boolean not null default false,
   time_blocks jsonb not null default '[]',
   party_min integer,
   party_max integer,
@@ -66,6 +70,7 @@ create table if not exists public.reservations (
   id text primary key,
   store_id text not null,
   guest_name text not null,
+  guest_phone text,
   party_size integer not null default 1,
   date text not null,
   status text not null,
@@ -73,6 +78,7 @@ create table if not exists public.reservations (
   unit_index integer not null,
   start_time timestamptz not null,
   end_time timestamptz not null,
+  notes text,
   source text,
   created_at timestamptz not null default now()
 );
@@ -101,6 +107,9 @@ create table if not exists public.store_menus (
   store_id text not null,
   name text not null,
   price integer,
+  category text not null default 'MAIN',
+  image_url text,
+  is_recommended boolean not null default false,
   created_at timestamptz not null default now()
 );
 

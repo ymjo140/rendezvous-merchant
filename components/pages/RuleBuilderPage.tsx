@@ -21,6 +21,7 @@ const dayLabels = [
   "\uD1A0",
   "\uC77C",
 ];
+const dayCodes = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
 const benefitTypes = [
   { value: BenefitType.FREE_MENU_ITEM, label: "\uBA54\uB274 \uC99D\uC815" },
@@ -199,6 +200,12 @@ export function RuleBuilderPage({
   const [step, setStep] = useState(1);
   const [name, setName] = useState("");
   const [days, setDays] = useState([true, true, true, true, false, false, false]);
+  const [recurrenceDays, setRecurrenceDays] = useState<string[]>(
+    dayCodes.filter((_, index) => [true, true, true, true, false, false, false][index])
+  );
+  const [activeTimeStart, setActiveTimeStart] = useState("18:00");
+  const [activeTimeEnd, setActiveTimeEnd] = useState("20:00");
+  const [isAutoApply, setIsAutoApply] = useState(false);
   const [timeBlocks, setTimeBlocks] = useState([
     { start: "18:00", end: "20:00" },
   ]);
@@ -247,6 +254,20 @@ export function RuleBuilderPage({
           setDailyCap(String(guardrails.daily_cap ?? dailyCap));
           setMinSpend(String(guardrails.min_spend ?? minSpend));
           setVisibility((localTarget.visibility as "public" | "private") ?? "public");
+          setRecurrenceDays(
+            localTarget.recurrence_days && localTarget.recurrence_days.length > 0
+              ? localTarget.recurrence_days
+              : (localTarget.days ?? days)
+                  .map((enabled, idx) => (enabled ? dayCodes[idx] : null))
+                  .filter(Boolean) as string[]
+          );
+          setActiveTimeStart(
+            localTarget.active_time_start ?? timeBlocks[0]?.start ?? "18:00"
+          );
+          setActiveTimeEnd(
+            localTarget.active_time_end ?? timeBlocks[0]?.end ?? "20:00"
+          );
+          setIsAutoApply(Boolean(localTarget.is_auto_apply));
           return;
         }
       }
@@ -265,6 +286,14 @@ export function RuleBuilderPage({
         setDailyCap(mockRule.dailyCap);
         setMinSpend(mockRule.minSpend);
         setVisibility(mockRule.visibility as "public" | "private");
+        setRecurrenceDays(
+          mockRule.days
+            .map((enabled, idx) => (enabled ? dayCodes[idx] : null))
+            .filter(Boolean) as string[]
+        );
+        setActiveTimeStart(mockRule.timeBlocks[0]?.start ?? "18:00");
+        setActiveTimeEnd(mockRule.timeBlocks[0]?.end ?? "20:00");
+        setIsAutoApply(false);
       }
       return;
     }
@@ -338,6 +367,10 @@ export function RuleBuilderPage({
       name,
       enabled: true,
       days,
+      recurrence_days: recurrenceDays,
+      active_time_start: activeTimeStart,
+      active_time_end: activeTimeEnd,
+      is_auto_apply: isAutoApply,
       time_blocks: timeBlocks,
       party_min: Number(partyMin),
       party_max: Number(partyMax),
@@ -490,6 +523,54 @@ export function RuleBuilderPage({
               >
                 {"\uC2DC\uAC04\uB300 \uCD94\uAC00"}
               </Button>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{"\uBC18\uBCF5 \uC694\uC77C \uC120\uD0DD"}</label>
+              <div className="flex flex-wrap gap-2">
+                {dayLabels.map((label, index) => {
+                  const code = dayCodes[index];
+                  const checked = recurrenceDays.includes(code);
+                  return (
+                    <label key={`recurrence-${label}`} className="flex items-center gap-1 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() =>
+                          setRecurrenceDays((prev) =>
+                            checked
+                              ? prev.filter((item) => item !== code)
+                              : [...prev, code]
+                          )
+                        }
+                      />
+                      {label}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{"\uBC18\uBCF5 \uC801\uC6A9 \uC2DC\uAC04\uB300"}</label>
+              <div className="grid gap-2 md:grid-cols-2">
+                <Input
+                  type="time"
+                  value={activeTimeStart}
+                  onChange={(event) => setActiveTimeStart(event.target.value)}
+                />
+                <Input
+                  type="time"
+                  value={activeTimeEnd}
+                  onChange={(event) => setActiveTimeEnd(event.target.value)}
+                />
+              </div>
+              <label className="flex items-center gap-2 text-sm text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={isAutoApply}
+                  onChange={(event) => setIsAutoApply(event.target.checked)}
+                />
+                {"\uC2A4\uCF00\uC904\uB7EC\uC5D0 \uC790\uB3D9 \uC801\uC6A9 \uD45C\uC2DC"}
+              </label>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">

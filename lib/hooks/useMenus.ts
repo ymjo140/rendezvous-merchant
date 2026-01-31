@@ -7,6 +7,9 @@ export type MenuRow = {
   store_id: string;
   name: string;
   price: number | null;
+  category?: "MAIN" | "SIDE" | "DRINK" | string | null;
+  image_url?: string | null;
+  is_recommended?: boolean | null;
   created_at?: string;
 };
 
@@ -28,7 +31,7 @@ async function fetchMenus(storeId?: string) {
 
 export function useMenus(storeId?: string) {
   const queryClient = useQueryClient();
-  const queryKey = ["store-menus", storeId];
+  const queryKey = ["store_menus", storeId];
 
   const query = useQuery({
     queryKey,

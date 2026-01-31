@@ -15,12 +15,14 @@ import {
   type ReservationRow,
 } from "@/lib/hooks/useReservations";
 import { useTimeDeals, type TimeDealRow } from "@/lib/hooks/useTimeDeals";
+import { autoAssign } from "@/lib/hooks/useAutoAssign";
 import { useStoreId } from "@/components/layout/Layout";
 
 type ReservationEntry = {
   id: string;
   store_id: string;
   guestName: string;
+  guestPhone?: string;
   partySize: number;
   date: string;
   status: "confirmed" | "pending" | "cancelled" | "no_show" | "blocked";
@@ -28,6 +30,7 @@ type ReservationEntry = {
   unit_index: number;
   start_time: string;
   end_time: string;
+  notes?: string;
   source?: "internal" | "external" | "manual";
 };
 
@@ -51,12 +54,15 @@ type RowInfo = {
 type CreateForm = {
   id: string;
   guestName: string;
+  guestPhone: string;
   partySize: string;
   date: string;
   startTime: string;
   endTime: string;
   unit_id: string;
   unit_index: number;
+  autoAssign: boolean;
+  notes: string;
 };
 
 type TimeDealForm = {
@@ -241,6 +247,7 @@ const dayLabels = [
   "\uAE08",
   "\uD1A0",
 ];
+const dayCodes = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
 function toMinutes(dateString: string) {
   const date = new Date(dateString);
@@ -305,11 +312,17 @@ function formatDateLabel(dateString: string) {
   return `${year}\uB144 ${month}\uC6D4 ${day}\uC77C (${weekday})`;
 }
 
+function getDayCode(dateString: string) {
+  const date = new Date(`${dateString}T00:00:00`);
+  return dayCodes[date.getDay()];
+}
+
 function mapRowToEntry(row: ReservationRow): ReservationEntry {
   return {
     id: String(row.id),
     store_id: String(row.store_id),
     guestName: row.guest_name,
+    guestPhone: row.guest_phone ?? undefined,
     partySize: row.party_size,
     date: row.date,
     status: row.status,
@@ -317,6 +330,7 @@ function mapRowToEntry(row: ReservationRow): ReservationEntry {
     unit_index: row.unit_index,
     start_time: row.start_time,
     end_time: row.end_time,
+    notes: row.notes ?? undefined,
     source: row.source,
   };
 }
@@ -326,6 +340,7 @@ function mapEntryToRow(entry: ReservationEntry): ReservationRow {
     id: entry.id,
     store_id: entry.store_id,
     guest_name: entry.guestName,
+    guest_phone: entry.guestPhone ?? null,
     party_size: entry.partySize,
     date: entry.date,
     status: entry.status,
@@ -333,6 +348,7 @@ function mapEntryToRow(entry: ReservationEntry): ReservationRow {
     unit_index: entry.unit_index,
     start_time: entry.start_time,
     end_time: entry.end_time,
+    notes: entry.notes ?? null,
     source: entry.source,
   };
 }
@@ -382,6 +398,10 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
   const [timeDealForm, setTimeDealForm] = useState<TimeDealForm | null>(null);
   const [blockMode, setBlockMode] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
+  const [autoRuleDialog, setAutoRuleDialog] = useState<RuleRow | null>(null);
+  const [hiddenAutoRules, setHiddenAutoRules] = useState<Record<string, boolean>>(
+    {}
+  );
 
   const {
     data: reservationRows = [],
@@ -542,6 +562,19 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
     () => timeDeals.filter((deal) => deal.date === dateKey),
     [timeDeals, dateKey]
   );
+  const autoRulesForDate = useMemo(() => {
+    if (!dateKey) return [];
+    const dayCode = getDayCode(dateKey);
+    return rules.filter(
+      (rule) =>
+        rule.is_auto_apply &&
+        Array.isArray(rule.recurrence_days) &&
+        rule.recurrence_days.includes(dayCode) &&
+        rule.active_time_start &&
+        rule.active_time_end &&
+        !hiddenAutoRules[`${rule.id}-${dateKey}`]
+    );
+  }, [rules, dateKey, hiddenAutoRules]);
 
   const activeReservations = useMemo(
     () => filtered.filter((item) => item.status !== "cancelled"),
@@ -577,19 +610,32 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
     setCreateForm({
       id: "",
       guestName: "",
+      guestPhone: "",
       partySize: "2",
       date: selectedDate,
       startTime,
       endTime,
       unit_id: row.unit_id,
       unit_index: row.unit_index,
+      autoAssign: true,
+      notes: "",
     });
     setCreateOpen(true);
   }
 
   function handleCreateSubmit() {
     if (!createForm) return;
-    const { id, guestName, partySize, date, startTime, endTime } = createForm;
+    const {
+      id,
+      guestName,
+      guestPhone,
+      partySize,
+      date,
+      startTime,
+      endTime,
+      autoAssign,
+      notes,
+    } = createForm;
 
     if (!id.trim() || !guestName.trim()) {
       window.alert(
@@ -624,18 +670,47 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
       return;
     }
 
+    let assignedUnitId = createForm.unit_id;
+    let assignedUnitIndex = createForm.unit_index;
+    let nextStatus: ReservationEntry["status"] = "confirmed";
+
+    if (autoAssign) {
+      const assignment = autoAssign(
+        {
+          partySize: Number(partySize) || 1,
+          date,
+          startTime,
+          endTime,
+        },
+        tableUnits,
+        reservations
+      );
+      if (assignment) {
+        assignedUnitId = assignment.unit_id;
+        assignedUnitIndex = assignment.unit_index;
+        window.alert(`✅ ${assignment.label} \uD14C\uC774\uBE14\uC5D0 \uBC30\uC815\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`);
+      } else {
+        nextStatus = "pending";
+        window.alert(
+          "\u26A0\uFE0F \uAC00\uB2A5\uD55C \uBE48 \uD14C\uC774\uBE14\uC774 \uC5C6\uC2B5\uB2C8\uB2E4. \uB300\uAE30 \uC0C1\uD0DC\uB85C \uB4F1\uB85D\uD569\uB2C8\uB2E4."
+        );
+      }
+    }
+
     const newReservation: ReservationEntry = {
       id: id.trim(),
       store_id: storeKey,
       guestName: guestName.trim(),
+      guestPhone: guestPhone.trim(),
       partySize: Number(partySize) || 1,
       date,
-      status: "confirmed",
-      unit_id: createForm.unit_id,
-      unit_index: createForm.unit_index,
+      status: nextStatus,
+      unit_id: assignedUnitId,
+      unit_index: assignedUnitIndex,
       start_time: `${date}T${startTime}:00`,
       end_time: `${date}T${endTime}:00`,
       source: "internal",
+      notes: notes.trim(),
     };
 
     createReservation.mutate(mapEntryToRow(newReservation));
@@ -712,6 +787,14 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
       createTimeDeal.mutate(mapTimeDealEntryToRow(newDeal));
     }
     setTimeDealDialogOpen(false);
+  }
+
+  function hideAutoRuleForDate(ruleId: string) {
+    setHiddenAutoRules((prev) => ({
+      ...prev,
+      [`${ruleId}-${dateKey}`]: true,
+    }));
+    setAutoRuleDialog(null);
   }
 
   function handleTimeDealDelete() {
@@ -943,6 +1026,39 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                     onClick={() => openTimeDealCreate(slot)}
                   />
                 ))}
+              {autoRulesForDate.map((rule) => {
+                const start = timeToMinutes(rule.active_time_start ?? "18:00");
+                const end = timeToMinutes(rule.active_time_end ?? "20:00");
+                const startIndex = Math.max(
+                  0,
+                  Math.floor((start - startMinutes) / slotMinutes)
+                );
+                const endIndex = Math.min(
+                  slots.length,
+                  Math.ceil((end - startMinutes) / slotMinutes)
+                );
+                const columnStart = 2 + startIndex;
+                const columnEnd = Math.max(columnStart + 1, 2 + endIndex);
+                const label = `\uD83D\uDD04 [\uC790\uB3D9\uC801\uC6A9] ${rule.benefit_title ?? rule.name}`;
+
+                return (
+                  <div
+                    key={`auto-${rule.id}`}
+                    className="relative z-10 flex items-center gap-2 rounded-md bg-indigo-100/70 px-2 py-1 text-xs text-indigo-700 cursor-pointer"
+                    style={{
+                      gridColumn: `${columnStart} / ${columnEnd}`,
+                      gridRow: "1",
+                      alignSelf: "center",
+                    }}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setAutoRuleDialog(rule);
+                    }}
+                  >
+                    <span className="truncate">{label}</span>
+                  </div>
+                );
+              })}
               {timeDealsForDate.map((deal) => {
                 const start = toMinutes(deal.start_time);
                 const end = toMinutes(deal.end_time);
@@ -1159,11 +1275,17 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                 {"\uACE0\uAC1D"}: {selectedReservation.guestName}
               </div>
               <div>
+                {"\uC5F0\uB77D\uCC98"}: {selectedReservation.guestPhone || "-"}
+              </div>
+              <div>
                 {"\uC778\uC6D0"}: {selectedReservation.partySize}\uBA85
               </div>
               <div>
                 {"\uC2DC\uAC04"}: {selectedReservation.start_time.slice(11, 16)}~
                 {selectedReservation.end_time.slice(11, 16)}
+              </div>
+              <div>
+                {"\uC694\uCCAD \uC0AC\uD56D"}: {selectedReservation.notes || "-"}
               </div>
             </div>
             {selectedReservation.status === "blocked" ? (
@@ -1242,6 +1364,20 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                   placeholder="\uAE40\uBBFC\uC218"
                 />
               </div>
+              <div className="space-y-1">
+                <label className="text-xs text-slate-500">{"\uC5F0\uB77D\uCC98"}</label>
+                <input
+                  className="h-10 w-full rounded-md border border-slate-200 px-3"
+                  value={createForm.guestPhone}
+                  onChange={(event) =>
+                    setCreateForm({
+                      ...createForm,
+                      guestPhone: event.target.value,
+                    })
+                  }
+                  placeholder="010-1234-5678"
+                />
+              </div>
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1">
                   <label className="text-xs text-slate-500">{"\uC778\uC6D0"}</label>
@@ -1303,9 +1439,33 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                   />
                 </div>
               </div>
+              <div className="space-y-1">
+                <label className="text-xs text-slate-500">{"\uC694\uCCAD \uC0AC\uD56D"}</label>
+                <input
+                  className="h-10 w-full rounded-md border border-slate-200 px-3"
+                  value={createForm.notes}
+                  onChange={(event) =>
+                    setCreateForm({
+                      ...createForm,
+                      notes: event.target.value,
+                    })
+                  }
+                  placeholder="\uCC3D\uAC00 \uC88C\uC11D"
+                />
+              </div>
               <div className="text-xs text-slate-500">
                 {`\uD14C\uC774\uBE14 ${createForm.unit_id}-${createForm.unit_index}`}
               </div>
+              <label className="flex items-center gap-2 text-sm text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={createForm.autoAssign}
+                  onChange={(event) =>
+                    setCreateForm({ ...createForm, autoAssign: event.target.checked })
+                  }
+                />
+                {"\uD14C\uC774\uBE14 \uC790\uB3D9 \uBC30\uC815"}
+              </label>
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="secondary" onClick={() => setCreateOpen(false)}>
@@ -1414,6 +1574,30 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
               </Button>
               <Button onClick={handleTimeDealSubmit}>
                 {timeDealForm.mode === "edit" ? "\uC800\uC7A5" : "\uC0DD\uC131"}
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </Dialog>
+
+      <Dialog open={Boolean(autoRuleDialog)}>
+        {autoRuleDialog ? (
+          <div className="space-y-4">
+            <div className="text-lg font-semibold">
+              {"\uC790\uB3D9 \uC801\uC6A9 \uB8F0"}
+            </div>
+            <div className="text-sm text-slate-600">
+              {`${autoRuleDialog.name} (${autoRuleDialog.active_time_start ?? ""}~${autoRuleDialog.active_time_end ?? ""})`}
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setAutoRuleDialog(null)}>
+                {"\uB2EB\uAE30"}
+              </Button>
+              <Button
+                className="bg-rose-600 hover:bg-rose-700"
+                onClick={() => hideAutoRuleForDate(String(autoRuleDialog.id))}
+              >
+                {"\uC774 \uB0A0\uB9CC \uB04C\uAE30"}
               </Button>
             </div>
           </div>

@@ -6,6 +6,7 @@ export type ReservationRow = {
   id: string;
   store_id: string;
   guest_name: string;
+  guest_phone?: string | null;
   party_size: number;
   date: string;
   status: "confirmed" | "pending" | "cancelled" | "no_show" | "blocked";
@@ -13,6 +14,7 @@ export type ReservationRow = {
   unit_index: number;
   start_time: string;
   end_time: string;
+  notes?: string | null;
   source?: "internal" | "external" | "manual";
 };
 
