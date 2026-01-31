@@ -24,7 +24,7 @@ export type RuleRow = {
 };
 
 type DbRuleRow = {
-  id: number | string;
+  id?: number | string;
   place_id?: number | null;
   store_id?: string | null;
   rule_name?: string | null;
