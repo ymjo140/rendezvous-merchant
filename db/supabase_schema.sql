@@ -95,6 +95,18 @@ create table if not exists public.time_deals (
 create index if not exists idx_time_deals_store
   on public.time_deals(store_id);
 
+-- 6) Store menus
+create table if not exists public.store_menus (
+  id uuid primary key default gen_random_uuid(),
+  store_id text not null,
+  name text not null,
+  price integer,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_store_menus_store
+  on public.store_menus(store_id);
+
 -- =====================
 -- RLS (Dev permissive)
 -- =====================
@@ -103,6 +115,7 @@ alter table public.offer_benefits_catalog enable row level security;
 alter table public.offer_rules enable row level security;
 alter table public.reservations enable row level security;
 alter table public.time_deals enable row level security;
+alter table public.store_menus enable row level security;
 
 -- Allow all operations for anon/authenticated (DEV ONLY)
 create policy "dev_all_table_units" on public.table_units
@@ -118,4 +131,7 @@ create policy "dev_all_reservations" on public.reservations
   for all using (true) with check (true);
 
 create policy "dev_all_time_deals" on public.time_deals
+  for all using (true) with check (true);
+
+create policy "dev_all_store_menus" on public.store_menus
   for all using (true) with check (true);

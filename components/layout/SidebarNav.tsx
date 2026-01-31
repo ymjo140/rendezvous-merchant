@@ -11,6 +11,7 @@ const navItems = [
   { label: "\uD61C\uD0DD \uCE74\uD0C8\uB85C\uADF8", slug: "offers/benefits" },
   { label: "\uB8F0 \uC2DC\uBBAC\uB808\uC774\uD130", slug: "offers/simulator" },
   { label: "\uC218\uC6A9\uB7C9", slug: "capacity" },
+  { label: "\uBA54\uB274 \uAD00\uB9AC", slug: "menus" },
   { label: "\uC778\uC0AC\uC774\uD2B8", slug: "insights" },
   { label: "\uC124\uC815", slug: "settings" },
 ];

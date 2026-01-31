@@ -2,15 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { fetchWithAuth } from "@/lib/api/client";
-import { endpoints } from "@/lib/api/endpoints";
 import type { StoreSummary } from "@/domain/stores/types";
-
-const mockStores: StoreSummary[] = [
-  { id: 1, name: "\uACE0\uB824\uB300\uC810" },
-  { id: 2, name: "\uC548\uC554 2\uD638\uC810" },
-  { id: "dev-store", name: "\uD14C\uC2A4\uD2B8 \uB9E4\uC7A5" },
-];
+import { supabase } from "@/lib/supabase/client";
 
 export function StoreSwitcher({ currentStoreId }: { currentStoreId: string | null }) {
   const router = useRouter();
@@ -21,10 +14,29 @@ export function StoreSwitcher({ currentStoreId }: { currentStoreId: string | nul
     let active = true;
     async function load() {
       try {
-        const data = await fetchWithAuth<StoreSummary[]>(endpoints.merchantStores);
-        if (active) setStores(data);
-      } catch {
-        if (active) setStores(mockStores);
+        const { data: userData } = await supabase.auth.getUser();
+        if (!active) return;
+        const userId = userData?.user?.id;
+        if (!userId) {
+          setStores([]);
+          return;
+        }
+        const { data, error } = await supabase
+          .from("places")
+          .select("id, name")
+          .eq("owner_id", userId)
+          .order("id", { ascending: true });
+        if (error) throw error;
+        if (!active) return;
+        setStores(
+          (data ?? []).map((store) => ({
+            id: store.id,
+            name: store.name,
+          }))
+        );
+      } catch (err) {
+        console.error(err);
+        if (active) setStores([]);
       }
     }
     void load();

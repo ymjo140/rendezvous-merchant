@@ -199,10 +199,87 @@ export function OnboardingPage() {
         return;
       }
 
+      const persistDetails = async (storeId: string) => {
+        const unitPayloads = [
+          {
+            name: capacityLabels.seat1,
+            min_capacity: 1,
+            max_capacity: 1,
+            quantity: seat1,
+            is_private: false,
+          },
+          {
+            name: capacityLabels.seat2,
+            min_capacity: 2,
+            max_capacity: 2,
+            quantity: seat2,
+            is_private: false,
+          },
+          {
+            name: capacityLabels.seat4,
+            min_capacity: 4,
+            max_capacity: 4,
+            quantity: seat4,
+            is_private: false,
+          },
+          {
+            name: capacityLabels.seat6,
+            min_capacity: 6,
+            max_capacity: 10,
+            quantity: seat6,
+            is_private: false,
+          },
+          {
+            name: capacityLabels.room,
+            min_capacity: 4,
+            max_capacity: 8,
+            quantity: roomCount,
+            is_private: true,
+          },
+        ]
+          .filter((unit) => unit.quantity > 0)
+          .map((unit) => ({
+            ...unit,
+            store_id: storeId,
+          }));
+
+        const menuPayloads = menus
+          .filter((menu) => menu.name.trim().length > 0)
+          .map((menu) => ({
+            store_id: storeId,
+            name: menu.name.trim(),
+            price: Number(menu.price) || null,
+          }));
+
+        await supabase.from("table_units").delete().eq("store_id", storeId);
+        if (unitPayloads.length > 0) {
+          const { error: unitError } = await supabase
+            .from("table_units")
+            .insert(unitPayloads);
+          if (unitError) throw unitError;
+        }
+
+        await supabase.from("store_menus").delete().eq("store_id", storeId);
+        if (menuPayloads.length > 0) {
+          const { error: menuError } = await supabase
+            .from("store_menus")
+            .insert(menuPayloads);
+          if (menuError) throw menuError;
+        }
+      };
+
       if (selectedPlace?.id) {
         const { data: store, error } = await supabase
           .from("places")
-          .update({ owner_id: userData.user.id })
+          .update({
+            owner_id: userData.user.id,
+            name: storeName,
+            category,
+            main_category: mapMainCategoryToDb(category),
+            address: location,
+            lat,
+            lng,
+          })
           .eq("id", selectedPlace.id)
           .select("id")
           .single();
@@ -214,6 +291,14 @@ export function OnboardingPage() {
               error?.message ? ` (${error.message})` : ""
             }`
           );
+          return;
+        }
+
+        try {
+          await persistDetails(String(store.id));
+        } catch (detailError) {
+          console.error(detailError);
+          window.alert("\uC218\uC6A9\uB7C9/\uBA54\uB274 \uC800\uC7A5\uC744 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
           return;
         }
 
@@ -243,6 +328,14 @@ export function OnboardingPage() {
             error?.message ? ` (${error.message})` : ""
           }`
         );
+        return;
+      }
+
+      try {
+        await persistDetails(String(store.id));
+      } catch (detailError) {
+        console.error(detailError);
+        window.alert("\uC218\uC6A9\uB7C9/\uBA54\uB274 \uC800\uC7A5\uC744 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
         return;
       }
 
