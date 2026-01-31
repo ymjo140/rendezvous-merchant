@@ -361,9 +361,10 @@ export function RuleBuilderPage({
       is_private: visibility === "private",
     };
 
+    const placeId = Number(storeIdValue);
     const ruleRow = {
       id: ruleId ?? crypto.randomUUID(),
-      store_id: storeIdValue,
+      place_id: Number.isFinite(placeId) ? placeId : undefined,
       name,
       enabled: true,
       days,

@@ -4,7 +4,8 @@ import { supabase } from "@/lib/supabase/client";
 
 export type RuleRow = {
   id: string;
-  store_id: string;
+  store_id?: string;
+  place_id?: number | null;
   name: string;
   enabled: boolean;
   days: boolean[];
@@ -29,10 +30,11 @@ const isSupabaseConfigured = Boolean(
 
 async function fetchRules(storeId?: string) {
   if (!storeId || !isSupabaseConfigured) return [] as RuleRow[];
+  const placeId = Number(storeId);
   const { data, error } = await supabase
     .from("offer_rules")
     .select("*")
-    .eq("store_id", storeId)
+    .eq("place_id", Number.isFinite(placeId) ? placeId : storeId)
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data ?? []) as RuleRow[];
@@ -50,6 +52,7 @@ export function useRules(storeId?: string) {
 
   useEffect(() => {
     if (!storeId || !isSupabaseConfigured) return;
+    const placeId = Number(storeId);
     const channel = supabase
       .channel(`rules-${storeId}`)
       .on(
@@ -58,7 +61,7 @@ export function useRules(storeId?: string) {
           event: "*",
           schema: "public",
           table: "offer_rules",
-          filter: `store_id=eq.${storeId}`,
+          filter: `place_id=eq.${Number.isFinite(placeId) ? placeId : storeId}`,
         },
         () => {
           queryClient.invalidateQueries({ queryKey });
