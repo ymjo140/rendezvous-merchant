@@ -580,6 +580,25 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
     () => filtered.filter((item) => item.status !== "cancelled"),
     [filtered]
   );
+  const unitOptions = useMemo(
+    () =>
+      tableUnits.map((unit) => ({
+        id: unit.id,
+        label: unit.name,
+        quantity: unit.quantity,
+      })),
+    [tableUnits]
+  );
+  const selectedUnit = useMemo(() => {
+    if (!createForm) return undefined;
+    return unitOptions.find(
+      (unit) => String(unit.id) === String(createForm.unit_id)
+    );
+  }, [createForm, unitOptions]);
+  const unitIndexOptions = useMemo(() => {
+    const count = selectedUnit?.quantity ?? 0;
+    return Array.from({ length: count }, (_, index) => index + 1);
+  }, [selectedUnit]);
 
   function openDetail(item: ReservationEntry) {
     if (item.source === "external") {
@@ -607,6 +626,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
   function openCreate(row: RowInfo, slot: string) {
     const startTime = slot;
     const endTime = minutesToTime(timeToMinutes(slot) + 120);
+    const fallbackUnit = tableUnits[0];
     setCreateForm({
       id: "",
       guestName: "",
@@ -615,8 +635,8 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
       date: selectedDate,
       startTime,
       endTime,
-      unit_id: row.unit_id,
-      unit_index: row.unit_index,
+      unit_id: row.unit_id ?? fallbackUnit?.id ?? "",
+      unit_index: row.unit_index ?? 1,
       autoAssign: true,
       notes: "",
     });
@@ -641,6 +661,10 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
       window.alert(
         "\uC608\uC57D \uBC88\uD638\uC640 \uACE0\uAC1D \uC774\uB984\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694."
       );
+      return;
+    }
+    if (!createForm.unit_id) {
+      window.alert("\uD14C\uC774\uBE14 \uC720\uD615\uC744 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.");
       return;
     }
 
@@ -688,7 +712,9 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
       if (assignment) {
         assignedUnitId = assignment.unit_id;
         assignedUnitIndex = assignment.unit_index;
-        window.alert(`✅ ${assignment.label} \uD14C\uC774\uBE14\uC5D0 \uBC30\uC815\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`);
+        window.alert(
+          `\u2705 ${assignment.label} \uD14C\uC774\uBE14\uC5D0 \uBC30\uC815\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`
+        );
       } else {
         nextStatus = "pending";
         window.alert(
@@ -1408,6 +1434,69 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1">
                   <label className="text-xs text-slate-500">
+                    {"\uD14C\uC774\uBE14 \uC720\uD615"}
+                  </label>
+                  <select
+                    className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
+                    value={createForm.unit_id}
+                    onChange={(event) => {
+                      const nextId = event.target.value;
+                      const nextUnit = unitOptions.find(
+                        (unit) => String(unit.id) === String(nextId)
+                      );
+                      const nextIndex = Math.min(
+                        createForm.unit_index,
+                        nextUnit?.quantity ?? 1
+                      );
+                      setCreateForm({
+                        ...createForm,
+                        unit_id: nextId,
+                        unit_index: nextIndex,
+                      });
+                    }}
+                    disabled={unitOptions.length === 0}
+                  >
+                    {unitOptions.length === 0 ? (
+                      <option value="">
+                        {"\uC218\uC6A9\uB7C9\uC5D0\uC11C \uD14C\uC774\uBE14\uC744 \uB4F1\uB85D\uD574 \uC8FC\uC138\uC694."}
+                      </option>
+                    ) : null}
+                    {unitOptions.map((unit) => (
+                      <option key={String(unit.id)} value={String(unit.id)}>
+                        {unit.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-500">
+                    {"\uD14C\uC774\uBE14 \uBC88\uD638"}
+                  </label>
+                  <select
+                    className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
+                    value={String(createForm.unit_index)}
+                    onChange={(event) =>
+                      setCreateForm({
+                        ...createForm,
+                        unit_index: Number(event.target.value),
+                      })
+                    }
+                    disabled={unitIndexOptions.length === 0}
+                  >
+                    {unitIndexOptions.length === 0 ? (
+                      <option value="1">{"-"}</option>
+                    ) : null}
+                    {unitIndexOptions.map((indexValue) => (
+                      <option key={indexValue} value={indexValue}>
+                        {indexValue}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-500">
                     {"\uC2DC\uC791 \uC2DC\uAC04"}
                   </label>
                   <input
@@ -1454,7 +1543,9 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                 />
               </div>
               <div className="text-xs text-slate-500">
-                {`\uD14C\uC774\uBE14 ${createForm.unit_id}-${createForm.unit_index}`}
+                {selectedUnit
+                  ? `${selectedUnit.label}-${createForm.unit_index}`
+                  : `\uD14C\uC774\uBE14 ${createForm.unit_id}-${createForm.unit_index}`}
               </div>
               <label className="flex items-center gap-2 text-sm text-slate-600">
                 <input
@@ -1607,3 +1698,4 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
     </div>
   );
 }
+

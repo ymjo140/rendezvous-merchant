@@ -7,6 +7,7 @@ import { Tabs } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Dialog } from "@/components/ui/dialog";
 import { useMenus, type MenuRow } from "@/lib/hooks/useMenus";
+import { useStoreId } from "@/components/layout/Layout";
 
 const categoryOptions = [
   { value: "MAIN", label: "\uBA54\uC778" },
@@ -26,13 +27,18 @@ function formatPrice(value?: number | null) {
 }
 
 export function MenuManagementPage({ storeId }: { storeId?: string }) {
+  const contextStoreId = useStoreId();
+  const resolvedStoreId =
+    storeId && storeId !== "undefined" && storeId !== "null"
+      ? storeId
+      : contextStoreId ?? undefined;
   const {
     data: menus = [],
     createMenu,
     updateMenu,
     deleteMenu,
     isLoading,
-  } = useMenus(storeId);
+  } = useMenus(resolvedStoreId);
 
   const [activeCategoryLabel, setActiveCategoryLabel] = useState(
     categoryOptions[0]?.label ?? "MAIN"
@@ -45,7 +51,7 @@ export function MenuManagementPage({ storeId }: { storeId?: string }) {
   const [imageUrl, setImageUrl] = useState("");
   const [isRecommended, setIsRecommended] = useState(false);
 
-  if (!storeId || storeId === "undefined" || storeId === "null") {
+  if (!resolvedStoreId) {
     return (
       <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600">
         {"\uAC00\uAC8C \uC815\uBCF4\uB97C \uBD88\uB7EC\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uB9E4\uC7A5\uC744 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694."}
@@ -91,7 +97,7 @@ export function MenuManagementPage({ storeId }: { storeId?: string }) {
       return;
     }
     const payload = {
-      store_id: storeId,
+      store_id: resolvedStoreId,
       name: name.trim(),
       price: price ? Number(price) : null,
       category,
