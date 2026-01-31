@@ -23,6 +23,10 @@ export function StoreIdProvider({
   );
 }
 
+export function useStoreId() {
+  return useContext(StoreIdContext);
+}
+
 export function Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -53,7 +57,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
     if (typeof window !== "undefined") {
       const lastStore = window.localStorage.getItem("rendezvous_last_store");
       if (lastStore) {
-        router.replace(`/stores/${lastStore}`);
+        const nextPath = pathname.startsWith("/stores/")
+          ? pathname.replace(/^\/stores\/[^/]+/, `/stores/${lastStore}`)
+          : `/stores/${lastStore}`;
+        router.replace(nextPath);
         return;
       }
     }

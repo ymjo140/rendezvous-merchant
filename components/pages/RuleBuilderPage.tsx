@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -12,6 +12,7 @@ import { HotDealCard } from "@/components/offers/HotDealCard";
 import { BenefitType } from "@/domain/offers/types";
 import { useBenefits } from "@/lib/hooks/useBenefits";
 import { useRules } from "@/lib/hooks/useRules";
+import { useStoreId } from "@/components/layout/Layout";
 
 const dayLabels = [
   "\uC6D4",
@@ -174,16 +175,28 @@ export function RuleBuilderPage({
   ruleId?: string;
 }) {
   const router = useRouter();
-  const pathname = usePathname();
+  const contextStoreId = useStoreId();
   const resolvedStoreId =
-    storeId ?? (pathname.match(/\/stores\/([^/]+)/)?.[1] ?? "default");
+    storeId && storeId !== "undefined" && storeId !== "null"
+      ? storeId
+      : contextStoreId ?? undefined;
+
+  if (!resolvedStoreId) {
+    return (
+      <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600">
+        {"\uAC00\uAC8C \uC815\uBCF4\uB97C \uBD88\uB7EC\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uB9E4\uC7A5\uC744 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694."}
+      </div>
+    );
+  }
+
+  const storeIdValue = resolvedStoreId;
   const storeName =
-    resolvedStoreId === "dev-store"
+    storeIdValue === "dev-store"
       ? "\uD14C\uC2A4\uD2B8 \uB9E4\uC7A5"
       : "\uB370\uBAA8 \uC2A4\uD1A0\uC5B4";
   const storeCategory = "\uC2DD\uB2F9/\uBC25\uC9D1";
-  const { data: benefitRows = [] } = useBenefits(resolvedStoreId);
-  const { data: ruleRows = [], createRule, updateRule } = useRules(resolvedStoreId);
+  const { data: benefitRows = [] } = useBenefits(storeIdValue);
+  const { data: ruleRows = [], createRule, updateRule } = useRules(storeIdValue);
 
   const [step, setStep] = useState(1);
   const [name, setName] = useState("");
@@ -240,7 +253,7 @@ export function RuleBuilderPage({
         }
       }
 
-      if (!resolvedStoreId || resolvedStoreId === "default" || !ruleId || !baseURL) {
+      if (!ruleId || !baseURL) {
         if (ruleId) {
           setName(mockRule.name);
           setDays(mockRule.days);
@@ -261,7 +274,7 @@ export function RuleBuilderPage({
 
       try {
         const data = await fetchWithAuth<RuleResponse[] | RuleResponse>(
-          endpoints.offerRules(resolvedStoreId)
+          endpoints.offerRules(storeIdValue)
         );
         const target = Array.isArray(data)
           ? data.find((item) => String(item.id) === String(ruleId))
@@ -287,7 +300,7 @@ export function RuleBuilderPage({
     }
 
     void loadRule();
-  }, [resolvedStoreId, ruleId, benefitRows, ruleRows]);
+  }, [storeIdValue, ruleId, benefitRows, ruleRows]);
 
   useEffect(() => {
     if (!catalog.length) return;
@@ -350,7 +363,7 @@ export function RuleBuilderPage({
 
     const ruleRow = {
       id: ruleId ?? crypto.randomUUID(),
-      store_id: resolvedStoreId ?? "dev-store",
+      store_id: storeIdValue,
       name,
       enabled: true,
       days,
@@ -378,19 +391,19 @@ export function RuleBuilderPage({
       // ignore
     }
 
-    if (!baseURL || resolvedStoreId === "default") {
+    if (!baseURL) {
       window.alert("\uC131\uACF5\uC801\uC73C\uB85C \uC800\uC7A5\uB418\uC5C8\uC2B5\uB2C8\uB2E4!");
-      router.push(`/stores/${resolvedStoreId}/offers/rules`);
+      router.push(`/stores/${storeIdValue}/offers/rules`);
       return;
     }
 
     try {
-      await fetchWithAuth(endpoints.offerRules(resolvedStoreId), {
+      await fetchWithAuth(endpoints.offerRules(storeIdValue), {
         method: ruleId ? "PATCH" : "POST",
         body: JSON.stringify({ id: ruleId, ...payload }),
       });
       window.alert("\uC131\uACF5\uC801\uC73C\uB85C \uC800\uC7A5\uB418\uC5C8\uC2B5\uB2C8\uB2E4!");
-      router.push(`/stores/${resolvedStoreId}/offers/rules`);
+      router.push(`/stores/${storeIdValue}/offers/rules`);
     } catch {
       window.alert("\uC11C\uBC84 \uC800\uC7A5\uC740 \uC2E4\uD328\uD588\uC9C0\uB9CC, \uD654\uBA74\uC5D0\uB294 \uBC18\uC601\uB418\uC5C8\uC2B5\uB2C8\uB2E4.");
     }
@@ -429,7 +442,6 @@ export function RuleBuilderPage({
         {step === 1 && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <div className="text-sm font-medium">{"[0m"}</div>
               <div className="text-sm font-medium">{"\u26A1 \uC790\uC8FC \uC4F0\uB294 \uADDC\uCE59 \uBD88\uB7EC\uC624\uAE30"}</div>
               <div className="flex flex-wrap gap-2">
                 {presets.map((preset) => (

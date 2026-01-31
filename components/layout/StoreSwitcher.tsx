@@ -48,6 +48,14 @@ export function StoreSwitcher({ currentStoreId }: { currentStoreId: string | nul
   const selectedId =
     currentStoreId ?? storedId ?? String(stores[0]?.id ?? "");
 
+  useEffect(() => {
+    if (!currentStoreId || currentStoreId === "undefined" || currentStoreId === "null") {
+      if (storedId) {
+        router.replace(`/stores/${storedId}`);
+      }
+    }
+  }, [currentStoreId, storedId, router]);
+
   return (
     <select
       className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm"

@@ -1,12 +1,12 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
 import { useTableUnits, type TableUnitRow } from "@/lib/hooks/useTableUnits";
+import { useStoreId } from "@/components/layout/Layout";
 
 const initialUnits: TableUnitRow[] = [
   {
@@ -48,12 +48,20 @@ type FormState = {
 };
 
 export function CapacityPage({ storeId }: { storeId?: string }) {
-  const pathname = usePathname();
+  const contextStoreId = useStoreId();
   const resolvedStoreId = useMemo(() => {
-    if (storeId) return storeId;
-    const match = pathname.match(/\/stores\/([^/]+)/);
-    return match ? match[1] : "default";
-  }, [storeId, pathname]);
+    if (storeId && storeId !== "undefined" && storeId !== "null") return storeId;
+    if (contextStoreId) return contextStoreId;
+    return undefined;
+  }, [storeId, contextStoreId]);
+
+  if (!resolvedStoreId) {
+    return (
+      <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600">
+        {"\uAC00\uAC8C \uC815\uBCF4\uB97C \uBD88\uB7EC\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uB9E4\uC7A5\uC744 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694."}
+      </div>
+    );
+  }
 
   const { data: unitRows = [], createUnit, updateUnit, isSupabaseConfigured } =
     useTableUnits(resolvedStoreId);
