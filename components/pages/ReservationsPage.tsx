@@ -15,6 +15,7 @@ import {
   type ReservationRow,
 } from "@/lib/hooks/useReservations";
 import { useTimeDeals, type TimeDealRow } from "@/lib/hooks/useTimeDeals";
+import { useStoreId } from "@/components/layout/Layout";
 
 type ReservationEntry = {
   id: string;
@@ -361,10 +362,11 @@ function mapTimeDealEntryToRow(entry: TimeDealEntry): TimeDealRow {
 }
 
 export function ReservationsPage({ storeId }: { storeId?: string }) {
+  const contextStoreId = useStoreId();
   const resolvedStoreId =
     storeId && storeId !== "undefined" && storeId !== "null"
       ? storeId
-      : undefined;
+      : contextStoreId ?? undefined;
   const [statusFilter, setStatusFilter] = useState("all");
   const [view, setView] = useState<"scheduler" | "list">("scheduler");
   const [selectedDate, setSelectedDate] = useState<string>("");
