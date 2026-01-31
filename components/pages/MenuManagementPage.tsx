@@ -58,7 +58,7 @@ export function MenuManagementPage({ storeId }: { storeId?: string }) {
             value={price}
             onChange={(event) => setPrice(event.target.value)}
           />
-          <Button onClick={handleAdd} disabled={createMenu.isLoading}>
+          <Button onClick={handleAdd} disabled={createMenu.isPending}>
             {"\uCD94\uAC00"}
           </Button>
         </div>
