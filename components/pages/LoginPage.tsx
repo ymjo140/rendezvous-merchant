@@ -49,9 +49,13 @@ export function LoginPage() {
         .from("places")
         .select("id")
         .eq("owner_id", data.user.id)
-        .single();
+        .maybeSingle();
 
-      if (storeError || !store?.id) {
+      if (storeError) {
+        console.error(storeError);
+      }
+
+      if (!store?.id) {
         if (typeof window !== "undefined") {
           window.localStorage.removeItem("rendezvous_last_store");
         }
