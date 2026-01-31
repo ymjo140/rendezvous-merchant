@@ -69,6 +69,9 @@ export function useTableUnits(storeId?: string) {
       if (error) throw error;
       return payload;
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey });
+    },
     onMutate: async (payload) => {
       await queryClient.cancelQueries({ queryKey });
       const previous = queryClient.getQueryData<TableUnitRow[]>(queryKey) ?? [];
@@ -94,6 +97,9 @@ export function useTableUnits(storeId?: string) {
         .eq("id", payload.id);
       if (error) throw error;
       return payload;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey });
     },
     onMutate: async (payload) => {
       await queryClient.cancelQueries({ queryKey });

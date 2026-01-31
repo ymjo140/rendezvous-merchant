@@ -1,21 +1,39 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { SidebarNav } from "@/components/layout/SidebarNav";
 import { Topbar } from "@/components/layout/Topbar";
 import { StoreSwitcher } from "@/components/layout/StoreSwitcher";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 
+const StoreIdContext = createContext<string | null>(null);
+
+export function StoreIdProvider({
+  storeId,
+  children,
+}: {
+  storeId: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <StoreIdContext.Provider value={storeId}>
+      {children}
+    </StoreIdContext.Provider>
+  );
+}
+
 export function Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const contextStoreId = useContext(StoreIdContext);
 
   const storeId = useMemo(() => {
+    if (contextStoreId) return contextStoreId;
     const match = pathname.match(/\/stores\/([^/]+)/);
     return match ? match[1] : null;
-  }, [pathname]);
+  }, [contextStoreId, pathname]);
   const normalizedStoreId = useMemo(() => {
     if (!storeId) return null;
     if (storeId === "undefined" || storeId === "null") return null;

@@ -2,7 +2,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, Td, Th } from "@/components/ui/table";
@@ -362,22 +361,10 @@ function mapTimeDealEntryToRow(entry: TimeDealEntry): TimeDealRow {
 }
 
 export function ReservationsPage({ storeId }: { storeId?: string }) {
-  const pathname = usePathname();
-  const effectiveStoreId = useMemo(() => {
-    if (storeId && storeId !== "undefined" && storeId !== "null") return storeId;
-    const parts = pathname?.split("/").filter(Boolean) ?? [];
-    const storesIndex = parts.indexOf("stores");
-    if (storesIndex >= 0 && parts[storesIndex + 1]) {
-      const candidate = parts[storesIndex + 1];
-      if (candidate && candidate !== "undefined" && candidate !== "null") {
-        return candidate;
-      }
-    }
-    return undefined;
-  }, [storeId, pathname]);
-  const [resolvedStoreId, setResolvedStoreId] = useState<string | undefined>(
-    undefined
-  );
+  const resolvedStoreId =
+    storeId && storeId !== "undefined" && storeId !== "null"
+      ? storeId
+      : undefined;
   const [statusFilter, setStatusFilter] = useState("all");
   const [view, setView] = useState<"scheduler" | "list">("scheduler");
   const [selectedDate, setSelectedDate] = useState<string>("");
@@ -431,7 +418,15 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
     isSupabaseConfigured: isTimeDealsSupabaseReady,
   } = useTimeDeals(resolvedStoreId);
 
-  const storeKey = resolvedStoreId ?? "dev-store";
+  if (!resolvedStoreId) {
+    return (
+      <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600">
+        {"\uAC00\uAC8C \uC815\uBCF4\uB97C \uBD88\uB7EC\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uB9E4\uC7A5\uC744 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694."}
+      </div>
+    );
+  }
+
+  const storeKey = resolvedStoreId;
   const fallbackReservationRows = useMemo(
     () =>
       mockReservations.map((item) =>
@@ -463,21 +458,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
     Boolean(reservationsError) ||
     Boolean(timeDealsError);
 
-  useEffect(() => {
-    if (effectiveStoreId) {
-      setResolvedStoreId(effectiveStoreId);
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem("rendezvous_last_store", effectiveStoreId);
-      }
-      return;
-    }
-    if (typeof window !== "undefined") {
-      const lastStore = window.localStorage.getItem("rendezvous_last_store");
-      if (lastStore) {
-        setResolvedStoreId(lastStore);
-      }
-    }
-  }, [effectiveStoreId]);
+  // storeId is provided by route params; no pathname/localStorage fallback
 
   useEffect(() => {
     if (typeof window === "undefined") return;

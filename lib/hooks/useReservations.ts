@@ -72,6 +72,9 @@ export function useReservations(storeId?: string) {
       if (error) throw error;
       return payload;
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey });
+    },
     onMutate: async (payload) => {
       await queryClient.cancelQueries({ queryKey });
       const previous = queryClient.getQueryData<ReservationRow[]>(queryKey) ?? [];
@@ -97,6 +100,9 @@ export function useReservations(storeId?: string) {
         .eq("id", payload.id);
       if (error) throw error;
       return payload;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey });
     },
     onMutate: async (payload) => {
       await queryClient.cancelQueries({ queryKey });
@@ -128,6 +134,9 @@ export function useReservations(storeId?: string) {
         .eq("id", payload.id);
       if (error) throw error;
       return payload;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey });
     },
     onMutate: async (payload) => {
       await queryClient.cancelQueries({ queryKey });
