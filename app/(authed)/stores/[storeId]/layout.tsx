@@ -1,12 +1,11 @@
 import { StoreIdProvider } from "@/components/layout/Layout";
 
-export default async function StoreLayout({
+export default function StoreLayout({
   children,
   params,
 }: {
   children: React.ReactNode;
   params: { storeId: string };
 }) {
-  const { storeId } = params;
-  return <StoreIdProvider storeId={storeId}>{children}</StoreIdProvider>;
+  return <StoreIdProvider storeId={params.storeId}>{children}</StoreIdProvider>;
 }
