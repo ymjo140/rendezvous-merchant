@@ -380,7 +380,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
   );
   const [statusFilter, setStatusFilter] = useState("all");
   const [view, setView] = useState<"scheduler" | "list">("scheduler");
-  const [selectedDate, setSelectedDate] = useState(todayString);
+  const [selectedDate, setSelectedDate] = useState<string>("");
   const [tableUnits, setTableUnits] = useState<TableUnit[]>([]);
   const [rules, setRules] = useState<RuleRow[]>([]);
   const [benefits, setBenefits] = useState<BenefitRow[]>([]);
@@ -497,6 +497,12 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
   }, []);
 
   useEffect(() => {
+    if (!selectedDate) {
+      setSelectedDate(todayString());
+    }
+  }, [selectedDate]);
+
+  useEffect(() => {
     if (unitRows.length > 0) {
       setTableUnits(
         unitRows.map((unit) => ({
@@ -531,20 +537,24 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
 
   
 
+  const dateKey = selectedDate || "1970-01-01";
+  const dateLabel = selectedDate
+    ? formatDateLabel(selectedDate)
+    : "\uB0A0\uC9DC \uB85C\uB529 \uC911";
+
   const filtered = useMemo(() => {
     return reservations.filter((item) => {
       const statusMatch = statusFilter === "all" || item.status === statusFilter;
-      const dateMatch = item.date === selectedDate;
+      const dateMatch = item.date === dateKey;
       return statusMatch && dateMatch;
     });
-  }, [reservations, statusFilter, selectedDate]);
+  }, [reservations, statusFilter, dateKey]);
 
   const slots = useMemo(() => buildSlots(), []);
   const rows = useMemo(() => buildRows(tableUnits), [tableUnits]);
-  const dateLabel = formatDateLabel(selectedDate);
   const timeDealsForDate = useMemo(
-    () => timeDeals.filter((deal) => deal.date === selectedDate),
-    [timeDeals, selectedDate]
+    () => timeDeals.filter((deal) => deal.date === dateKey),
+    [timeDeals, dateKey]
   );
 
   const activeReservations = useMemo(
