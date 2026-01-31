@@ -15,7 +15,7 @@ import {
   type ReservationRow,
 } from "@/lib/hooks/useReservations";
 import { useTimeDeals, type TimeDealRow } from "@/lib/hooks/useTimeDeals";
-import { autoAssign } from "@/lib/hooks/useAutoAssign";
+import { autoAssign as runAutoAssign } from "@/lib/hooks/useAutoAssign";
 import { useStoreId } from "@/components/layout/Layout";
 
 type ReservationEntry = {
@@ -675,7 +675,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
     let nextStatus: ReservationEntry["status"] = "confirmed";
 
     if (autoAssign) {
-      const assignment = autoAssign(
+      const assignment = runAutoAssign(
         {
           partySize: Number(partySize) || 1,
           date,
