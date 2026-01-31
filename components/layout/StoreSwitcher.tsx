@@ -15,6 +15,7 @@ const mockStores: StoreSummary[] = [
 export function StoreSwitcher({ currentStoreId }: { currentStoreId: string | null }) {
   const router = useRouter();
   const [stores, setStores] = useState<StoreSummary[]>([]);
+  const [storedId, setStoredId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -39,10 +40,11 @@ export function StoreSwitcher({ currentStoreId }: { currentStoreId: string | nul
     }
   }, [currentStoreId]);
 
-  const storedId =
-    typeof window !== "undefined"
-      ? window.localStorage.getItem("rendezvous_last_store")
-      : null;
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setStoredId(window.localStorage.getItem("rendezvous_last_store"));
+  }, []);
+
   const selectedId =
     currentStoreId ?? storedId ?? String(stores[0]?.id ?? "");
 
