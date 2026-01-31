@@ -42,7 +42,13 @@ export function StoreSwitcher({ currentStoreId }: { currentStoreId: string | nul
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    setStoredId(window.localStorage.getItem("rendezvous_last_store"));
+    const value = window.localStorage.getItem("rendezvous_last_store");
+    if (value === "undefined" || value === "null") {
+      window.localStorage.removeItem("rendezvous_last_store");
+      setStoredId(null);
+      return;
+    }
+    setStoredId(value);
   }, []);
 
   const selectedId =

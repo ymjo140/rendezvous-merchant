@@ -56,12 +56,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
     if (isSelect || isOnboarding) return;
     if (typeof window !== "undefined") {
       const lastStore = window.localStorage.getItem("rendezvous_last_store");
-      if (lastStore) {
+      if (lastStore && lastStore !== "undefined" && lastStore !== "null") {
         const nextPath = pathname.startsWith("/stores/")
           ? pathname.replace(/^\/stores\/[^/]+/, `/stores/${lastStore}`)
           : `/stores/${lastStore}`;
         router.replace(nextPath);
         return;
+      }
+      if (lastStore === "undefined" || lastStore === "null") {
+        window.localStorage.removeItem("rendezvous_last_store");
       }
     }
     router.replace("/stores/select");

@@ -40,6 +40,9 @@ export function LoginPage() {
         .single();
 
       if (storeError || !store?.id) {
+        if (typeof window !== "undefined") {
+          window.localStorage.removeItem("rendezvous_last_store");
+        }
         router.push("/onboarding");
         return;
       }
