@@ -23,13 +23,25 @@ export function LoginPage() {
 
     setLoading(true);
     try {
+      if (
+        !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+        !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      ) {
+        window.alert("\uC218\uD398\uC774\uC2A4 \uD658\uACBD\uBCC0\uC218\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+        return;
+      }
       const { data, error } = await supabase.auth.signInWithPassword({
         email: DEV_EMAIL,
         password: password.trim(),
       });
 
       if (error || !data?.user) {
-        window.alert("\uB85C\uADF8\uC778 \uC2E4\uD328: dev@rendezvous.app \uACC4\uC815\uC744 \uD655\uC778\uD574\uC8FC\uC138\uC694.");
+        if (error) console.error(error);
+        window.alert(
+          `\uB85C\uADF8\uC778 \uC2E4\uD328: dev@rendezvous.app \uACC4\uC815\uC744 \uD655\uC778\uD574\uC8FC\uC138\uC694.${
+            error?.message ? ` (${error.message})` : ""
+          }`
+        );
         return;
       }
 
@@ -51,7 +63,8 @@ export function LoginPage() {
         window.localStorage.setItem("rendezvous_last_store", String(store.id));
       }
       router.push(`/stores/${store.id}`);
-    } catch {
+    } catch (err) {
+      console.error(err);
       window.alert("\uB85C\uADF8\uC778 \uC2E4\uD328: dev@rendezvous.app \uACC4\uC815\uC744 \uD655\uC778\uD574\uC8FC\uC138\uC694.");
     } finally {
       setLoading(false);
