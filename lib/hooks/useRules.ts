@@ -130,6 +130,44 @@ function mapRuleRowToDb(row: RuleRow): DbRuleRow {
   };
 }
 
+function mapRuleUpdateToDb(payload: Partial<RuleRow>) {
+  const update: Partial<DbRuleRow> = {};
+  if (payload.place_id !== undefined) update.place_id = payload.place_id ?? null;
+  if (payload.store_id !== undefined) update.store_id = payload.store_id ?? null;
+  if (payload.name !== undefined) update.rule_name = payload.name;
+  if (payload.days !== undefined) update.day_of_week_mask = daysToMask(payload.days);
+  if (payload.time_blocks !== undefined) update.time_blocks_json = payload.time_blocks;
+  if (payload.party_min !== undefined) update.party_size_min = payload.party_min ?? null;
+  if (payload.party_max !== undefined) update.party_size_max = payload.party_max ?? null;
+  if (payload.lead_min !== undefined || payload.lead_max !== undefined) {
+    update.lead_time_thresholds_json = {
+      min: payload.lead_min ?? undefined,
+      max: payload.lead_max ?? undefined,
+    };
+  }
+  if (
+    payload.benefit_id !== undefined ||
+    payload.benefit_type !== undefined ||
+    payload.benefit_value !== undefined ||
+    payload.benefit_title !== undefined
+  ) {
+    update.base_benefit_json = {
+      id: payload.benefit_id ?? undefined,
+      type: payload.benefit_type ?? undefined,
+      value: payload.benefit_value ?? undefined,
+      title: payload.benefit_title ?? undefined,
+    };
+  }
+  if (payload.enabled !== undefined) update.enabled = payload.enabled;
+  if (payload.benefit_id !== undefined) update.benefit_id = payload.benefit_id ?? null;
+  if (payload.benefit_title !== undefined) update.benefit_title = payload.benefit_title ?? null;
+  if (payload.benefit_type !== undefined) update.benefit_type = payload.benefit_type ?? null;
+  if (payload.benefit_value !== undefined) update.benefit_value = payload.benefit_value ?? null;
+  if (payload.guardrails !== undefined) update.guardrails = payload.guardrails ?? null;
+  if (payload.visibility !== undefined) update.visibility = payload.visibility ?? null;
+  return update;
+}
+
 export function useRules(storeId?: string) {
   const queryClient = useQueryClient();
   const queryKey = ["rules", storeId];
@@ -196,25 +234,7 @@ export function useRules(storeId?: string) {
     mutationFn: async (payload: Partial<RuleRow> & { id: string }) => {
       if (!isSupabaseConfigured) return payload;
       const { id, ...rest } = payload;
-      const dbPayload = mapRuleRowToDb({
-        id,
-        store_id: payload.store_id,
-        place_id: payload.place_id,
-        name: payload.name ?? "",
-        enabled: payload.enabled ?? true,
-        days: payload.days ?? [],
-        time_blocks: payload.time_blocks ?? [],
-        party_min: payload.party_min ?? null,
-        party_max: payload.party_max ?? null,
-        lead_min: payload.lead_min ?? null,
-        lead_max: payload.lead_max ?? null,
-        benefit_id: payload.benefit_id ?? null,
-        benefit_title: payload.benefit_title ?? null,
-        benefit_type: payload.benefit_type ?? null,
-        benefit_value: payload.benefit_value ?? null,
-        guardrails: payload.guardrails ?? null,
-        visibility: payload.visibility ?? null,
-      });
+      const dbPayload = mapRuleUpdateToDb(rest);
       const { error } = await supabase
         .from("offer_rules")
         .update(dbPayload)

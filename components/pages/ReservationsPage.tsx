@@ -371,7 +371,6 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
   const [view, setView] = useState<"scheduler" | "list">("scheduler");
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [tableUnits, setTableUnits] = useState<TableUnit[]>([]);
-  const [rules, setRules] = useState<RuleRow[]>([]);
   const [benefits, setBenefits] = useState<BenefitRow[]>([]);
   const [selectedReservation, setSelectedReservation] =
     useState<ReservationEntry | null>(null);
@@ -512,13 +511,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
     setTableUnits([]);
   }, [unitRows, isUnitsSupabaseReady, unitsError]);
 
-  useEffect(() => {
-    if (ruleRows.length > 0) {
-      setRules(ruleRows);
-      return;
-    }
-    setRules([]);
-  }, [ruleRows]);
+  const rules = ruleRows;
 
   useEffect(() => {
     if (benefitRows.length > 0) {
