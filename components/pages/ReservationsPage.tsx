@@ -1499,10 +1499,8 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                   <label className="text-xs text-slate-500">
                     {"\uC2DC\uC791 \uC2DC\uAC04"}
                   </label>
-                  <input
-                    type="time"
-                    step={1800}
-                    className="h-10 w-full rounded-md border border-slate-200 px-3"
+                  <select
+                    className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
                     value={createForm.startTime}
                     onChange={(event) =>
                       setCreateForm({
@@ -1510,16 +1508,20 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                         startTime: event.target.value,
                       })
                     }
-                  />
+                  >
+                    {slots.map((slot) => (
+                      <option key={slot} value={slot}>
+                        {slot}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs text-slate-500">
                     {"\uC885\uB8CC \uC2DC\uAC04"}
                   </label>
-                  <input
-                    type="time"
-                    step={1800}
-                    className="h-10 w-full rounded-md border border-slate-200 px-3"
+                  <select
+                    className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
                     value={createForm.endTime}
                     onChange={(event) =>
                       setCreateForm({
@@ -1527,7 +1529,13 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                         endTime: event.target.value,
                       })
                     }
-                  />
+                  >
+                    {slots.map((slot) => (
+                      <option key={slot} value={slot}>
+                        {slot}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div className="space-y-1">
