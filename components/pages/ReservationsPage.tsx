@@ -1140,22 +1140,11 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                   <div className="bg-white p-2 text-slate-700">{row.label}</div>
                   {slots.map((slot) => {
                     const slotMinutesValue = timeToMinutes(slot);
-                    const slotIndex = Math.floor(
-                      (slotMinutesValue - startMinutes) / slotMinutes
-                    );
+                    const slotEndValue = slotMinutesValue + slotMinutes;
                     const occupied = occupiedReservations.some((reservation) => {
                       const start = timeToMinutes(reservation.start_time.slice(11, 16));
                       const end = timeToMinutes(reservation.end_time.slice(11, 16));
-                      if (end <= start) return false;
-                      const startIndex = Math.max(
-                        0,
-                        Math.floor((start - startMinutes) / slotMinutes)
-                      );
-                      const endIndex = Math.min(
-                        slots.length,
-                        Math.ceil((end - startMinutes) / slotMinutes)
-                      );
-                      return slotIndex >= startIndex && slotIndex < endIndex;
+                      return slotMinutesValue < end && slotEndValue > start;
                     });
 
                     return (
