@@ -927,7 +927,10 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                 );
                 const endIndex = Math.min(
                   slots.length,
-                  Math.ceil((end - startMinutes) / slotMinutes)
+                  Math.max(
+                    startIndex + 1,
+                    Math.floor((end - startMinutes - 1) / slotMinutes) + 1
+                  )
                 );
                 const columnStart = 2 + startIndex;
                 const columnEnd = Math.max(columnStart + 1, 2 + endIndex);
@@ -960,7 +963,10 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                 );
                 const endIndex = Math.min(
                   slots.length,
-                  Math.ceil((end - startMinutes) / slotMinutes)
+                  Math.max(
+                    startIndex + 1,
+                    Math.floor((end - startMinutes - 1) / slotMinutes) + 1
+                  )
                 );
                 const columnStart = 2 + startIndex;
                 const columnEnd = Math.max(columnStart + 1, 2 + endIndex);
@@ -1009,6 +1015,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                   <div className="bg-white p-2 text-slate-700">{row.label}</div>
                   {slots.map((slot) => {
                     const slotMinutesValue = timeToMinutes(slot);
+                    const slotEndMinutesValue = slotMinutesValue + slotMinutes;
                     const blockingReservation = occupiedReservations.find(
                       (reservation) => {
                         const start = timeToMinutes(
@@ -1017,7 +1024,9 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                         const end = timeToMinutes(
                           reservation.end_time.slice(11, 16)
                         );
-                        return slotMinutesValue >= start && slotMinutesValue < end;
+                        return (
+                          slotMinutesValue < end && slotEndMinutesValue > start
+                        );
                       }
                     );
                     const occupied = Boolean(blockingReservation);
@@ -1059,7 +1068,10 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                     );
                     const endIndex = Math.min(
                       slots.length,
-                      Math.ceil((end - startMinutes) / slotMinutes)
+                      Math.max(
+                        startIndex + 1,
+                        Math.floor((end - startMinutes - 1) / slotMinutes) + 1
+                      )
                     );
                     const columnStart = 2 + startIndex;
                     const columnEnd = Math.max(columnStart + 1, 2 + endIndex);
