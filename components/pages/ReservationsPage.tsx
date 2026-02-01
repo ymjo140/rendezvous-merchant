@@ -1086,8 +1086,8 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                 );
               })}
               {timeDealsForDate.map((deal) => {
-                const start = toMinutes(deal.start_time);
-                const end = toMinutes(deal.end_time);
+                const start = timeToMinutes(deal.start_time.slice(11, 16));
+                const end = timeToMinutes(deal.end_time.slice(11, 16));
                 const startIndex = Math.max(
                   0,
                   Math.floor((start - startMinutes) / slotMinutes)
@@ -1165,8 +1165,8 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                     );
                   })}
                   {rowReservations.map((reservation) => {
-                    const start = toMinutes(reservation.start_time);
-                    const end = toMinutes(reservation.end_time);
+                    const start = timeToMinutes(reservation.start_time.slice(11, 16));
+                    const end = timeToMinutes(reservation.end_time.slice(11, 16));
                     const startIndex = Math.max(
                       0,
                       Math.floor((start - startMinutes) / slotMinutes)
@@ -1501,6 +1501,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                   </label>
                   <input
                     type="time"
+                    step={1800}
                     className="h-10 w-full rounded-md border border-slate-200 px-3"
                     value={createForm.startTime}
                     onChange={(event) =>
@@ -1517,6 +1518,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                   </label>
                   <input
                     type="time"
+                    step={1800}
                     className="h-10 w-full rounded-md border border-slate-200 px-3"
                     value={createForm.endTime}
                     onChange={(event) =>
