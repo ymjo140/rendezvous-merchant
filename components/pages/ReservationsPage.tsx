@@ -1126,7 +1126,10 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                   reservation.unit_index === row.unit_index
               );
               const occupiedReservations = rowReservations.filter(
-                (reservation) => reservation.status !== "no_show"
+                (reservation) =>
+                  reservation.status === "confirmed" ||
+                  reservation.status === "pending" ||
+                  reservation.status === "blocked"
               );
 
               return (
