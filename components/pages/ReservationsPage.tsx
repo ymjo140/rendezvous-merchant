@@ -134,6 +134,10 @@ function minutesToTime(minutes: number) {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
+function parseDateSafe(dateStr: string) {
+  return new Date(dateStr);
+}
+
 function buildSlots() {
   const slots: string[] = [];
   for (let minutes = startMinutes; minutes < endMinutes; minutes += slotMinutes) {
@@ -1014,16 +1018,16 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                 >
                   <div className="bg-white p-2 text-slate-700">{row.label}</div>
                   {slots.map((slot) => {
-                    const slotMinutesValue = timeToMinutes(slot);
+                    const currentSlotDate = new Date(`${selectedDate}T${slot}:00`);
+                    const currentSlotTime = currentSlotDate.getTime();
                     const blockingReservation = occupiedReservations.find(
                       (reservation) => {
-                        const start = timeToMinutes(
-                          reservation.start_time.slice(11, 16)
-                        );
-                        const end = timeToMinutes(
-                          reservation.end_time.slice(11, 16)
-                        );
-                        return slotMinutesValue >= start && slotMinutesValue < end;
+                        const resStart = parseDateSafe(reservation.start_time).getTime();
+                        const resEnd = parseDateSafe(reservation.end_time).getTime();
+                        if (Number.isNaN(resStart) || Number.isNaN(resEnd)) {
+                          return false;
+                        }
+                        return currentSlotTime >= resStart && currentSlotTime < resEnd;
                       }
                     );
                     const occupied = Boolean(blockingReservation);
@@ -1042,8 +1046,19 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                         }`}
                         onClick={() => {
                           if (occupied && blockingReservation) {
+                            const slotStr = currentSlotDate.toLocaleTimeString();
+                            const startStr = new Date(
+                              blockingReservation.start_time
+                            ).toLocaleTimeString();
+                            const endStr = new Date(
+                              blockingReservation.end_time
+                            ).toLocaleTimeString();
                             window.alert(
-                              `\u26D4 \uC608\uC57D \uBD88\uAC00\\n\\n[${blockingLabel}]\uB2D8\uC758 \uC608\uC57D\uC774 \uC788\uC2B5\uB2C8\uB2E4.\\n\uC2DC\uAC04: ${blockingReservation.start_time.slice(11, 16)} ~ ${blockingReservation.end_time.slice(11, 16)}`
+                              `\u26D4 \uC608\uC57D \uBD88\uAC00 (\uC815\uBC00 \uC9C4\uB2E8)\\n\\n[${blockingLabel}]\uB2D8\uC758 \uC608\uC57D\uACFC \uACB9\uCE69\uB2C8\uB2E4.\\n--------------------------------\\n\uC120\uD0DD \uC2DC\uAC04: ${slot} (Timestamp: ${currentSlotTime})\\n\uC608\uC57D \uC2DC\uC791: ${startStr} (Timestamp: ${new Date(
+                                blockingReservation.start_time
+                              ).getTime()})\\n\uC608\uC57D \uC885\uB8CC: ${endStr} (Timestamp: ${new Date(
+                                blockingReservation.end_time
+                              ).getTime()})\\n--------------------------------\\n\uC608\uC57D \uC885\uB8CC \uC2DC\uAC04\uC774 \uC608\uC0C1\uACFC \uB2E4\uB974\uBA74 (\uC624\uC804/\uC624\uD6C4, \uB0A0\uC9DC \uBC14\uB010 \uB4F1), DB \uD0C0\uC784\uC874 \uC800\uC7A5 \uBB38\uC81C\uB97C \uD655\uC778\uD574\uC8FC\uC138\uC694.`
                             );
                             return;
                           }
