@@ -77,138 +77,7 @@ type TimeDealForm = {
 
 const mockStoreId = "dev-store";
 
-const mockReservations: ReservationEntry[] = [
-  {
-    id: "R-101",
-    store_id: mockStoreId,
-    guestName: "\uAE40\uBBFC\uC218",
-    partySize: 4,
-    date: "2026-02-01",
-    status: "confirmed",
-    unit_id: "unit-hall-4",
-    unit_index: 1,
-    start_time: "2026-02-01T18:00:00",
-    end_time: "2026-02-01T20:00:00",
-    source: "internal",
-  },
-  {
-    id: "R-102",
-    store_id: mockStoreId,
-    guestName: "\uC774\uC9C0\uD604",
-    partySize: 2,
-    date: "2026-02-01",
-    status: "pending",
-    unit_id: "unit-terrace-2",
-    unit_index: 2,
-    start_time: "2026-02-01T19:00:00",
-    end_time: "2026-02-01T21:00:00",
-    source: "internal",
-  },
-  {
-    id: "R-103",
-    store_id: mockStoreId,
-    guestName: "\uBC15\uC131\uC900",
-    partySize: 6,
-    date: "2026-02-01",
-    status: "confirmed",
-    unit_id: "unit-vip",
-    unit_index: 1,
-    start_time: "2026-02-01T20:30:00",
-    end_time: "2026-02-01T22:30:00",
-    source: "internal",
-  },
-  {
-    id: "R-104",
-    store_id: mockStoreId,
-    guestName: "\uB124\uC774\uBC84 \uC608\uC57D(\uAE40\uCCA0\uC218)",
-    partySize: 2,
-    date: "2026-02-01",
-    status: "confirmed",
-    unit_id: "unit-hall-4",
-    unit_index: 3,
-    start_time: "2026-02-01T18:30:00",
-    end_time: "2026-02-01T20:00:00",
-    source: "external",
-  },
-  {
-    id: "R-201",
-    store_id: mockStoreId,
-    guestName: "\uCD5C\uD558\uB9BC",
-    partySize: 2,
-    date: "2026-02-02",
-    status: "confirmed",
-    unit_id: "unit-terrace-2",
-    unit_index: 1,
-    start_time: "2026-02-02T17:30:00",
-    end_time: "2026-02-02T19:30:00",
-    source: "internal",
-  },
-  {
-    id: "R-202",
-    store_id: mockStoreId,
-    guestName: "\uBC15\uC9C4\uC6C5",
-    partySize: 4,
-    date: "2026-02-02",
-    status: "cancelled",
-    unit_id: "unit-hall-4",
-    unit_index: 3,
-    start_time: "2026-02-02T18:30:00",
-    end_time: "2026-02-02T20:30:00",
-    source: "internal",
-  },
-  {
-    id: "R-203",
-    store_id: mockStoreId,
-    guestName: "\uC724\uC9C4\uC11C",
-    partySize: 3,
-    date: "2026-02-02",
-    status: "pending",
-    unit_id: "unit-hall-4",
-    unit_index: 2,
-    start_time: "2026-02-02T19:00:00",
-    end_time: "2026-02-02T21:00:00",
-    source: "internal",
-  },
-  {
-    id: "R-204",
-    store_id: mockStoreId,
-    guestName: "\uAD6C\uAE00 \uCE98\uB9B0\uB354 \uC678\uBD80\uC608\uC57D",
-    partySize: 4,
-    date: "2026-02-02",
-    status: "confirmed",
-    unit_id: "unit-vip",
-    unit_index: 2,
-    start_time: "2026-02-02T20:00:00",
-    end_time: "2026-02-02T22:00:00",
-    source: "external",
-  },
-  {
-    id: "R-301",
-    store_id: mockStoreId,
-    guestName: "\uD64D\uB3C4\uD61C",
-    partySize: 5,
-    date: "2026-02-03",
-    status: "confirmed",
-    unit_id: "unit-vip",
-    unit_index: 2,
-    start_time: "2026-02-03T18:00:00",
-    end_time: "2026-02-03T20:00:00",
-    source: "internal",
-  },
-  {
-    id: "R-302",
-    store_id: mockStoreId,
-    guestName: "\uAC15\uC720\uC9C4",
-    partySize: 2,
-    date: "2026-02-03",
-    status: "no_show",
-    unit_id: "unit-terrace-2",
-    unit_index: 1,
-    start_time: "2026-02-03T20:00:00",
-    end_time: "2026-02-03T22:00:00",
-    source: "internal",
-  },
-];
+const mockReservations: ReservationEntry[] = [];
 const statusLabelMap: Record<ReservationEntry["status"], string> = {
   confirmed: "\uD655\uC815",
   pending: "\uB300\uAE30",
@@ -1131,21 +1000,38 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                   <div className="bg-white p-2 text-slate-700">{row.label}</div>
                   {slots.map((slot) => {
                     const slotMinutesValue = timeToMinutes(slot);
-                    const occupied = occupiedReservations.some((reservation) => {
-                      const start = timeToMinutes(reservation.start_time.slice(11, 16));
-                      const end = timeToMinutes(reservation.end_time.slice(11, 16));
-                      return slotMinutesValue >= start && slotMinutesValue < end;
-                    });
+                    const blockingReservation = occupiedReservations.find(
+                      (reservation) => {
+                        const start = timeToMinutes(
+                          reservation.start_time.slice(11, 16)
+                        );
+                        const end = timeToMinutes(
+                          reservation.end_time.slice(11, 16)
+                        );
+                        return slotMinutesValue >= start && slotMinutesValue < end;
+                      }
+                    );
+                    const occupied = Boolean(blockingReservation);
+                    const blockingLabel = blockingReservation
+                      ? blockingReservation.status === "blocked"
+                        ? "\uC608\uC57D \uB9C9\uC74C"
+                        : blockingReservation.guestName
+                      : "";
 
                     return (
                       <button
                         key={`${row.id}-${slot}`}
                         type="button"
                         className={`bg-white p-2 border-l border-slate-100 ${
-                          occupied ? "cursor-not-allowed" : "hover:bg-slate-50"
+                          occupied ? "bg-slate-50 cursor-pointer" : "hover:bg-slate-50"
                         }`}
                         onClick={() => {
-                          if (occupied) return;
+                          if (occupied && blockingReservation) {
+                            window.alert(
+                              `\u26D4 \uC608\uC57D \uBD88\uAC00\\n\\n[${blockingLabel}]\uB2D8\uC758 \uC608\uC57D\uC774 \uC788\uC2B5\uB2C8\uB2E4.\\n\uC2DC\uAC04: ${blockingReservation.start_time.slice(11, 16)} ~ ${blockingReservation.end_time.slice(11, 16)}`
+                            );
+                            return;
+                          }
                           if (blockMode) {
                             createBlockedSlot(row, slot);
                             return;
@@ -1699,4 +1585,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
     </div>
   );
 }
+
+
+
 
