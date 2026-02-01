@@ -889,11 +889,20 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
             }}
           >
             <div className="bg-white p-2 font-medium">{"\uD14C\uC774\uBE14"}</div>
-            {slots.map((slot) => (
-              <div key={slot} className="bg-white p-2 text-center text-slate-500">
-                {slot}
-              </div>
-            ))}
+            {slots.map((slot) => {
+              const slotEnd = minutesToTime(timeToMinutes(slot) + slotMinutes);
+              return (
+                <div
+                  key={slot}
+                  className="bg-white p-2 text-center text-[11px] text-slate-500 leading-tight"
+                >
+                  <div>{slot}</div>
+                  <div className="text-[10px] text-slate-400">
+                    {`~${slotEnd}`}
+                  </div>
+                </div>
+              );
+            })}
 
             <div
               className="col-span-full grid"
