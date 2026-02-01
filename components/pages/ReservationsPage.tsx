@@ -1015,7 +1015,6 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                   <div className="bg-white p-2 text-slate-700">{row.label}</div>
                   {slots.map((slot) => {
                     const slotMinutesValue = timeToMinutes(slot);
-                    const slotEndMinutesValue = slotMinutesValue + slotMinutes;
                     const blockingReservation = occupiedReservations.find(
                       (reservation) => {
                         const start = timeToMinutes(
@@ -1024,9 +1023,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                         const end = timeToMinutes(
                           reservation.end_time.slice(11, 16)
                         );
-                        return (
-                          slotMinutesValue < end && slotEndMinutesValue > start
-                        );
+                        return slotMinutesValue >= start && slotMinutesValue < end;
                       }
                     );
                     const occupied = Boolean(blockingReservation);
