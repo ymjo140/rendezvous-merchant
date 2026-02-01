@@ -462,22 +462,10 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
   }
 
   const storeKey = resolvedStoreId;
-  const fallbackReservationRows = useMemo(
-    () =>
-      mockReservations.map((item) =>
-        mapEntryToRow({ ...item, store_id: storeKey })
-      ),
-    [storeKey]
+  const reservations = useMemo(
+    () => reservationRows.map(mapRowToEntry),
+    [reservationRows]
   );
-  const reservations = useMemo(() => {
-    const baseRows =
-      reservationRows.length > 0
-        ? reservationRows
-        : isReservationsSupabaseReady
-          ? []
-          : fallbackReservationRows;
-    return baseRows.map(mapRowToEntry);
-  }, [reservationRows, fallbackReservationRows, isReservationsSupabaseReady]);
 
   const timeDeals = useMemo(() => {
     return timeDealRows.map(mapTimeDealRowToEntry);
