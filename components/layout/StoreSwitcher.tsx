@@ -1,89 +1,62 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import type { StoreSummary } from "@/domain/stores/types";
-import { supabase } from "@/lib/supabase/client";
+import { useStores } from "@/hooks/queries/useStores";
+import { useAppStore } from "@/stores/useAppStore";
 
 export function StoreSwitcher({ currentStoreId }: { currentStoreId: string | null }) {
   const router = useRouter();
-  const [stores, setStores] = useState<StoreSummary[]>([]);
-  const [storedId, setStoredId] = useState<string | null>(null);
+  const { data: stores = [], isLoading } = useStores();
+  const { selectedStoreId, setSelectedStoreId } = useAppStore();
 
   useEffect(() => {
-    let active = true;
-    async function load() {
-      try {
-        const { data: userData } = await supabase.auth.getUser();
-        if (!active) return;
-        const userId = userData?.user?.id;
-        if (!userId) {
-          setStores([]);
-          return;
-        }
-        const { data, error } = await supabase
-          .from("places")
-          .select("id, name")
-          .eq("owner_id", userId)
-          .order("id", { ascending: true });
-        if (error) throw error;
-        if (!active) return;
-        setStores(
-          (data ?? []).map((store) => ({
-            id: store.id,
-            name: store.name,
-          }))
-        );
-      } catch (err) {
-        console.error(err);
-        if (active) setStores([]);
-      }
+    if (currentStoreId && currentStoreId !== selectedStoreId) {
+      setSelectedStoreId(currentStoreId);
     }
-    void load();
-    return () => {
-      active = false;
-    };
-  }, []);
+  }, [currentStoreId, selectedStoreId, setSelectedStoreId]);
 
   useEffect(() => {
-    if (!currentStoreId) return;
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem("rendezvous_last_store", currentStoreId);
+    if (!selectedStoreId && stores.length > 0) {
+      setSelectedStoreId(String(stores[0].id));
     }
-  }, [currentStoreId]);
+  }, [selectedStoreId, stores, setSelectedStoreId]);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const value = window.localStorage.getItem("rendezvous_last_store");
-    if (value === "undefined" || value === "null") {
-      window.localStorage.removeItem("rendezvous_last_store");
-      setStoredId(null);
-      return;
-    }
-    setStoredId(value);
-  }, []);
+  const resolvedId =
+    selectedStoreId ?? currentStoreId ?? (stores[0]?.id ? String(stores[0]?.id) : "");
 
-  const selectedId =
-    currentStoreId ?? storedId ?? String(stores[0]?.id ?? "");
+  if (isLoading) {
+    return (
+      <select
+        className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-400"
+        disabled
+        value=""
+      >
+        <option value="">매장 불러오는 중...</option>
+      </select>
+    );
+  }
 
-  useEffect(() => {
-    if (!currentStoreId || currentStoreId === "undefined" || currentStoreId === "null") {
-      if (storedId) {
-        router.replace(`/stores/${storedId}`);
-      }
-    }
-  }, [currentStoreId, storedId, router]);
+  if (!stores.length) {
+    return (
+      <select
+        className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-400"
+        disabled
+        value=""
+      >
+        <option value="">등록된 매장이 없습니다</option>
+      </select>
+    );
+  }
 
   return (
     <select
       className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm"
-      value={selectedId}
+      value={resolvedId}
       onChange={(event) => {
         const nextId = event.target.value;
         if (!nextId) return;
-        if (typeof window !== "undefined") {
-          window.localStorage.setItem("rendezvous_last_store", nextId);
-        }
+        setSelectedStoreId(nextId);
         router.push(`/stores/${nextId}`);
       }}
     >
