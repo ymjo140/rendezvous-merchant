@@ -1,6 +1,8 @@
 "use client";
 
 import { ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { clearToken } from "@/lib/auth/tokenStore";
 
 export function Topbar({
   children,
@@ -9,6 +11,7 @@ export function Topbar({
   children?: ReactNode;
   onMenuClick?: () => void;
 }) {
+  const router = useRouter();
   return (
     <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 lg:px-6">
       <div className="flex items-center gap-3">
@@ -34,7 +37,18 @@ export function Topbar({
         </button>
         <div className="text-sm text-slate-500">{"\uC0AC\uC7A5\uB2D8 \uCEE8\uC194"}</div>
       </div>
-      <div className="flex items-center gap-3">{children}</div>
+      <div className="flex items-center gap-3">
+        {children}
+        <button
+          className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-600 hover:bg-slate-50"
+          onClick={() => {
+            clearToken();
+            router.push("/login");
+          }}
+        >
+          로그아웃
+        </button>
+      </div>
     </div>
   );
 }

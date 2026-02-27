@@ -6,6 +6,12 @@ type StoresResponse = {
   stores: StoreSummary[];
 };
 
+export type CreateStorePayload = {
+  name: string;
+  category?: string;
+  address?: string;
+};
+
 export async function getMerchantStores(): Promise<StoreSummary[]> {
   const token = getToken();
   const response = await apiRequest<StoresResponse | StoreSummary[]>(
@@ -17,4 +23,19 @@ export async function getMerchantStores(): Promise<StoreSummary[]> {
 
   if (Array.isArray(response)) return response;
   return response?.stores ?? [];
+}
+
+export async function createMerchantStore(payload: CreateStorePayload): Promise<StoreSummary> {
+  const token = getToken();
+  const response = await apiRequest<{ store: StoreSummary } | StoreSummary>(
+    "/api/merchant/stores",
+    {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      body: JSON.stringify(payload),
+    }
+  );
+
+  if ("store" in response) return response.store;
+  return response as StoreSummary;
 }
