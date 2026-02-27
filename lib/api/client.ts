@@ -1,4 +1,4 @@
-﻿export const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+﻿export const baseURL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 export class ApiError extends Error {
   status: number;
