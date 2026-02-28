@@ -7,7 +7,8 @@ type StoresResponse = {
 };
 
 export type CreateStorePayload = {
-  name: string;
+  place_id?: string | number;
+  name?: string;
   category?: string;
   address?: string;
 };

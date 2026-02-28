@@ -7,14 +7,28 @@ import { useAppStore } from "@/stores/useAppStore";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/lib/supabase/client";
+
+const MIN_QUERY_LENGTH = 2;
+
+type PlaceOption = {
+  id: string | number;
+  name: string;
+  address?: string | null;
+  category?: string | null;
+};
 
 export function StoreSwitcher({ currentStoreId }: { currentStoreId: string | null }) {
   const router = useRouter();
   const { data: stores = [], isLoading } = useStores();
   const createStore = useCreateStore();
   const { selectedStoreId, setSelectedStoreId } = useAppStore();
+
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", category: "", address: "" });
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<PlaceOption[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [selectedPlace, setSelectedPlace] = useState<PlaceOption | null>(null);
 
   useEffect(() => {
     if (currentStoreId && currentStoreId !== selectedStoreId) {
@@ -28,23 +42,64 @@ export function StoreSwitcher({ currentStoreId }: { currentStoreId: string | nul
     }
   }, [selectedStoreId, stores, setSelectedStoreId]);
 
+  useEffect(() => {
+    if (!isCreateOpen) {
+      setQuery("");
+      setResults([]);
+      setSelectedPlace(null);
+      setIsSearching(false);
+    }
+  }, [isCreateOpen]);
+
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (!isCreateOpen || trimmed.length < MIN_QUERY_LENGTH) {
+      setResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    let active = true;
+    setIsSearching(true);
+
+    const run = async () => {
+      const { data, error } = await supabase
+        .from("places")
+        .select("id, name, address, category")
+        .ilike("name", `%${trimmed}%`)
+        .limit(10);
+
+      if (!active) return;
+      if (error) {
+        console.error(error);
+        setResults([]);
+      } else {
+        setResults((data ?? []) as PlaceOption[]);
+      }
+      setIsSearching(false);
+    };
+
+    void run();
+
+    return () => {
+      active = false;
+    };
+  }, [query, isCreateOpen]);
+
   const resolvedId =
     selectedStoreId ?? currentStoreId ?? (stores[0]?.id ? String(stores[0]?.id) : "");
 
   const handleSubmit = async () => {
-    if (!form.name.trim()) {
-      window.alert("매장 이름을 입력해 주세요.");
+    if (!selectedPlace) {
+      window.alert("매장을 선택해 주세요.");
       return;
     }
 
     const created = await createStore.mutateAsync({
-      name: form.name.trim(),
-      category: form.category.trim() || undefined,
-      address: form.address.trim() || undefined,
+      place_id: selectedPlace.id,
     });
 
     setSelectedStoreId(String(created.id));
-    setForm({ name: "", category: "", address: "" });
     setIsCreateOpen(false);
     router.push(`/stores/${created.id}`);
   };
@@ -52,27 +107,56 @@ export function StoreSwitcher({ currentStoreId }: { currentStoreId: string | nul
   const createDialog = (
     <Dialog open={isCreateOpen}>
       <div className="space-y-4">
-        <div className="text-lg font-semibold">새 매장 등록</div>
-        <Input
-          placeholder="매장 이름"
-          value={form.name}
-          onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-        />
-        <Input
-          placeholder="카테고리 (예: 술집)"
-          value={form.category}
-          onChange={(event) => setForm((prev) => ({ ...prev, category: event.target.value }))}
-        />
-        <Input
-          placeholder="주소"
-          value={form.address}
-          onChange={(event) => setForm((prev) => ({ ...prev, address: event.target.value }))}
-        />
+        <div className="text-lg font-semibold">매장 검색 후 등록</div>
+        <div className="relative">
+          <Input
+            placeholder="매장 이름을 검색하세요"
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setSelectedPlace(null);
+            }}
+          />
+          {query.trim().length >= MIN_QUERY_LENGTH && (
+            <div className="absolute z-10 mt-2 w-full rounded-md border border-slate-200 bg-white shadow-lg">
+              {isSearching ? (
+                <div className="px-3 py-2 text-sm text-slate-500">검색 중...</div>
+              ) : results.length === 0 ? (
+                <div className="px-3 py-2 text-sm text-slate-400">검색 결과가 없습니다.</div>
+              ) : (
+                results.map((place) => (
+                  <button
+                    key={place.id}
+                    type="button"
+                    className="flex w-full flex-col gap-1 border-b border-slate-100 px-3 py-2 text-left text-sm hover:bg-slate-50"
+                    onClick={() => {
+                      setSelectedPlace(place);
+                      setQuery(place.name);
+                      setResults([]);
+                    }}
+                  >
+                    <span className="font-medium text-slate-900">{place.name}</span>
+                    <span className="text-xs text-slate-500">{place.address ?? "주소 미등록"}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
+        {selectedPlace && (
+          <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-sm space-y-1">
+            <div className="text-slate-700">선택된 매장: {selectedPlace.name}</div>
+            <div className="text-slate-500">카테고리: {selectedPlace.category ?? "-"}</div>
+            <div className="text-slate-500">주소: {selectedPlace.address ?? "-"}</div>
+          </div>
+        )}
+
         <div className="flex justify-end gap-2">
           <Button variant="ghost" onClick={() => setIsCreateOpen(false)}>
             취소
           </Button>
-          <Button onClick={handleSubmit} disabled={createStore.isPending}>
+          <Button onClick={handleSubmit} disabled={!selectedPlace || createStore.isPending}>
             등록
           </Button>
         </div>
