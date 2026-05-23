@@ -1,6 +1,8 @@
 ﻿import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
+import { fetchWithAuth, baseURL } from "@/lib/api/client";
+import { endpoints } from "@/lib/api/endpoints";
 
 export type RuleRow = {
   id: string;
@@ -228,8 +230,17 @@ export function useRules(storeId?: string) {
 
   const createRule = useMutation({
     mutationFn: async (payload: RuleRow) => {
-      if (!isSupabaseConfigured) return payload;
       const dbPayload = mapRuleRowToDb(payload);
+      const placeId = Number(storeId ?? payload.place_id ?? payload.store_id);
+      // 보안: 쓰기는 백엔드(JWT+소유권 검증) 경유. baseURL 없으면 dev용 supabase 폴백.
+      if (baseURL) {
+        await fetchWithAuth(endpoints.offerRules(placeId), {
+          method: "POST",
+          body: JSON.stringify(dbPayload),
+        });
+        return payload;
+      }
+      if (!isSupabaseConfigured) return payload;
       const { error } = await supabase.from("offer_rules").insert(dbPayload);
       if (error) throw error;
       return payload;
@@ -255,9 +266,17 @@ export function useRules(storeId?: string) {
 
   const updateRule = useMutation({
     mutationFn: async (payload: Partial<RuleRow> & { id: string }) => {
-      if (!isSupabaseConfigured) return payload;
       const { id, ...rest } = payload;
       const dbPayload = mapRuleUpdateToDb(rest);
+      const placeId = Number(storeId ?? rest.place_id ?? rest.store_id);
+      if (baseURL) {
+        await fetchWithAuth(`${endpoints.offerRules(placeId)}/${id}`, {
+          method: "PATCH",
+          body: JSON.stringify(dbPayload),
+        });
+        return payload;
+      }
+      if (!isSupabaseConfigured) return payload;
       const { error } = await supabase
         .from("offer_rules")
         .update(dbPayload)
@@ -291,6 +310,13 @@ export function useRules(storeId?: string) {
 
   const deleteRule = useMutation({
     mutationFn: async (payload: { id: string }) => {
+      const placeId = Number(storeId);
+      if (baseURL) {
+        await fetchWithAuth(`${endpoints.offerRules(placeId)}/${payload.id}`, {
+          method: "DELETE",
+        });
+        return payload;
+      }
       if (!isSupabaseConfigured) return payload;
       const { error } = await supabase
         .from("offer_rules")
