@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { logAction } from "@/lib/analytics/analyticsClient";
 import { actionMap } from "@/domain/analytics/actionMap";
 import { supabase } from "@/lib/supabase/client";
+import { setToken } from "@/lib/auth/tokenStore";
 
 const DEV_EMAIL = "dev@rendezvous.app";
 
@@ -44,6 +45,9 @@ export function LoginPage() {
         );
         return;
       }
+
+      // AuthGuard\uAC00 tokenStore \uD1A0\uD070\uC744 \uC694\uAD6C\uD558\uBBC0\uB85C \uC138\uC158 \uD1A0\uD070\uC744 \uC2EC\uB294\uB2E4(\uC5C6\uC73C\uBA74 \uAC00\uB4DC\uAC00 /login\uC73C\uB85C \uB418\uB3CC\uB9BC)
+      setToken(data.session?.access_token || "dev-token");
 
       const { data: store, error: storeError } = await supabase
         .from("places")
