@@ -1,8 +1,6 @@
 ﻿import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
-import { fetchWithAuth, baseURL } from "@/lib/api/client";
-import { endpoints } from "@/lib/api/endpoints";
 import { BenefitCategory, BenefitType } from "@/domain/offers/types";
 
 export type BenefitRow = {
@@ -67,13 +65,6 @@ export function useBenefits(storeId?: string) {
 
   const createBenefit = useMutation({
     mutationFn: async (payload: BenefitRow) => {
-      if (baseURL) {
-        await fetchWithAuth(
-          endpoints.merchantResource(storeId ?? payload.store_id, "offer_benefits_catalog"),
-          { method: "POST", body: JSON.stringify(payload) }
-        );
-        return payload;
-      }
       if (!isSupabaseConfigured) return payload;
       const { error } = await supabase
         .from("offer_benefits_catalog")
@@ -102,13 +93,6 @@ export function useBenefits(storeId?: string) {
 
   const updateBenefit = useMutation({
     mutationFn: async (payload: Partial<BenefitRow> & { id: string }) => {
-      if (baseURL) {
-        await fetchWithAuth(
-          `${endpoints.merchantResource(storeId ?? payload.store_id ?? "", "offer_benefits_catalog")}/${payload.id}`,
-          { method: "PATCH", body: JSON.stringify(payload) }
-        );
-        return payload;
-      }
       if (!isSupabaseConfigured) return payload;
       const { error } = await supabase
         .from("offer_benefits_catalog")
@@ -143,13 +127,6 @@ export function useBenefits(storeId?: string) {
 
   const deleteBenefit = useMutation({
     mutationFn: async (payload: { id: string }) => {
-      if (baseURL) {
-        await fetchWithAuth(
-          `${endpoints.merchantResource(storeId ?? "", "offer_benefits_catalog")}/${payload.id}`,
-          { method: "DELETE" }
-        );
-        return payload;
-      }
       if (!isSupabaseConfigured) return payload;
       const { error } = await supabase
         .from("offer_benefits_catalog")

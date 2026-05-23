@@ -1,8 +1,6 @@
 ﻿import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
-import { fetchWithAuth, baseURL } from "@/lib/api/client";
-import { endpoints } from "@/lib/api/endpoints";
 
 export type TableUnitRow = {
   id: string;
@@ -66,13 +64,6 @@ export function useTableUnits(storeId?: string) {
 
   const createUnit = useMutation({
     mutationFn: async (payload: TableUnitRow) => {
-      if (baseURL) {
-        await fetchWithAuth(endpoints.merchantResource(storeId ?? payload.store_id, "table_units"), {
-          method: "POST",
-          body: JSON.stringify(payload),
-        });
-        return payload;
-      }
       if (!isSupabaseConfigured) return payload;
       const { error } = await supabase.from("table_units").insert(payload);
       if (error) throw error;
@@ -99,13 +90,6 @@ export function useTableUnits(storeId?: string) {
 
   const updateUnit = useMutation({
     mutationFn: async (payload: Partial<TableUnitRow> & { id: string }) => {
-      if (baseURL) {
-        await fetchWithAuth(
-          `${endpoints.merchantResource(storeId ?? payload.store_id ?? "", "table_units")}/${payload.id}`,
-          { method: "PATCH", body: JSON.stringify(payload) }
-        );
-        return payload;
-      }
       if (!isSupabaseConfigured) return payload;
       const { error } = await supabase
         .from("table_units")

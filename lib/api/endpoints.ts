@@ -3,8 +3,6 @@
   merchantStores: "/api/merchant/stores",
   offerRules: (storeId: string | number) =>
     `/api/merchant/stores/${storeId}/offer-rules`,
-  merchantResource: (storeId: string | number, resource: string) =>
-    `/api/merchant/stores/${storeId}/r/${resource}`,
   metrics: (storeId: string | number, from: string, to: string) =>
     `/api/merchant/stores/${storeId}/metrics?from=${from}&to=${to}`,
   benefits: (storeId: string | number) =>
