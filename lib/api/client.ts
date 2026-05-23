@@ -37,13 +37,10 @@ export async function fetchWithAuth<T>(
     cache: "no-store",
   });
 
-  if (response.status === 401) {
-    const { clearToken } = await import("@/lib/auth/tokenStore");
-    clearToken();
-    if (typeof window !== "undefined") {
-      window.location.href = "/login";
-    }
-  }
+  // 주의: 401이라고 무조건 토큰 삭제 + /login 강제이동하지 않는다.
+  // 머천트는 Supabase Auth로 로그인하는데, /api/users/me(FastAPI)는 supabase 토큰을
+  // 디코드 못 해 401을 주므로, 여기서 강제 로그아웃하면 정상 세션이 로그인 직후 튕긴다.
+  // 401은 아래에서 ApiError로 던지고, 호출자(useMe 등)가 적절히 처리한다.
 
   const payload = await parseResponse<T | { message?: string }>(response);
 
