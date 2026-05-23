@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils/cn";
 
 const navItems = [
   { label: "\uB300\uC2DC\uBCF4\uB4DC", slug: "" },
+  { label: "AI \uC218\uC775\uC5D4\uC9C4", slug: "offers/ai" },
   { label: "\uC608\uC57D", slug: "reservations" },
   { label: "\uB8F0 \uC124\uC815", slug: "offers/rules" },
   { label: "\uD61C\uD0DD \uCE74\uD0C8\uB85C\uADF8", slug: "offers/benefits" },
