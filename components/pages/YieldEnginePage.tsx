@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +8,7 @@ import { useStoreId } from "@/components/layout/Layout";
 import { useReservations } from "@/lib/hooks/useReservations";
 import { useTableUnits } from "@/lib/hooks/useTableUnits";
 import { useRules, type RuleRow } from "@/lib/hooks/useRules";
-import { supabase } from "@/lib/supabase/client";
+import { usePlaceCategory } from "@/lib/hooks/usePlaceCategory";
 import {
   suggestRules,
   DAYPARTS,
@@ -34,23 +33,6 @@ function occColor(predicted: number): string {
   // 0(한가)=빨강 ~ 1(만석)=초록
   const hue = Math.round(predicted * 140);
   return `hsl(${hue}, 65%, 90%)`;
-}
-
-function usePlaceCategory(storeId?: string) {
-  return useQuery({
-    queryKey: ["place-category", storeId],
-    enabled: Boolean(storeId),
-    queryFn: async () => {
-      const placeId = Number(storeId);
-      if (!Number.isFinite(placeId)) return undefined;
-      const { data } = await supabase
-        .from("places")
-        .select("main_category")
-        .eq("id", placeId)
-        .maybeSingle();
-      return (data?.main_category as string | undefined) ?? undefined;
-    },
-  });
 }
 
 export function YieldEnginePage({ storeId }: { storeId?: string }) {
