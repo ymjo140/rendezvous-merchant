@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "렌데부 사장님 컨솔",
-  description: "렌데부 매장 운영을 위한 B2B 컨솔",
+  title: "랑데부 사장님 콘솔",
+  description: "랑데부 매장 운영을 위한 B2B 콘솔",
 };
 
 export default function RootLayout({

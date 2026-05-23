@@ -82,8 +82,8 @@ export function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 p-6">
       <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold text-slate-900">
-          {"\uB80C\uB370\uBD80 \uC0AC\uC7A5\uB2D8 \uCEE8\uC194"}
+        <h1 className="text-2xl font-bold text-slate-900">
+          <span className="text-brand">\uB791\uB370\uBD80</span> \uC0AC\uC7A5\uB2D8 \uCF58\uC194
         </h1>
         <p className="mt-2 text-sm text-slate-500">
           {

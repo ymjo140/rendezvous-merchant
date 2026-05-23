@@ -17,7 +17,7 @@ export function Button({
       ? "bg-slate-200 text-slate-900 hover:bg-slate-300"
       : variant === "ghost"
         ? "bg-transparent text-slate-700 hover:bg-slate-100"
-        : "bg-slate-900 text-white hover:bg-slate-800";
+        : "bg-brand text-white hover:bg-brand-dark";
 
   return <button className={cn(base, styles, className)} {...props} />;
 }

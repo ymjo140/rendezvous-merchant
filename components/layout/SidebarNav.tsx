@@ -33,7 +33,7 @@ export function SidebarNav({
 
   return (
     <nav className="flex h-full flex-col gap-4 p-6">
-      <div className="text-lg font-semibold">{"\uB80C\uB370\uBD80"}</div>
+      <div className="text-lg font-bold text-brand">\uB791\uB370\uBD80</div>
       <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
         {"\uC0AC\uC7A5\uB2D8 \uCEE8\uC194"}
       </div>
@@ -53,8 +53,8 @@ export function SidebarNav({
               className={cn(
                 "rounded-md px-3 py-2 text-sm transition-colors",
                 isActive
-                  ? "bg-slate-900 text-white"
-                  : "text-slate-600 hover:bg-slate-100"
+                  ? "bg-brand text-white"
+                  : "text-slate-600 hover:bg-brand-light"
               )}
             >
               {item.label}
