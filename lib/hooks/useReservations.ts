@@ -1,6 +1,8 @@
 ﻿import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
+import { fetchWithAuth, baseURL } from "@/lib/api/client";
+import { endpoints } from "@/lib/api/endpoints";
 
 export type ReservationRow = {
   id: string;
@@ -69,6 +71,13 @@ export function useReservations(storeId?: string) {
 
   const createReservation = useMutation({
     mutationFn: async (payload: ReservationRow) => {
+      if (baseURL) {
+        await fetchWithAuth(endpoints.merchantResource(storeId ?? payload.store_id, "reservations"), {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        return payload;
+      }
       if (!isSupabaseConfigured) return payload;
       const { error } = await supabase.from("reservations").insert(payload);
       if (error) throw error;
@@ -95,6 +104,13 @@ export function useReservations(storeId?: string) {
 
   const updateReservation = useMutation({
     mutationFn: async (payload: Partial<ReservationRow> & { id: string }) => {
+      if (baseURL) {
+        await fetchWithAuth(
+          `${endpoints.merchantResource(storeId ?? payload.store_id ?? "", "reservations")}/${payload.id}`,
+          { method: "PATCH", body: JSON.stringify(payload) }
+        );
+        return payload;
+      }
       if (!isSupabaseConfigured) return payload;
       const { error } = await supabase
         .from("reservations")
@@ -129,6 +145,13 @@ export function useReservations(storeId?: string) {
 
   const deleteReservation = useMutation({
     mutationFn: async (payload: { id: string }) => {
+      if (baseURL) {
+        await fetchWithAuth(
+          `${endpoints.merchantResource(storeId ?? "", "reservations")}/${payload.id}`,
+          { method: "DELETE" }
+        );
+        return payload;
+      }
       if (!isSupabaseConfigured) return payload;
       const { error } = await supabase
         .from("reservations")

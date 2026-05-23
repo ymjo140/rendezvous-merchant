@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
+import { fetchWithAuth, baseURL } from "@/lib/api/client";
+import { endpoints } from "@/lib/api/endpoints";
 
 export type MenuRow = {
   id: string;
@@ -64,6 +66,13 @@ export function useMenus(storeId?: string) {
 
   const createMenu = useMutation({
     mutationFn: async (payload: Omit<MenuRow, "id">) => {
+      if (baseURL) {
+        await fetchWithAuth(endpoints.merchantResource(storeId ?? payload.store_id, "store_menus"), {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        return payload;
+      }
       if (!isSupabaseConfigured) return payload;
       const { error } = await supabase.from("store_menus").insert(payload);
       if (error) throw error;
@@ -76,6 +85,13 @@ export function useMenus(storeId?: string) {
 
   const updateMenu = useMutation({
     mutationFn: async (payload: Partial<MenuRow> & { id: string }) => {
+      if (baseURL) {
+        await fetchWithAuth(
+          `${endpoints.merchantResource(storeId ?? payload.store_id ?? "", "store_menus")}/${payload.id}`,
+          { method: "PATCH", body: JSON.stringify(payload) }
+        );
+        return payload;
+      }
       if (!isSupabaseConfigured) return payload;
       const { error } = await supabase
         .from("store_menus")
@@ -91,6 +107,13 @@ export function useMenus(storeId?: string) {
 
   const deleteMenu = useMutation({
     mutationFn: async (id: string) => {
+      if (baseURL) {
+        await fetchWithAuth(
+          `${endpoints.merchantResource(storeId ?? "", "store_menus")}/${id}`,
+          { method: "DELETE" }
+        );
+        return id;
+      }
       if (!isSupabaseConfigured) return id;
       const { error } = await supabase.from("store_menus").delete().eq("id", id);
       if (error) throw error;

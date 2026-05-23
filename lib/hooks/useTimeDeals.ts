@@ -1,6 +1,8 @@
 ﻿import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
+import { fetchWithAuth, baseURL } from "@/lib/api/client";
+import { endpoints } from "@/lib/api/endpoints";
 
 export type TimeDealRow = {
   id: string;
@@ -63,6 +65,13 @@ export function useTimeDeals(storeId?: string) {
 
   const createTimeDeal = useMutation({
     mutationFn: async (payload: TimeDealRow) => {
+      if (baseURL) {
+        await fetchWithAuth(endpoints.merchantResource(storeId ?? payload.store_id, "time_deals"), {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        return payload;
+      }
       if (!isSupabaseConfigured) return payload;
       const { error } = await supabase.from("time_deals").insert(payload);
       if (error) throw error;
@@ -89,6 +98,13 @@ export function useTimeDeals(storeId?: string) {
 
   const updateTimeDeal = useMutation({
     mutationFn: async (payload: Partial<TimeDealRow> & { id: string }) => {
+      if (baseURL) {
+        await fetchWithAuth(
+          `${endpoints.merchantResource(storeId ?? payload.store_id ?? "", "time_deals")}/${payload.id}`,
+          { method: "PATCH", body: JSON.stringify(payload) }
+        );
+        return payload;
+      }
       if (!isSupabaseConfigured) return payload;
       const { error } = await supabase
         .from("time_deals")
@@ -123,6 +139,13 @@ export function useTimeDeals(storeId?: string) {
 
   const deleteTimeDeal = useMutation({
     mutationFn: async (payload: { id: string }) => {
+      if (baseURL) {
+        await fetchWithAuth(
+          `${endpoints.merchantResource(storeId ?? "", "time_deals")}/${payload.id}`,
+          { method: "DELETE" }
+        );
+        return payload;
+      }
       if (!isSupabaseConfigured) return payload;
       const { error } = await supabase
         .from("time_deals")
