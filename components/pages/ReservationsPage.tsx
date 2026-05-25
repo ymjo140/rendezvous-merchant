@@ -103,7 +103,7 @@ const statusOptions = [
   { value: "blocked", label: "\uC608\uC57D \uB9C9\uC74C" },
 ];
 
-const startMinutes = 17 * 60;
+const startMinutes = 9 * 60;
 const endMinutes = 24 * 60;
 const slotMinutes = 30;
 const labelColumnWidth = 160;
@@ -886,13 +886,14 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
             }
           </div>
 
+          <div className="overflow-x-auto pb-1">
           <div
             className="grid gap-px rounded-lg border border-slate-200 bg-slate-200 text-xs"
             style={{
-              gridTemplateColumns: `${labelColumnWidth}px repeat(${slots.length}, minmax(24px, 1fr))`,
+              gridTemplateColumns: `${labelColumnWidth}px repeat(${slots.length}, minmax(64px, 1fr))`,
             }}
           >
-            <div className="bg-white p-2 font-medium">{"\uD14C\uC774\uBE14"}</div>
+            <div className="sticky left-0 z-20 bg-white p-2 font-medium">{"\uD14C\uC774\uBE14"}</div>
             {slots.map((slot) => {
               const slotEnd = minutesToTime(timeToMinutes(slot) + slotMinutes);
               return (
@@ -911,10 +912,10 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
             <div
               className="col-span-full grid"
               style={{
-                gridTemplateColumns: `${labelColumnWidth}px repeat(${slots.length}, minmax(24px, 1fr))`,
+                gridTemplateColumns: `${labelColumnWidth}px repeat(${slots.length}, minmax(64px, 1fr))`,
               }}
             >
-              <div className="bg-white p-2 text-slate-700">{"\uD0C0\uC784\uC138\uC77C"}</div>
+              <div className="sticky left-0 z-20 bg-white p-2 text-slate-700">{"\uD0C0\uC784\uC138\uC77C"}</div>
                 {slots.map((slot) => (
                   <div
                     key={`deal-slot-${slot}`}
@@ -1013,10 +1014,10 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                   key={row.id}
                   className="col-span-full grid"
                   style={{
-                    gridTemplateColumns: `${labelColumnWidth}px repeat(${slots.length}, minmax(24px, 1fr))`,
+                    gridTemplateColumns: `${labelColumnWidth}px repeat(${slots.length}, minmax(64px, 1fr))`,
                   }}
                 >
-                  <div className="bg-white p-2 text-slate-700">{row.label}</div>
+                  <div className="sticky left-0 z-20 bg-white p-2 text-slate-700">{row.label}</div>
                   {slots.map((slot) => {
                     const currentSlotDate = new Date(`${selectedDate}T${slot}:00`);
                     const currentSlotTime = currentSlotDate.getTime();
@@ -1131,6 +1132,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                 </div>
               );
             })}
+          </div>
           </div>
         </div>
       ) : null}
