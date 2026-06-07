@@ -221,6 +221,10 @@ export function RuleBuilderPage({
   const [dailyCap, setDailyCap] = useState("20");
   const [minSpend, setMinSpend] = useState("30000");
   const [visibility, setVisibility] = useState<"public" | "private">("public");
+  // 핫딜 운영루프: 수량(0=무제한) / 유효기간
+  const [inventoryCap, setInventoryCap] = useState("0");
+  const [validFrom, setValidFrom] = useState("");
+  const [validTo, setValidTo] = useState("");
   const [catalog, setCatalog] = useState<BenefitItem[]>(mockBenefits);
 
   useEffect(() => {
@@ -245,6 +249,9 @@ export function RuleBuilderPage({
           setTimeBlocks(localTarget.time_blocks ?? timeBlocks);
           setPartyMin(String(localTarget.party_min ?? partyMin));
           setPartyMax(String(localTarget.party_max ?? partyMax));
+          setInventoryCap(String(localTarget.inventory_cap ?? 0));
+          setValidFrom(localTarget.valid_from ?? "");
+          setValidTo(localTarget.valid_to ?? "");
           setLeadMin(String(localTarget.lead_min ?? leadMin));
           setLeadMax(String(localTarget.lead_max ?? leadMax));
           setBenefitId(String(localTarget.benefit_id ?? benefitId));
@@ -382,6 +389,9 @@ export function RuleBuilderPage({
       benefit_value: benefitValue,
       guardrails: { daily_cap: Number(dailyCap), min_spend: Number(minSpend) },
       visibility,
+      inventory_cap: Number(inventoryCap) || 0,
+      valid_from: validFrom || null,
+      valid_to: validTo || null,
     };
 
     try {
@@ -668,6 +678,27 @@ export function RuleBuilderPage({
                 onChange={(event) => setMinSpend(event.target.value)}
               />
             </div>
+            {/* \uD56B\uB51C \uC218\uB7C9 / \uC720\uD6A8\uAE30\uAC04 (\uC18C\uC9C4\u00B7\uB9CC\uB8CC \uC2DC B2C \uB178\uCD9C \uC790\uB3D9 \uC911\uB2E8) */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{"\uD56B\uB51C \uC218\uB7C9 (0 = \uBB34\uC81C\uD55C)"}</label>
+              <Input
+                type="number"
+                value={inventoryCap}
+                onChange={(event) => setInventoryCap(event.target.value)}
+                placeholder="\uC608: 20 (\uC218\uB7C9 \uC18C\uC9C4 \uC2DC \uC790\uB3D9 \uB9C8\uAC10)"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{"\uC720\uD6A8 \uC2DC\uC791\uC77C"}</label>
+                <Input type="date" value={validFrom} onChange={(event) => setValidFrom(event.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{"\uC720\uD6A8 \uC885\uB8CC\uC77C"}</label>
+                <Input type="date" value={validTo} onChange={(event) => setValidTo(event.target.value)} />
+              </div>
+            </div>
+            <p className="text-xs text-slate-400">{"\uBE44\uC6CC\uB450\uBA74 \uC0C1\uC2DC \uC9C4\uD589. \uC218\uB7C9 \uC18C\uC9C4\u00B7\uAE30\uAC04 \uB9CC\uB8CC \uC2DC \uC571\uC5D0\uC11C \uC790\uB3D9\uC73C\uB85C \uB0B4\uB824\uAC11\uB2C8\uB2E4."}</p>
             <div className="space-y-2">
               <label className="text-sm font-medium">{"\uC0C1\uC138 \uC870\uAC74 \uC124\uC815"}</label>
               <div className="space-y-2 text-sm text-slate-600">

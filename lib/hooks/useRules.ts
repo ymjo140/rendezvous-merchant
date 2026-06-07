@@ -24,6 +24,11 @@ export type RuleRow = {
   benefit_value?: string | null;
   guardrails?: { daily_cap?: number; min_spend?: number } | null;
   visibility?: "public" | "private" | null;
+  // 핫딜 운영루프(수량/유효기간). inventory_used는 읽기전용 표시용.
+  inventory_cap?: number | null;
+  inventory_used?: number | null;
+  valid_from?: string | null;
+  valid_to?: string | null;
   created_at?: string;
 };
 
@@ -51,6 +56,10 @@ type DbRuleRow = {
   benefit_value?: string | null;
   guardrails?: { daily_cap?: number; min_spend?: number } | null;
   visibility?: string | null;
+  inventory_cap?: number | null;
+  inventory_used?: number | null;
+  valid_from?: string | null;
+  valid_to?: string | null;
 };
 
 const isSupabaseConfigured = Boolean(
@@ -109,6 +118,10 @@ function mapDbRuleToRuleRow(row: DbRuleRow): RuleRow {
     benefit_value: row.benefit_value ?? benefitFromJson.value ?? null,
     guardrails: row.guardrails ?? null,
     visibility: (row.visibility as "public" | "private" | null) ?? null,
+    inventory_cap: row.inventory_cap ?? null,
+    inventory_used: row.inventory_used ?? null,
+    valid_from: row.valid_from ?? null,
+    valid_to: row.valid_to ?? null,
     created_at: row.created_at ?? undefined,
   };
 }
@@ -143,6 +156,9 @@ function mapRuleRowToDb(row: RuleRow): DbRuleRow {
     benefit_value: row.benefit_value ?? null,
     guardrails: row.guardrails ?? null,
     visibility: row.visibility ?? null,
+    inventory_cap: row.inventory_cap ?? 0,
+    valid_from: row.valid_from ?? null,
+    valid_to: row.valid_to ?? null,
   };
 }
 
@@ -188,6 +204,9 @@ function mapRuleUpdateToDb(payload: Partial<RuleRow>) {
   if (payload.benefit_value !== undefined) update.benefit_value = payload.benefit_value ?? null;
   if (payload.guardrails !== undefined) update.guardrails = payload.guardrails ?? null;
   if (payload.visibility !== undefined) update.visibility = payload.visibility ?? null;
+  if (payload.inventory_cap !== undefined) update.inventory_cap = payload.inventory_cap ?? 0;
+  if (payload.valid_from !== undefined) update.valid_from = payload.valid_from ?? null;
+  if (payload.valid_to !== undefined) update.valid_to = payload.valid_to ?? null;
   return update;
 }
 

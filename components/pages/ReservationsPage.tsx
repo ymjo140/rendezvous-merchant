@@ -17,6 +17,7 @@ import {
 import { useTimeDeals, type TimeDealRow } from "@/lib/hooks/useTimeDeals";
 import { autoAssign as runAutoAssign } from "@/lib/hooks/useAutoAssign";
 import { useStoreId } from "@/components/layout/Layout";
+import { AppReservationsPanel } from "@/components/reservations/AppReservationsPanel";
 
 type ReservationEntry = {
   id: string;
@@ -808,6 +809,10 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
           </Button>
         </div>
       </div>
+
+      {/* 📱 앱(B2C)에서 들어온 예약 — 확정/완료/취소(환불) */}
+      <AppReservationsPanel storeId={resolvedStoreId} />
+
       {view === "scheduler" ? (
         <div className="space-y-4">
           <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
