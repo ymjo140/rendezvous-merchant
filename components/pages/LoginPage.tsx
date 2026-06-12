@@ -9,6 +9,9 @@ import { actionMap } from "@/domain/analytics/actionMap";
 import { supabase } from "@/lib/supabase/client";
 import { setToken } from "@/lib/auth/tokenStore";
 import { isValidBizNo, normalizeBizNo, formatBizNo } from "@/lib/bizno";
+import { fetchWithAuth } from "@/lib/api/client";
+
+type BizVerifyResult = { valid: boolean | null; status?: string; message?: string };
 
 const DEV_EMAIL = "dev@rendezvous.app";
 
@@ -85,6 +88,27 @@ export function LoginPage() {
     setNotice(null);
     try {
       if (mode === "signup") {
+        // 국세청 사업자등록 상태조회(진위확인) — 미등록/폐업이면 가입 차단.
+        // 서비스 장애(unavailable) 시엔 체크섬 검증만으로 진행(가입 후 심사 시 확인).
+        let bizVerified: boolean | null = null;
+        try {
+          const v = await fetchWithAuth<BizVerifyResult>("/api/merchant/verify-business", {
+            method: "POST",
+            body: JSON.stringify({ business_number: normalizeBizNo(bizNo) }),
+          });
+          bizVerified = v?.valid ?? null;
+          if (v?.valid === false) {
+            setError(v.message || "사업자등록번호 확인에 실패했어요. 번호를 다시 확인해주세요.");
+            return;
+          }
+          if (v?.valid === null) {
+            setNotice("사업자 진위확인 서비스가 지연되어, 가입 후 심사 단계에서 확인됩니다.");
+          }
+        } catch {
+          // 백엔드 콜드스타트 등 — 체크섬 통과 상태이므로 가입은 진행
+          setNotice("사업자 진위확인 서비스가 지연되어, 가입 후 심사 단계에서 확인됩니다.");
+        }
+
         const { data, error: err } = await supabase.auth.signUp({
           email: email.trim(),
           password: pw,
@@ -93,6 +117,7 @@ export function LoginPage() {
             data: {
               business_number: normalizeBizNo(bizNo),
               owner_name: ownerName.trim(),
+              business_verified: bizVerified, // true=국세청 확인됨 / null=확인 대기
               role: "merchant",
             },
           },
