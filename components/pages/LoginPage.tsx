@@ -8,6 +8,7 @@ import { logAction } from "@/lib/analytics/analyticsClient";
 import { actionMap } from "@/domain/analytics/actionMap";
 import { supabase } from "@/lib/supabase/client";
 import { setToken } from "@/lib/auth/tokenStore";
+import { isValidBizNo, normalizeBizNo, formatBizNo } from "@/lib/bizno";
 
 const DEV_EMAIL = "dev@rendezvous.app";
 
@@ -17,6 +18,8 @@ export function LoginPage() {
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [pw2, setPw2] = useState("");
+  const [bizNo, setBizNo] = useState("");
+  const [ownerName, setOwnerName] = useState("");
   const [masterKey, setMasterKey] = useState("");
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -58,6 +61,17 @@ export function LoginPage() {
       setError("비밀번호가 서로 달라요.");
       return false;
     }
+    if (mode === "signup") {
+      // 점주 인증: 사업자등록번호 필수 + 국세청 체크섬 검증
+      if (!ownerName.trim()) {
+        setError("대표자명을 입력해주세요.");
+        return false;
+      }
+      if (!isValidBizNo(bizNo)) {
+        setError("유효하지 않은 사업자등록번호예요. 10자리 번호를 확인해주세요.");
+        return false;
+      }
+    }
     return true;
   }
 
@@ -74,6 +88,14 @@ export function LoginPage() {
         const { data, error: err } = await supabase.auth.signUp({
           email: email.trim(),
           password: pw,
+          options: {
+            // 점주 인증 정보 — auth user metadata에 보관(가입 심사/추후 국세청 진위확인용)
+            data: {
+              business_number: normalizeBizNo(bizNo),
+              owner_name: ownerName.trim(),
+              role: "merchant",
+            },
+          },
         });
         if (err) {
           setError(
@@ -195,12 +217,33 @@ export function LoginPage() {
               onChange={(e) => setPw(e.target.value)}
             />
             {mode === "signup" && (
-              <Input
-                type="password"
-                placeholder="비밀번호 확인"
-                value={pw2}
-                onChange={(e) => setPw2(e.target.value)}
-              />
+              <>
+                <Input
+                  type="password"
+                  placeholder="비밀번호 확인"
+                  value={pw2}
+                  onChange={(e) => setPw2(e.target.value)}
+                />
+                {/* 점주 인증 — 사업자 정보 */}
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2">
+                  <div className="text-xs font-semibold text-slate-600">🏪 점주 인증</div>
+                  <Input
+                    placeholder="사업자등록번호 (123-45-67890)"
+                    value={bizNo}
+                    onChange={(e) => setBizNo(e.target.value)}
+                    onBlur={() => setBizNo(formatBizNo(bizNo))}
+                    inputMode="numeric"
+                  />
+                  <Input
+                    placeholder="대표자명"
+                    value={ownerName}
+                    onChange={(e) => setOwnerName(e.target.value)}
+                  />
+                  <p className="text-[11px] text-slate-400">
+                    사업자등록번호는 형식 검증 후 가입 심사에 사용됩니다.
+                  </p>
+                </div>
+              </>
             )}
             {error && <p className="text-xs text-rose-500">{error}</p>}
             {notice && <p className="text-xs text-emerald-600">{notice}</p>}

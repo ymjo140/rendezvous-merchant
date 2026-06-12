@@ -95,13 +95,17 @@ export function StoreSwitcher({ currentStoreId }: { currentStoreId: string | nul
       return;
     }
 
-    const created = await createStore.mutateAsync({
-      place_id: selectedPlace.id,
-    });
-
-    setSelectedStoreId(String(created.id));
-    setIsCreateOpen(false);
-    router.push(`/stores/${created.id}`);
+    try {
+      const created = await createStore.mutateAsync({
+        place_id: selectedPlace.id,
+      });
+      setSelectedStoreId(String(created.id));
+      setIsCreateOpen(false);
+      router.push(`/stores/${created.id}`);
+    } catch (e: any) {
+      // 이미 다른 사장님 소유 등 — 사유를 명확히 안내(기존엔 조용히 실패)
+      window.alert(e?.message || "매장 등록에 실패했어요. 잠시 후 다시 시도해주세요.");
+    }
   };
 
   const createDialog = (
@@ -117,7 +121,7 @@ export function StoreSwitcher({ currentStoreId }: { currentStoreId: string | nul
               setSelectedPlace(null);
             }}
           />
-          {query.trim().length >= MIN_QUERY_LENGTH && (
+          {!selectedPlace && query.trim().length >= MIN_QUERY_LENGTH && (
             <div className="absolute z-10 mt-2 w-full rounded-md border border-slate-200 bg-white shadow-lg">
               {isSearching ? (
                 <div className="px-3 py-2 text-sm text-slate-500">검색 중...</div>
