@@ -94,11 +94,19 @@ export function HomePage({ storeId }: { storeId?: string }) {
   const topSuggestion = useMemo(() => {
     try {
       const { suggestions } = suggestRules({
-        reservations: manualReservations.map((r) => ({
-          party_size: r.party_size,
-          status: r.status,
-          start_time: r.start_time,
-        })),
+        // 수기 + 앱(B2C) 예약 합산
+        reservations: [
+          ...manualReservations.map((r) => ({
+            party_size: r.party_size,
+            status: r.status,
+            start_time: r.start_time,
+          })),
+          ...appReservations.map((r) => ({
+            party_size: r.party_size,
+            status: r.status,
+            start_time: `${r.date}T${r.time || "00:00"}:00`,
+          })),
+        ],
         units: units.map((u) => ({ max_capacity: u.max_capacity, quantity: u.quantity })),
         rules: activeHotdeals.map((r) => ({
           enabled: r.enabled,

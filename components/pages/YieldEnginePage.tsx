@@ -1,14 +1,16 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useStoreId } from "@/components/layout/Layout";
 import { useReservations } from "@/lib/hooks/useReservations";
+import { useAppReservations } from "@/lib/hooks/useAppReservations";
 import { useTableUnits } from "@/lib/hooks/useTableUnits";
 import { useRules, type RuleRow } from "@/lib/hooks/useRules";
 import { usePlaceCategory } from "@/lib/hooks/usePlaceCategory";
+import { fetchWithAuth } from "@/lib/api/client";
 import {
   suggestRules,
   DAYPARTS,
@@ -17,6 +19,27 @@ import {
   type Suggestion,
   type Cell,
 } from "@/domain/offers/yieldEngine";
+
+// 핫딜별 성과 귀속(노출→클릭→예약→예약금) — FastAPI offer-performance
+type OfferPerf = {
+  rule_id: number;
+  name: string;
+  benefit_title: string;
+  enabled: boolean;
+  impressions: number;
+  clicks: number;
+  reservations: number;
+  deposit_sum: number;
+  inventory_cap: number;
+  inventory_used: number;
+  remaining: number | null;
+  ctr: number | null;
+  conversion: number | null;
+};
+type OfferPerfResponse = {
+  rules: OfferPerf[];
+  totals: { impressions: number; clicks: number; reservations: number; deposit_sum: number };
+};
 
 // 월요일 시작 컬럼 → JS getDay() 매핑
 const DAY_COLUMNS = [
@@ -43,18 +66,44 @@ export function YieldEnginePage({ storeId }: { storeId?: string }) {
       : contextStoreId ?? undefined;
 
   const { data: reservations = [] } = useReservations(resolvedStoreId);
+  const { data: appReservations = [] } = useAppReservations(resolvedStoreId);
   const { data: units = [] } = useTableUnits(resolvedStoreId);
   const { data: rules = [], createRule } = useRules(resolvedStoreId);
   const { data: category } = usePlaceCategory(resolvedStoreId);
+  const [perf, setPerf] = useState<OfferPerfResponse | null>(null);
+
+  // 핫딜 성과 리포트 로드 (실패 시 섹션 숨김)
+  useEffect(() => {
+    if (!resolvedStoreId) return;
+    let active = true;
+    fetchWithAuth<OfferPerfResponse>(`/api/merchant/stores/${resolvedStoreId}/offer-performance`)
+      .then((p) => {
+        if (active) setPerf(p);
+      })
+      .catch(() => {
+        if (active) setPerf(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [resolvedStoreId]);
 
   const { grid, suggestions } = useMemo(
     () =>
       suggestRules({
-        reservations: reservations.map((r) => ({
-          party_size: r.party_size,
-          status: r.status,
-          start_time: r.start_time,
-        })),
+        // 수기 예약 + 앱(B2C) 예약을 합산 — 플랫폼이 만든 예약도 점유율 학습에 반영
+        reservations: [
+          ...reservations.map((r) => ({
+            party_size: r.party_size,
+            status: r.status,
+            start_time: r.start_time,
+          })),
+          ...appReservations.map((r) => ({
+            party_size: r.party_size,
+            status: r.status,
+            start_time: `${r.date}T${r.time || "00:00"}:00`,
+          })),
+        ],
         units: units.map((u) => ({
           max_capacity: u.max_capacity,
           quantity: u.quantity,
@@ -66,7 +115,7 @@ export function YieldEnginePage({ storeId }: { storeId?: string }) {
         })),
         category,
       }),
-    [reservations, units, rules, category]
+    [reservations, appReservations, units, rules, category]
   );
 
   const cellAt = (jsDow: number, dpKey: string): Cell | undefined =>
@@ -231,6 +280,81 @@ export function YieldEnginePage({ storeId }: { storeId?: string }) {
           </div>
         )}
       </div>
+
+      {/* 📊 핫딜 성과 — 손님 앱 노출→클릭→예약→예약금 귀속 (실데이터) */}
+      {perf && perf.rules.length > 0 && (
+        <Card className="border-brand/30">
+          <CardHeader>
+            <CardTitle>📊 내 핫딜 성과 (손님 앱 실데이터)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap gap-5 rounded-xl bg-slate-50 p-4">
+              <PerfStat label="총 노출" value={`${perf.totals.impressions.toLocaleString()}회`} />
+              <PerfStat label="클릭" value={`${perf.totals.clicks.toLocaleString()}회`} />
+              <PerfStat label="예약 전환" value={`${perf.totals.reservations.toLocaleString()}건`} />
+              <PerfStat
+                label="발생 예약금"
+                value={`${perf.totals.deposit_sum.toLocaleString()}원`}
+                accent
+              />
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-slate-200 text-left text-slate-500">
+                    <th className="p-2 font-medium">핫딜</th>
+                    <th className="p-2 text-right font-medium">노출</th>
+                    <th className="p-2 text-right font-medium">클릭</th>
+                    <th className="p-2 text-right font-medium">예약</th>
+                    <th className="p-2 text-right font-medium">예약금</th>
+                    <th className="p-2 text-right font-medium">수량</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {perf.rules.map((r) => (
+                    <tr key={r.rule_id} className="border-b border-slate-100">
+                      <td className="p-2">
+                        <span className="font-medium text-slate-800">{r.name}</span>
+                        {!r.enabled && (
+                          <span className="ml-1.5 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-400">
+                            꺼짐
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-2 text-right text-slate-600">{r.impressions.toLocaleString()}</td>
+                      <td className="p-2 text-right text-slate-600">
+                        {r.clicks.toLocaleString()}
+                        {r.ctr !== null && (
+                          <span className="ml-1 text-[10px] text-slate-400">({Math.round(r.ctr * 100)}%)</span>
+                        )}
+                      </td>
+                      <td className="p-2 text-right font-semibold text-slate-800">{r.reservations}</td>
+                      <td className="p-2 text-right font-semibold text-brand-dark">
+                        {r.deposit_sum.toLocaleString()}원
+                      </td>
+                      <td className="p-2 text-right text-slate-500">
+                        {r.inventory_cap > 0 ? `${r.remaining}/${r.inventory_cap}` : "무제한"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              노출·클릭은 손님 앱(랑데부) 핫딜 탭 실측, 예약·예약금은 해당 핫딜로 들어온 앱 예약 기준입니다.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+function PerfStat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+  return (
+    <div>
+      <div className="text-xs text-slate-500">{label}</div>
+      <div className={`text-xl font-bold ${accent ? "text-brand-dark" : "text-slate-900"}`}>{value}</div>
     </div>
   );
 }
