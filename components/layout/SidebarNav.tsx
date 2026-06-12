@@ -3,6 +3,12 @@
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
+import { useAppReservations } from "@/lib/hooks/useAppReservations";
+
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 
 const navItems = [
   { label: "\uB300\uC2DC\uBCF4\uB4DC", slug: "" },
@@ -31,6 +37,12 @@ export function SidebarNav({
       ? storeId
       : params?.storeId ?? null;
 
+  // 대기 중(확정 전) 앱 예약 수 → '예약' 메뉴 뱃지
+  const { data: appReservations = [] } = useAppReservations(resolvedStoreId ?? undefined);
+  const pendingCount = appReservations.filter(
+    (r) => r.status === "confirmed" && r.date >= todayStr()
+  ).length;
+
   return (
     <nav className="flex h-full flex-col gap-4 p-6">
       <div className="text-lg font-bold text-brand">\uB791\uB370\uBD80</div>
@@ -51,13 +63,23 @@ export function SidebarNav({
               href={href}
               onClick={onNavigate}
               className={cn(
-                "rounded-md px-3 py-2 text-sm transition-colors",
+                "flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors",
                 isActive
                   ? "bg-brand text-white"
                   : "text-slate-600 hover:bg-brand-light"
               )}
             >
-              {item.label}
+              <span>{item.label}</span>
+              {item.slug === "reservations" && pendingCount > 0 && (
+                <span
+                  className={cn(
+                    "ml-2 rounded-full px-1.5 py-0.5 text-[10px] font-bold",
+                    isActive ? "bg-white text-brand" : "bg-rose-500 text-white"
+                  )}
+                >
+                  {pendingCount}
+                </span>
+              )}
             </Link>
           );
         })}

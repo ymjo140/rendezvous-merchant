@@ -13,67 +13,130 @@ const DEV_EMAIL = "dev@rendezvous.app";
 
 export function LoginPage() {
   const router = useRouter();
-  const [password, setPassword] = useState("");
+  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [email, setEmail] = useState("");
+  const [pw, setPw] = useState("");
+  const [pw2, setPw2] = useState("");
+  const [masterKey, setMasterKey] = useState("");
   const [loading, setLoading] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  async function handleDevLogin() {
-    if (!password.trim()) {
-      window.alert("\uBE44\uBC00\uBC88\uD638\uB97C \uC785\uB825\uD574 \uC8FC\uC138\uC694.");
+  /** 인증 성공 후 공통 라우팅: 토큰 저장 → 내 가게 있으면 콘솔, 없으면 온보딩 */
+  async function afterAuth(accessToken: string | undefined, userId: string) {
+    setToken(accessToken || "dev-token");
+    const { data: store } = await supabase
+      .from("places")
+      .select("id")
+      .eq("owner_id", userId)
+      .maybeSingle();
+
+    if (!store?.id) {
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem("rendezvous_last_store");
+      }
+      router.push("/onboarding");
       return;
     }
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("rendezvous_last_store", String(store.id));
+    }
+    router.push(`/stores/${store.id}`);
+  }
 
+  function validate(): boolean {
+    setError(null);
+    if (!email.trim() || !email.includes("@")) {
+      setError("올바른 이메일을 입력해주세요.");
+      return false;
+    }
+    if (pw.length < 6) {
+      setError("비밀번호는 6자 이상이어야 해요.");
+      return false;
+    }
+    if (mode === "signup" && pw !== pw2) {
+      setError("비밀번호가 서로 달라요.");
+      return false;
+    }
+    return true;
+  }
+
+  async function handleEmailSubmit() {
+    if (!validate()) return;
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      setError("서버 설정이 없습니다. 관리자에게 문의해주세요.");
+      return;
+    }
     setLoading(true);
+    setNotice(null);
     try {
-      if (
-        !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-        !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      ) {
-        window.alert("\uC218\uD398\uC774\uC2A4 \uD658\uACBD\uBCC0\uC218\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.");
+      if (mode === "signup") {
+        const { data, error: err } = await supabase.auth.signUp({
+          email: email.trim(),
+          password: pw,
+        });
+        if (err) {
+          setError(
+            err.message.toLowerCase().includes("already")
+              ? "이미 가입된 이메일이에요. 로그인해주세요."
+              : `가입 실패: ${err.message}`
+          );
+          return;
+        }
+        if (data.session && data.user) {
+          // 이메일 확인이 꺼진 프로젝트 → 바로 가게 등록(온보딩)
+          await afterAuth(data.session.access_token, data.user.id);
+          return;
+        }
+        // 이메일 확인이 켜진 프로젝트 → 안내 후 로그인 탭으로
+        setNotice("확인 메일을 보냈어요! 메일의 링크를 누른 뒤 로그인해주세요.");
+        setMode("login");
         return;
       }
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: DEV_EMAIL,
-        password: password.trim(),
-      });
 
-      if (error || !data?.user) {
-        if (error) console.error(error);
+      const { data, error: err } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: pw,
+      });
+      if (err || !data?.user) {
+        setError("로그인 실패: 이메일 또는 비밀번호를 확인해주세요.");
+        return;
+      }
+      await afterAuth(data.session?.access_token, data.user.id);
+    } catch (e) {
+      console.error(e);
+      setError("처리 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleDevLogin() {
+    if (!masterKey.trim()) {
+      window.alert("비밀번호를 입력해 주세요.");
+      return;
+    }
+    setLoading(true);
+    try {
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        window.alert("수파베이스 환경변수가 없습니다.");
+        return;
+      }
+      const { data, error: err } = await supabase.auth.signInWithPassword({
+        email: DEV_EMAIL,
+        password: masterKey.trim(),
+      });
+      if (err || !data?.user) {
+        if (err) console.error(err);
         window.alert(
-          `\uB85C\uADF8\uC778 \uC2E4\uD328: dev@rendezvous.app \uACC4\uC815\uC744 \uD655\uC778\uD574\uC8FC\uC138\uC694.${
-            error?.message ? ` (${error.message})` : ""
-          }`
+          `로그인 실패: dev@rendezvous.app 계정을 확인해주세요.${err?.message ? ` (${err.message})` : ""}`
         );
         return;
       }
-
-      // AuthGuard\uAC00 tokenStore \uD1A0\uD070\uC744 \uC694\uAD6C\uD558\uBBC0\uB85C \uC138\uC158 \uD1A0\uD070\uC744 \uC2EC\uB294\uB2E4(\uC5C6\uC73C\uBA74 \uAC00\uB4DC\uAC00 /login\uC73C\uB85C \uB418\uB3CC\uB9BC)
-      setToken(data.session?.access_token || "dev-token");
-
-      const { data: store, error: storeError } = await supabase
-        .from("places")
-        .select("id")
-        .eq("owner_id", data.user.id)
-        .maybeSingle();
-
-      if (storeError) {
-        console.error(storeError);
-      }
-
-      if (!store?.id) {
-        if (typeof window !== "undefined") {
-          window.localStorage.removeItem("rendezvous_last_store");
-        }
-        router.push("/onboarding");
-        return;
-      }
-
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem("rendezvous_last_store", String(store.id));
-      }
-      router.push(`/stores/${store.id}`);
-    } catch (err) {
-      console.error(err);
-      window.alert("\uB85C\uADF8\uC778 \uC2E4\uD328: dev@rendezvous.app \uACC4\uC815\uC744 \uD655\uC778\uD574\uC8FC\uC138\uC694.");
+      await afterAuth(data.session?.access_token, data.user.id);
+    } catch (e) {
+      console.error(e);
+      window.alert("로그인 실패: dev@rendezvous.app 계정을 확인해주세요.");
     } finally {
       setLoading(false);
     }
@@ -83,15 +146,83 @@ export function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-slate-50 p-6">
       <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
         <h1 className="text-2xl font-bold text-slate-900">
-          <span className="text-brand">\uB791\uB370\uBD80</span> \uC0AC\uC7A5\uB2D8 \uCF58\uC194
+          <span className="text-brand">랑데부</span> 사장님 콘솔
         </h1>
         <p className="mt-2 text-sm text-slate-500">
-          {
-            "\uCE74\uCE74\uC624 \uACC4\uC815\uC73C\uB85C \uB85C\uADF8\uC778\uD558\uACE0 \uB9E4\uC7A5 \uAD00\uB9AC \uCEE8\uC194\uC5D0 \uC811\uC18D\uD558\uC138\uC694."
-          }
+          가게를 등록하고 앱 손님의 예약·핫딜을 관리하세요.
         </p>
+
+        {/* 이메일 로그인/가입 */}
+        <div className="mt-6">
+          <div className="grid grid-cols-2 rounded-xl bg-slate-100 p-1 text-sm font-semibold">
+            <button
+              type="button"
+              className={`rounded-lg py-2 transition-colors ${
+                mode === "login" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"
+              }`}
+              onClick={() => {
+                setMode("login");
+                setError(null);
+              }}
+            >
+              로그인
+            </button>
+            <button
+              type="button"
+              className={`rounded-lg py-2 transition-colors ${
+                mode === "signup" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"
+              }`}
+              onClick={() => {
+                setMode("signup");
+                setError(null);
+              }}
+            >
+              회원가입
+            </button>
+          </div>
+
+          <div className="mt-4 space-y-3">
+            <Input
+              type="email"
+              placeholder="이메일"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <Input
+              type="password"
+              placeholder="비밀번호 (6자 이상)"
+              value={pw}
+              onChange={(e) => setPw(e.target.value)}
+            />
+            {mode === "signup" && (
+              <Input
+                type="password"
+                placeholder="비밀번호 확인"
+                value={pw2}
+                onChange={(e) => setPw2(e.target.value)}
+              />
+            )}
+            {error && <p className="text-xs text-rose-500">{error}</p>}
+            {notice && <p className="text-xs text-emerald-600">{notice}</p>}
+            <Button className="w-full" onClick={handleEmailSubmit} disabled={loading}>
+              {loading ? "처리 중..." : mode === "signup" ? "가입하고 가게 등록하기" : "로그인"}
+            </Button>
+            {mode === "signup" && (
+              <p className="text-center text-[11px] text-slate-400">
+                가입 후 바로 가게 등록(온보딩)으로 이동해요.
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="my-6 flex items-center gap-3 text-xs text-slate-400">
+          <div className="h-px flex-1 bg-slate-200" />
+          <span>또는</span>
+          <div className="h-px flex-1 bg-slate-200" />
+        </div>
+
         <Button
-          className="mt-6 w-full"
+          className="w-full bg-[#FEE500] text-black hover:bg-[#FEE500]/90"
           onClick={async () => {
             try {
               await logAction({ action_type: actionMap.login_click });
@@ -101,27 +232,19 @@ export function LoginPage() {
             router.push("/auth/callback/kakao?code=dev-kakao");
           }}
         >
-          {"\uCE74\uCE74\uC624 \uB85C\uADF8\uC778"}
+          카카오 로그인
         </Button>
 
-        <div className="my-6 flex items-center gap-3 text-xs text-slate-400">
-          <div className="h-px flex-1 bg-slate-200" />
-          <span>{"\uB610\uB294"}</span>
-          <div className="h-px flex-1 bg-slate-200" />
-        </div>
-
-        <div className="space-y-3">
-          <div className="text-sm font-medium text-slate-700">
-            {"\uD83D\uDD27 \uAC1C\uBC1C\uC790\uC6A9 \uB9C8\uC2A4\uD130\uD0A4"}
-          </div>
+        <div className="mt-6 space-y-3">
+          <div className="text-sm font-medium text-slate-700">🔧 개발자용 마스터키</div>
           <Input
             type="password"
             placeholder="Master Key"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
+            value={masterKey}
+            onChange={(event) => setMasterKey(event.target.value)}
           />
-          <Button className="w-full" onClick={handleDevLogin} disabled={loading}>
-            {loading ? "\uB85C\uADF8\uC778 \uC911..." : "\uD83D\uDE80 \uC989\uC2DC \uC9C4\uC785"}
+          <Button variant="secondary" className="w-full" onClick={handleDevLogin} disabled={loading}>
+            {loading ? "로그인 중..." : "🚀 즉시 진입"}
           </Button>
         </div>
       </div>

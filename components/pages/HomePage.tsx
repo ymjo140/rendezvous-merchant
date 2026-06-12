@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,20 @@ import { useReservations } from "@/lib/hooks/useReservations";
 import { useTableUnits } from "@/lib/hooks/useTableUnits";
 import { useRules } from "@/lib/hooks/useRules";
 import { suggestRules } from "@/domain/offers/yieldEngine";
+import { fetchWithAuth } from "@/lib/api/client";
+
+// 손님 앱(B2C) 행동로그 집계 — FastAPI /api/merchant/stores/{id}/pulse
+type StorePulse = {
+  impressions: number;
+  clicks: number;
+  saves: number;
+  ctr: number | null;
+  daily: Array<{ date: string; impressions: number; clicks: number }>;
+  week_reservations: number;
+  deposit_week: number;
+  deposit_month: number;
+  pending_reservations: number;
+};
 
 function todayStr() {
   const d = new Date();
@@ -34,9 +48,26 @@ export function HomePage({ storeId }: { storeId?: string }) {
   const { data: manualReservations = [] } = useReservations(storeId);
   const { data: units = [] } = useTableUnits(storeId);
   const { data: rules = [] } = useRules(storeId);
+  const [pulse, setPulse] = useState<StorePulse | null>(null);
 
   const today = todayStr();
   const week = weekRange();
+
+  // 수요 레이더: 손님 앱에서 내 가게가 얼마나 보였는지 (실패해도 카드만 숨김)
+  useEffect(() => {
+    if (!storeId) return;
+    let active = true;
+    fetchWithAuth<StorePulse>(`/api/merchant/stores/${storeId}/pulse?days=7`)
+      .then((p) => {
+        if (active) setPulse(p);
+      })
+      .catch(() => {
+        if (active) setPulse(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [storeId]);
 
   // 1) 오늘 예약 (앱)
   const todayReservations = useMemo(
@@ -104,6 +135,62 @@ export function HomePage({ storeId }: { storeId?: string }) {
           value={`${appReservations.filter((r) => r.status === "confirmed" && r.date >= today).length}건`}
         />
       </div>
+
+      {/* 📡 수요 레이더(손님 앱 실데이터) + 예약금 정산 */}
+      {pulse && (
+        <Card className="border-brand/30">
+          <CardHeader>
+            <CardTitle className="text-base">📡 수요 레이더 · 최근 7일 (손님 앱 실데이터)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-[1.2fr_1fr]">
+              <div>
+                <div className="flex flex-wrap gap-5">
+                  <PulseStat label="내 가게 노출" value={pulse.impressions} suffix="회" />
+                  <PulseStat label="클릭(상세 조회)" value={pulse.clicks} suffix="회" />
+                  <PulseStat label="저장/찜" value={pulse.saves} suffix="회" />
+                  {pulse.ctr !== null && (
+                    <PulseStat label="클릭률" value={Math.round(pulse.ctr * 100)} suffix="%" />
+                  )}
+                </div>
+                {pulse.daily.length > 0 ? (
+                  <div className="mt-4 flex h-16 items-end gap-1.5">
+                    {pulse.daily.map((d) => {
+                      const max = Math.max(...pulse.daily.map((x) => x.impressions + x.clicks), 1);
+                      const h = Math.max(8, Math.round(((d.impressions + d.clicks) / max) * 64));
+                      return (
+                        <div key={d.date} className="flex flex-col items-center gap-1" title={`${d.date}: 노출 ${d.impressions} · 클릭 ${d.clicks}`}>
+                          <div className="w-7 rounded-t bg-brand/70" style={{ height: `${h}px` }} />
+                          <div className="text-[9px] text-slate-400">{d.date.slice(5)}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="mt-4 text-xs text-slate-400">
+                    아직 노출 데이터가 없어요. 핫딜을 등록하면 손님 앱에 노출됩니다.
+                  </p>
+                )}
+              </div>
+              <div className="rounded-xl bg-slate-50 p-4">
+                <div className="text-xs font-bold text-slate-500">💰 예약금 정산</div>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className="text-2xl font-bold text-slate-900">
+                    {pulse.deposit_week.toLocaleString()}원
+                  </span>
+                  <span className="text-xs text-slate-400">이번 주</span>
+                </div>
+                <div className="mt-1 text-xs text-slate-500">
+                  이번 달 누적 {pulse.deposit_month.toLocaleString()}원 · 예약 {pulse.week_reservations}건
+                </div>
+                <p className="mt-3 text-[11px] text-slate-400">
+                  손님이 캐시로 결제한 예약금입니다. 취소 시 자동 환불돼요.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* 오늘 예약 */}
@@ -210,6 +297,18 @@ export function HomePage({ storeId }: { storeId?: string }) {
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function PulseStat({ label, value, suffix }: { label: string; value: number; suffix: string }) {
+  return (
+    <div>
+      <div className="text-xs text-slate-500">{label}</div>
+      <div className="text-xl font-bold text-slate-900">
+        {value.toLocaleString()}
+        <span className="ml-0.5 text-xs font-medium text-slate-400">{suffix}</span>
+      </div>
     </div>
   );
 }

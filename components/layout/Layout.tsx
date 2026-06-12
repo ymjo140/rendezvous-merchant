@@ -6,6 +6,8 @@ import { SidebarNav } from "@/components/layout/SidebarNav";
 import { Topbar } from "@/components/layout/Topbar";
 import { StoreSwitcher } from "@/components/layout/StoreSwitcher";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Toaster } from "@/components/ui/toaster";
+import { NewReservationWatcher } from "@/components/layout/NewReservationWatcher";
 
 const StoreIdContext = createContext<string | null>(null);
 
@@ -72,6 +74,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900">
+      {/* 전역 토스트 + 새 앱예약 실시간 알림 */}
+      <Toaster />
+      <NewReservationWatcher storeId={normalizedStoreId} />
       <aside className="hidden w-64 border-r border-slate-200 bg-white lg:block">
         <SidebarNav storeId={normalizedStoreId} />
       </aside>

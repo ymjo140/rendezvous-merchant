@@ -1,0 +1,24 @@
+{
+  "name": "랑데부 사장님",
+  "short_name": "랑데부 사장님",
+  "description": "랑데부 매장 운영 콘솔 — 예약·핫딜·AI 수익엔진",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#f5a623",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
