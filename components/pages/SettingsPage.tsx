@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "@/components/ui/toaster";
+import { VIBE_OPTIONS, FACILITY_OPTIONS } from "@/domain/storeFilters";
 
 // 손님 앱(B2C) 장소 상세가 그대로 읽는 필드들 — 여기서 수정하면 앱에 바로 반영됨.
 type StoreInfo = {
@@ -41,8 +42,15 @@ export function SettingsPage({ storeId }: { storeId?: string }) {
   const placeId = Number(resolvedStoreId);
 
   const [info, setInfo] = useState<StoreInfo>(EMPTY);
+  const [vibes, setVibes] = useState<string[]>([]); // 분위기 태그(한글)
+  const [facilities, setFacilities] = useState<string[]>([]); // 시설 영어키
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  const toggleVibe = (v: string) =>
+    setVibes((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]));
+  const toggleFacility = (key: string) =>
+    setFacilities((prev) => (prev.includes(key) ? prev.filter((x) => x !== key) : [...prev, key]));
   const [color, setColor] = useState<"black" | "blue">("black");
   const qrRef = useRef<HTMLDivElement>(null);
 
@@ -55,7 +63,7 @@ export function SettingsPage({ storeId }: { storeId?: string }) {
       }
       const { data, error } = await supabase
         .from("places")
-        .select("name, cuisine_type, category, phone, business_hours, address, price_range, external_link")
+        .select("name, cuisine_type, category, phone, business_hours, address, price_range, external_link, vibe_tags, features")
         .eq("id", placeId)
         .maybeSingle();
       if (!active) return;
@@ -69,6 +77,10 @@ export function SettingsPage({ storeId }: { storeId?: string }) {
           price_range: data.price_range ?? "",
           external_link: data.external_link ?? "",
         });
+        setVibes(Array.isArray(data.vibe_tags) ? data.vibe_tags : []);
+        // features는 {key: true} dict → 켜진 키 목록으로
+        const feat = data.features && typeof data.features === "object" ? data.features : {};
+        setFacilities(Object.keys(feat).filter((k) => feat[k]));
       }
       setLoading(false);
     }
@@ -88,6 +100,11 @@ export function SettingsPage({ storeId }: { storeId?: string }) {
       return;
     }
     setSaving(true);
+    // 시설 영어키 목록 → {key: true} dict
+    const featuresObj: Record<string, boolean> = {};
+    facilities.forEach((k) => {
+      featuresObj[k] = true;
+    });
     const { error } = await supabase
       .from("places")
       .update({
@@ -98,6 +115,8 @@ export function SettingsPage({ storeId }: { storeId?: string }) {
         address: info.address.trim() || null,
         price_range: info.price_range || null,
         external_link: info.external_link.trim() || null,
+        vibe_tags: vibes,
+        features: featuresObj,
       })
       .eq("id", placeId);
     setSaving(false);
@@ -187,6 +206,80 @@ export function SettingsPage({ storeId }: { storeId?: string }) {
               <p className="text-xs text-slate-400">
                 💡 메뉴는 <b>메뉴 관리</b>에서, 핫딜은 <b>룰 설정</b>에서 관리해요. 모두 손님 앱에 연동됩니다.
               </p>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 분위기·시설 태그 — 손님 앱 필터(분위기/시설)에 그대로 매칭됨 */}
+      <Card>
+        <CardHeader>
+          <CardTitle>🏷️ 분위기 · 편의시설</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {loading ? (
+            <p className="py-4 text-sm text-slate-400">불러오는 중...</p>
+          ) : (
+            <>
+              <div>
+                <div className="mb-2 text-sm font-medium text-slate-700">
+                  분위기 <span className="text-xs font-normal text-slate-400">(여러 개 선택 가능)</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {VIBE_OPTIONS.map((v) => {
+                    const on = vibes.includes(v);
+                    return (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => toggleVibe(v)}
+                        className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                          on
+                            ? "border-brand bg-amber-50 text-brand-dark font-semibold"
+                            : "border-slate-200 text-slate-600 hover:border-slate-300"
+                        }`}
+                      >
+                        {v}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <div className="mb-2 text-sm font-medium text-slate-700">
+                  편의시설 <span className="text-xs font-normal text-slate-400">(룸·주차·콜키지 등)</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {FACILITY_OPTIONS.map((f) => {
+                    const on = facilities.includes(f.key);
+                    return (
+                      <button
+                        key={f.key}
+                        type="button"
+                        onClick={() => toggleFacility(f.key)}
+                        className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                          on
+                            ? "border-[#14B8A6] bg-teal-50 text-teal-700 font-semibold"
+                            : "border-slate-200 text-slate-600 hover:border-slate-300"
+                        }`}
+                      >
+                        {on ? "✓ " : ""}
+                        {f.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-slate-400">
+                  💡 선택한 분위기·시설로 손님 앱 필터(예: '룸 있는 곳')에 노출됩니다.
+                </p>
+                <Button onClick={handleSave} disabled={saving} className="bg-brand hover:bg-brand-dark px-6">
+                  {saving ? "저장 중..." : "저장하기"}
+                </Button>
+              </div>
             </>
           )}
         </CardContent>
