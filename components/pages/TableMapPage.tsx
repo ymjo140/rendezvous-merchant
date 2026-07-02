@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase/client";
 import { toast } from "@/components/ui/toaster";
 import { useTableUnits } from "@/lib/hooks/useTableUnits";
 import { useAppReservations } from "@/lib/hooks/useAppReservations";
+import { useStoreId } from "@/components/layout/Layout";
 
 // 🪑 테이블 맵 v2.5 — 수용량 통합 + 예약 배정 + 합석 + 구역/층 + 실측 스냅샷.
 // 상태가 바뀔 때마다 점유 스냅샷(store_table_events)을 남겨 AI 수익엔진의
@@ -74,7 +75,11 @@ function cellsOf(t: Pick<StoreTable, "pos_x" | "pos_y" | "shape" | "rotated">): 
 }
 
 export function TableMapPage({ storeId }: { storeId?: string }) {
-  const placeId = Number(storeId);
+  // 라우트 prop이 비면 Layout 컨텍스트(pathname 기반)로 폴백 — params 언랩 이슈 방어
+  const contextStoreId = useStoreId();
+  const resolvedStoreId =
+    storeId && storeId !== "undefined" && storeId !== "null" ? storeId : contextStoreId ?? undefined;
+  const placeId = Number(resolvedStoreId);
   const [tables, setTables] = useState<StoreTable[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<StoreTable | null>(null);
@@ -85,11 +90,14 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
   const [moveMode, setMoveMode] = useState(false);
   const [area, setArea] = useState(DEFAULT_AREA);
   const [assignRes, setAssignRes] = useState<{ id: string; time: string; party: number } | null>(null);
-  const { data: units = [] } = useTableUnits(storeId);
-  const { data: appReservations = [] } = useAppReservations(storeId);
+  const { data: units = [] } = useTableUnits(resolvedStoreId);
+  const { data: appReservations = [] } = useAppReservations(resolvedStoreId);
 
   const load = async () => {
-    if (!Number.isFinite(placeId)) return;
+    if (!Number.isFinite(placeId)) {
+      setLoading(false); // 매장 id 없음 — 스피너 영구 방지
+      return;
+    }
     const { data, error } = await supabase
       .from("store_tables")
       .select("*")

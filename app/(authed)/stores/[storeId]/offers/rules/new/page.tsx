@@ -1,5 +1,6 @@
 import { RuleBuilderPage } from "@/components/pages/RuleBuilderPage";
 
-export default function Page({ params }: { params: { storeId: string } }) {
-  return <RuleBuilderPage storeId={params.storeId} />;
+export default async function Page({ params }: { params: Promise<{ storeId: string }> }) {
+  const { storeId } = await params;
+  return <RuleBuilderPage storeId={storeId} />;
 }

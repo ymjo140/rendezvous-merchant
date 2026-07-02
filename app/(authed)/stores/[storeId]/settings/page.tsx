@@ -1,5 +1,6 @@
 import { SettingsPage } from "@/components/pages/SettingsPage";
 
-export default function Page({ params }: { params: { storeId: string } }) {
-  return <SettingsPage storeId={params.storeId} />;
+export default async function Page({ params }: { params: Promise<{ storeId: string }> }) {
+  const { storeId } = await params;
+  return <SettingsPage storeId={storeId} />;
 }

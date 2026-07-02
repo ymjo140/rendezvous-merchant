@@ -1,5 +1,6 @@
 import { InsightsPage } from "@/components/pages/InsightsPage";
 
-export default function Page({ params }: { params: { storeId: string } }) {
-  return <InsightsPage storeId={params.storeId} />;
+export default async function Page({ params }: { params: Promise<{ storeId: string }> }) {
+  const { storeId } = await params;
+  return <InsightsPage storeId={storeId} />;
 }

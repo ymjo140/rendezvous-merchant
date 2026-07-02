@@ -1,5 +1,6 @@
 import { ReservationsPage } from "@/components/pages/ReservationsPage";
 
-export default function Page({ params }: { params: { storeId: string } }) {
-  return <ReservationsPage storeId={params.storeId} />;
+export default async function Page({ params }: { params: Promise<{ storeId: string }> }) {
+  const { storeId } = await params;
+  return <ReservationsPage storeId={storeId} />;
 }

@@ -1,9 +1,10 @@
 import { RuleBuilderPage } from "@/components/pages/RuleBuilderPage";
 
-export default function Page({
+export default async function Page({
   params,
 }: {
-  params: { storeId: string; ruleId: string };
+  params: Promise<{ storeId: string; ruleId: string }>;
 }) {
-  return <RuleBuilderPage storeId={params.storeId} ruleId={params.ruleId} />;
+  const { storeId, ruleId } = await params;
+  return <RuleBuilderPage storeId={storeId} ruleId={ruleId} />;
 }

@@ -1,5 +1,6 @@
 import { HomePage } from "@/components/pages/HomePage";
 
-export default function Page({ params }: { params: { storeId: string } }) {
-  return <HomePage storeId={params.storeId} />;
+export default async function Page({ params }: { params: Promise<{ storeId: string }> }) {
+  const { storeId } = await params;
+  return <HomePage storeId={storeId} />;
 }

@@ -1,5 +1,7 @@
 import { TableMapPage } from "@/components/pages/TableMapPage";
 
-export default function Page({ params }: { params: { storeId: string } }) {
-  return <TableMapPage storeId={params.storeId} />;
+// Next 15+: 라우트 params는 Promise — await로 언랩해야 함(동기 접근 시 undefined)
+export default async function Page({ params }: { params: Promise<{ storeId: string }> }) {
+  const { storeId } = await params;
+  return <TableMapPage storeId={storeId} />;
 }

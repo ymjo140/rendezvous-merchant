@@ -1,5 +1,6 @@
 import { YieldEnginePage } from "@/components/pages/YieldEnginePage";
 
-export default function Page({ params }: { params: { storeId: string } }) {
-  return <YieldEnginePage storeId={params.storeId} />;
+export default async function Page({ params }: { params: Promise<{ storeId: string }> }) {
+  const { storeId } = await params;
+  return <YieldEnginePage storeId={storeId} />;
 }

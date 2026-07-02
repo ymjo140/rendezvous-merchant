@@ -1,5 +1,6 @@
 import { BenefitsCatalogPage } from "@/components/pages/BenefitsCatalogPage";
 
-export default function Page({ params }: { params: { storeId: string } }) {
-  return <BenefitsCatalogPage storeId={params.storeId} />;
+export default async function Page({ params }: { params: Promise<{ storeId: string }> }) {
+  const { storeId } = await params;
+  return <BenefitsCatalogPage storeId={storeId} />;
 }

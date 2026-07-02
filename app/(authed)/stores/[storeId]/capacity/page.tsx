@@ -1,5 +1,6 @@
 import { CapacityPage } from "@/components/pages/CapacityPage";
 
-export default function Page({ params }: { params: { storeId: string } }) {
-  return <CapacityPage storeId={params.storeId} />;
+export default async function Page({ params }: { params: Promise<{ storeId: string }> }) {
+  const { storeId } = await params;
+  return <CapacityPage storeId={storeId} />;
 }
