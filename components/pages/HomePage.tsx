@@ -10,6 +10,7 @@ import { useTableUnits } from "@/lib/hooks/useTableUnits";
 import { useRules } from "@/lib/hooks/useRules";
 import { suggestRules } from "@/domain/offers/yieldEngine";
 import { fetchWithAuth } from "@/lib/api/client";
+import { VacancyCard } from "@/components/home/VacancyCard";
 
 // 손님 앱(B2C) 행동로그 집계 — FastAPI /api/merchant/stores/{id}/pulse
 type StorePulse = {
@@ -132,6 +133,9 @@ export function HomePage({ storeId }: { storeId?: string }) {
           + 핫딜 만들기
         </Button>
       </div>
+
+      {/* 🔴 지금 빈자리 원탭 알림 — 손님 앱 '지금 입장 가능' 노출 */}
+      <VacancyCard storeId={storeId} />
 
       {/* 요약 4지표 */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
