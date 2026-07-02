@@ -86,6 +86,7 @@ export function AppReservationsPanel({ storeId }: { storeId?: string }) {
                   </div>
                   <div className="text-xs text-slate-500 mt-0.5">
                     {r.party_size}명
+                    {r.table_label && <span className="ml-1 rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">🪑 {r.table_label} 지정</span>}
                     {r.deposit_amount > 0 && ` · 예약금 ${r.deposit_amount.toLocaleString()}원`}
                   </div>
                 </div>

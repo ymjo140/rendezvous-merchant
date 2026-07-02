@@ -402,26 +402,43 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
               📅 오늘 다가오는 예약 {upcomingReservations.length}건 — 테이블을 배정해두세요
             </div>
             <div className="flex flex-wrap gap-2">
-              {upcomingReservations.map((r) => (
-                <button
-                  key={r.id}
-                  onClick={() =>
-                    setAssignRes(
+              {upcomingReservations.map((r) => {
+                // 손님이 자리를 지정한 예약 → 칩 탭 한 번에 그 테이블로 자동 배정
+                const wanted = r.table_id ? tables.find((t) => t.id === r.table_id) : undefined;
+                return (
+                  <button
+                    key={r.id}
+                    onClick={() => {
+                      if (wanted) {
+                        setAssignRes({ id: String(r.id), time: r.time, party: r.party_size });
+                        // assignToTable은 assignRes state를 쓰므로 직접 값 전달 버전으로 처리
+                        updateTable(wanted, {
+                          status: "reserved",
+                          reserved_note: `${r.id}|${r.time} ${r.party_size}인 예약`,
+                        }).then((ok) => {
+                          setAssignRes(null);
+                          if (ok) toast(`손님 지정석 ${wanted.label}에 자동 배정!`, "success");
+                        });
+                        return;
+                      }
+                      setAssignRes(
+                        assignRes?.id === String(r.id)
+                          ? null
+                          : { id: String(r.id), time: r.time, party: r.party_size }
+                      );
+                    }}
+                    className={`rounded-xl border-2 px-3 py-2 text-xs font-bold transition-colors ${
                       assignRes?.id === String(r.id)
-                        ? null
-                        : { id: String(r.id), time: r.time, party: r.party_size }
-                    )
-                  }
-                  className={`rounded-xl border-2 px-3 py-2 text-xs font-bold transition-colors ${
-                    assignRes?.id === String(r.id)
-                      ? "border-amber-500 bg-amber-100 text-amber-800"
-                      : "border-slate-200 text-slate-600 hover:border-amber-300"
-                  }`}
-                >
-                  {r.time} · {r.party_size}인
-                  {assignRes?.id === String(r.id) ? " → 테이블 탭!" : ""}
-                </button>
-              ))}
+                        ? "border-amber-500 bg-amber-100 text-amber-800"
+                        : "border-slate-200 text-slate-600 hover:border-amber-300"
+                    }`}
+                  >
+                    {r.time} · {r.party_size}인
+                    {r.table_label ? ` · 🪑${r.table_label} 지정` : ""}
+                    {assignRes?.id === String(r.id) && !wanted ? " → 테이블 탭!" : ""}
+                  </button>
+                );
+              })}
             </div>
           </CardContent>
         </Card>

@@ -17,6 +17,8 @@ export type AppReservationRow = {
   party_size: number;
   deposit_amount: number;
   status: "confirmed" | "completed" | "cancelled" | "no_show";
+  table_id?: number | null;      // 손님 지정 테이블
+  table_label?: string | null;   // 예: '창가 T1' 
   created_at: string;
 };
 
