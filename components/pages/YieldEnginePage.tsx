@@ -8,6 +8,7 @@ import { useStoreId } from "@/components/layout/Layout";
 import { useReservations } from "@/lib/hooks/useReservations";
 import { useAppReservations } from "@/lib/hooks/useAppReservations";
 import { useTableUnits } from "@/lib/hooks/useTableUnits";
+import { useStoreTables } from "@/lib/hooks/useStoreTables";
 import { useRules, type RuleRow } from "@/lib/hooks/useRules";
 import { usePlaceCategory } from "@/lib/hooks/usePlaceCategory";
 import { fetchWithAuth } from "@/lib/api/client";
@@ -67,7 +68,13 @@ export function YieldEnginePage({ storeId }: { storeId?: string }) {
 
   const { data: reservations = [] } = useReservations(resolvedStoreId);
   const { data: appReservations = [] } = useAppReservations(resolvedStoreId);
-  const { data: units = [] } = useTableUnits(resolvedStoreId);
+  const { data: legacyUnits = [] } = useTableUnits(resolvedStoreId);
+  const { data: storeTables = [] } = useStoreTables(resolvedStoreId);
+  // 좌석 SSOT: 테이블 맵 우선, 미등록 매장은 기존 수용량 폴백
+  const units =
+    storeTables.length > 0
+      ? storeTables.map((t) => ({ max_capacity: t.capacity, quantity: 1 } as any))
+      : legacyUnits;
   const { data: rules = [], createRule } = useRules(resolvedStoreId);
   const { data: category } = usePlaceCategory(resolvedStoreId);
   const [perf, setPerf] = useState<OfferPerfResponse | null>(null);

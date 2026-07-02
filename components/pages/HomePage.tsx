@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useAppReservations } from "@/lib/hooks/useAppReservations";
 import { useReservations } from "@/lib/hooks/useReservations";
 import { useTableUnits } from "@/lib/hooks/useTableUnits";
+import { useStoreTables } from "@/lib/hooks/useStoreTables";
 import { useRules } from "@/lib/hooks/useRules";
 import { suggestRules } from "@/domain/offers/yieldEngine";
 import { fetchWithAuth } from "@/lib/api/client";
@@ -47,7 +48,13 @@ export function HomePage({ storeId }: { storeId?: string }) {
   const router = useRouter();
   const { data: appReservations = [] } = useAppReservations(storeId);
   const { data: manualReservations = [] } = useReservations(storeId);
-  const { data: units = [] } = useTableUnits(storeId);
+  const { data: legacyUnits = [] } = useTableUnits(storeId);
+  const { data: storeTables = [] } = useStoreTables(storeId);
+  // 좌석 SSOT: 테이블 맵 우선, 미등록 매장은 기존 수용량 폴백
+  const units =
+    storeTables.length > 0
+      ? storeTables.map((t) => ({ max_capacity: t.capacity, quantity: 1 } as any))
+      : legacyUnits;
   const { data: rules = [] } = useRules(storeId);
   const [pulse, setPulse] = useState<StorePulse | null>(null);
 
