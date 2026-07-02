@@ -129,6 +129,12 @@ export function VacancyCard({ storeId }: { storeId?: string }) {
                   버튼 한 번이면 근처에서 모임 장소 찾는 손님에게 &lsquo;지금 입장 가능&rsquo;으로 노출돼요.
                 </div>
               </div>
+              <a
+                href={`/stores/${storeId}/tables`}
+                className="flex-shrink-0 text-xs font-bold text-brand hover:underline"
+              >
+                테이블별 관리 →
+              </a>
             </div>
             <div className="flex items-center gap-2">
               <div className="flex gap-1">
