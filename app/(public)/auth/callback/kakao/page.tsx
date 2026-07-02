@@ -19,9 +19,19 @@ function KakaoCallbackInner() {
           throw new Error("인증 코드가 없습니다.");
         }
         const result = await exchangeKakaoCode(code);
-        setToken(result.access_token || "dev-token");
+        if (!result.access_token) {
+          throw new Error("no token");
+        }
+        setToken(result.access_token);
         router.replace("/stores/select");
       } catch {
+        // 프로덕션: dev-token 폴백 금지 — 인증 코드 없이 진입하는 우회를 차단하고
+        // 로그인 화면으로 회귀. 로컬(dev)에서는 편의상 dev-token 유지.
+        if (process.env.NODE_ENV === "production") {
+          setStatus("카카오 인증에 실패했어요. 로그인 화면으로 돌아갑니다.");
+          router.replace("/?error=kakao");
+          return;
+        }
         setToken("dev-token");
         setStatus("개발용 토큰으로 로그인합니다.");
         router.replace("/stores/select");

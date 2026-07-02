@@ -51,11 +51,10 @@ export async function createMerchantStore(payload: CreateStorePayload): Promise<
     }
 
     if (!place.owner_id) {
-      const { error: upErr } = await supabase
-        .from("places")
-        .update({ owner_id: userId })
-        .eq("id", placeId);
-      if (upErr) throw new Error("매장 등록에 실패했어요. 잠시 후 다시 시도해주세요.");
+      // RLS 소유권 잠금 하에서 미소유 place의 owner 지정은 claim_store 함수로만 가능
+      // (직접 UPDATE는 정책상 차단됨 — 반달리즘 방지).
+      const { error: claimErr } = await supabase.rpc("claim_store", { p_place_id: placeId });
+      if (claimErr) throw new Error("매장 등록에 실패했어요. 잠시 후 다시 시도해주세요.");
     }
     return { id: place.id, name: place.name, address: place.address ?? "" } as StoreSummary;
   }

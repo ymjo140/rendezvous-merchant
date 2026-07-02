@@ -116,31 +116,19 @@ create table if not exists public.store_menus (
 create index if not exists idx_store_menus_store
   on public.store_menus(store_id);
 
--- =====================
--- RLS (Dev permissive)
--- =====================
-alter table public.table_units enable row level security;
+-- =========================================================================
+-- RLS
+-- =========================================================================
+-- ⚠️ 과거의 dev-permissive 정책(dev_all_*, USING(true))은 보안상 폐기되었습니다.
+--    RLS 정책의 단일 소스는 db/rls_ownership.sql (소유권 기반) 입니다.
+--    신규 환경 구축 시: 이 파일로 테이블 생성 → 이어서 rls_ownership.sql 적용.
+--
+-- RLS 활성화만 여기서 보장(정책은 rls_ownership.sql이 소유). 정책이 하나도
+-- 없으면 anon/authenticated는 기본 거부되므로 안전한 기본값이다.
+alter table public.table_units            enable row level security;
 alter table public.offer_benefits_catalog enable row level security;
-alter table public.offer_rules enable row level security;
-alter table public.reservations enable row level security;
-alter table public.time_deals enable row level security;
-alter table public.store_menus enable row level security;
-
--- Allow all operations for anon/authenticated (DEV ONLY)
-create policy "dev_all_table_units" on public.table_units
-  for all using (true) with check (true);
-
-create policy "dev_all_benefits" on public.offer_benefits_catalog
-  for all using (true) with check (true);
-
-create policy "dev_all_rules" on public.offer_rules
-  for all using (true) with check (true);
-
-create policy "dev_all_reservations" on public.reservations
-  for all using (true) with check (true);
-
-create policy "dev_all_time_deals" on public.time_deals
-  for all using (true) with check (true);
-
-create policy "dev_all_store_menus" on public.store_menus
-  for all using (true) with check (true);
+alter table public.offer_rules            enable row level security;
+alter table public.reservations           enable row level security;
+alter table public.time_deals             enable row level security;
+alter table public.store_menus            enable row level security;
+-- 다음 단계: \i db/rls_ownership.sql  (소유권 정책 + claim_store 함수)

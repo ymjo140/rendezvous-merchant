@@ -269,10 +269,23 @@ export function OnboardingPage() {
       };
 
       if (selectedPlace?.id) {
+        // 1) 소유권 claim (RLS 하에서 미소유 place는 claim_store 함수로만 owner 지정 가능)
+        const { error: claimErr } = await supabase.rpc("claim_store", {
+          p_place_id: selectedPlace.id,
+        });
+        if (claimErr) {
+          console.error(claimErr);
+          window.alert(
+            `매장 등록에 실패했어요.${
+              claimErr?.message ? ` (${claimErr.message})` : ""
+            }`
+          );
+          return;
+        }
+        // 2) 소유자가 됐으니 나머지 정보 업데이트(owner_id는 위에서 세팅됨)
         const { data: store, error } = await supabase
           .from("places")
           .update({
-            owner_id: userData.user.id,
             name: storeName,
             category,
             main_category: mapMainCategoryToDb(category),

@@ -283,38 +283,44 @@ export function LoginPage() {
           </div>
         </div>
 
-        <div className="my-6 flex items-center gap-3 text-xs text-slate-400">
-          <div className="h-px flex-1 bg-slate-200" />
-          <span>또는</span>
-          <div className="h-px flex-1 bg-slate-200" />
-        </div>
+        {/* 개발 전용 로그인(가짜 카카오 + 마스터키) — 프로덕션 빌드에서는 제외.
+            로컬(npm run dev)에서는 그대로 노출되어 확인용으로 사용 가능. */}
+        {process.env.NODE_ENV !== "production" && (
+          <>
+            <div className="my-6 flex items-center gap-3 text-xs text-slate-400">
+              <div className="h-px flex-1 bg-slate-200" />
+              <span>또는 (개발용)</span>
+              <div className="h-px flex-1 bg-slate-200" />
+            </div>
 
-        <Button
-          className="w-full bg-[#FEE500] text-black hover:bg-[#FEE500]/90"
-          onClick={async () => {
-            try {
-              await logAction({ action_type: actionMap.login_click });
-            } catch {
-              // ignore logging failures in dev
-            }
-            router.push("/auth/callback/kakao?code=dev-kakao");
-          }}
-        >
-          카카오 로그인
-        </Button>
+            <Button
+              className="w-full bg-[#FEE500] text-black hover:bg-[#FEE500]/90"
+              onClick={async () => {
+                try {
+                  await logAction({ action_type: actionMap.login_click });
+                } catch {
+                  // ignore logging failures in dev
+                }
+                router.push("/auth/callback/kakao?code=dev-kakao");
+              }}
+            >
+              카카오 로그인 (개발용)
+            </Button>
 
-        <div className="mt-6 space-y-3">
-          <div className="text-sm font-medium text-slate-700">🔧 개발자용 마스터키</div>
-          <Input
-            type="password"
-            placeholder="Master Key"
-            value={masterKey}
-            onChange={(event) => setMasterKey(event.target.value)}
-          />
-          <Button variant="secondary" className="w-full" onClick={handleDevLogin} disabled={loading}>
-            {loading ? "로그인 중..." : "🚀 즉시 진입"}
-          </Button>
-        </div>
+            <div className="mt-6 space-y-3">
+              <div className="text-sm font-medium text-slate-700">🔧 개발자용 마스터키</div>
+              <Input
+                type="password"
+                placeholder="Master Key"
+                value={masterKey}
+                onChange={(event) => setMasterKey(event.target.value)}
+              />
+              <Button variant="secondary" className="w-full" onClick={handleDevLogin} disabled={loading}>
+                {loading ? "로그인 중..." : "🚀 즉시 진입"}
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
