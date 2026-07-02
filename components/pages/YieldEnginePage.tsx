@@ -9,6 +9,7 @@ import { useReservations } from "@/lib/hooks/useReservations";
 import { useAppReservations } from "@/lib/hooks/useAppReservations";
 import { useTableUnits } from "@/lib/hooks/useTableUnits";
 import { useStoreTables } from "@/lib/hooks/useStoreTables";
+import { useTableSnapshots } from "@/lib/hooks/useTableSnapshots";
 import { useRules, type RuleRow } from "@/lib/hooks/useRules";
 import { usePlaceCategory } from "@/lib/hooks/usePlaceCategory";
 import { fetchWithAuth } from "@/lib/api/client";
@@ -70,6 +71,7 @@ export function YieldEnginePage({ storeId }: { storeId?: string }) {
   const { data: appReservations = [] } = useAppReservations(resolvedStoreId);
   const { data: legacyUnits = [] } = useTableUnits(resolvedStoreId);
   const { data: storeTables = [] } = useStoreTables(resolvedStoreId);
+  const { data: snapshots = [] } = useTableSnapshots(resolvedStoreId);
   // 좌석 SSOT: 테이블 맵 우선, 미등록 매장은 기존 수용량 폴백
   const units =
     storeTables.length > 0
@@ -121,8 +123,10 @@ export function YieldEnginePage({ storeId }: { storeId?: string }) {
           time_blocks: r.time_blocks,
         })),
         category,
+        // 🪑 테이블맵 실측 점유 스냅샷 — 추정을 실측으로 업그레이드
+        snapshots,
       }),
-    [reservations, appReservations, units, rules, category]
+    [reservations, appReservations, units, rules, category, snapshots]
   );
 
   const cellAt = (jsDow: number, dpKey: string): Cell | undefined =>

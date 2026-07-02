@@ -38,6 +38,13 @@ export type ExistingRuleInput = {
   time_blocks?: Array<{ start: string; end: string }>;
 };
 
+// 테이블 맵 점유 스냅샷(store_table_events) — 상태 변경 시점의 실측 점유율.
+// 예약 데이터보다 강한 신호라 우선 블렌딩된다.
+export type OccupancySnapshot = {
+  ts: string; // ISO 시각
+  occupancy: number; // 0~1 (occupied_seats / total_seats)
+};
+
 // 엔진 내부 dow는 JS getDay()(일=0..토=6). 머천트 days[]는 월=0 시작.
 export function jsDowToUiIndex(dow: number): number {
   return (dow + 6) % 7; // 일(0)->6, 월(1)->0, ... 토(6)->5
@@ -71,19 +78,23 @@ export function totalSeats(units: TableUnitInput[]): number {
   return seats > 0 ? seats : 0;
 }
 
-function dowOf(iso: string): number {
+// (dow, daypart) 동시 산출 — 자정~06시는 '전날 밤 장사'이므로 dow를 하루 당긴다.
+// (예: 토 01:00 스냅샷은 금요일 심야 셀에 귀속 — 안 하면 토 심야 예측이 오염됨)
+function slotOf(iso: string): { dow: number; dp: Daypart | null } {
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? -1 : d.getDay();
-}
-function daypartOf(iso: string): Daypart | null {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return null;
+  if (Number.isNaN(d.getTime())) return { dow: -1, dp: null };
   const h = d.getHours();
-  if (h >= 11 && h < 14) return "LUNCH";
-  if (h >= 14 && h < 17) return "AFTERNOON";
-  if (h >= 17 && h < 21) return "DINNER";
-  if (h >= 21 || h < 6) return "LATE";
-  return null; // 영업 외(오전 등)
+  let dow = d.getDay();
+  let dp: Daypart | null = null;
+  if (h >= 11 && h < 14) dp = "LUNCH";
+  else if (h >= 14 && h < 17) dp = "AFTERNOON";
+  else if (h >= 17 && h < 21) dp = "DINNER";
+  else if (h >= 21) dp = "LATE";
+  else if (h < 6) {
+    dp = "LATE";
+    dow = (dow + 6) % 7; // 전날로 귀속
+  }
+  return { dow, dp };
 }
 
 const ACTIVE_STATUS = new Set(["confirmed", "pending", "seated", "completed"]);
@@ -101,16 +112,28 @@ export function buildOccupancyGrid(params: {
   reservations: ReservationInput[];
   units: TableUnitInput[];
   category?: string;
+  snapshots?: OccupancySnapshot[];
 }): Cell[] {
-  const { reservations, units, category } = params;
+  const { reservations, units, category, snapshots } = params;
   const seats = totalSeats(units);
+
+  // 실측 스냅샷을 (dow, daypart)별로 집계 — 테이블맵에서 온 진짜 점유율
+  const snapAgg = new Map<string, { sum: number; count: number }>();
+  for (const s of snapshots ?? []) {
+    const { dow, dp } = slotOf(s.ts);
+    if (dow < 0 || !dp || !(s.occupancy >= 0)) continue;
+    const key = `${dow}:${dp}`;
+    const cur = snapAgg.get(key) ?? { sum: 0, count: 0 };
+    cur.sum += Math.min(1, Math.max(0, s.occupancy));
+    cur.count += 1;
+    snapAgg.set(key, cur);
+  }
 
   // 슬롯별 예약 좌석 합 + 건수 집계
   const agg = new Map<string, { seatSum: number; count: number; weeks: Set<string> }>();
   for (const r of reservations) {
     if (!ACTIVE_STATUS.has((r.status || "").toLowerCase())) continue;
-    const dow = dowOf(r.start_time);
-    const dp = daypartOf(r.start_time);
+    const { dow, dp } = slotOf(r.start_time);
     if (dow < 0 || !dp) continue;
     const key = `${dow}:${dp}`;
     const cur = agg.get(key) ?? { seatSum: 0, count: 0, weeks: new Set<string>() };
@@ -137,7 +160,18 @@ export function buildOccupancyGrid(params: {
       // 블렌딩: 관측 표본이 많을수록 실측을 신뢰 (w = samples/(samples+k))
       const k = 4; // 신뢰 전환 상수
       const w = samples > 0 ? samples / (samples + k) : 0;
-      const predicted = observed === null ? base : w * observed + (1 - w) * base;
+      let predicted = observed === null ? base : w * observed + (1 - w) * base;
+
+      // 🪑 테이블맵 실측 스냅샷 — 있으면 최우선 블렌딩 (wS = n/(n+2))
+      const snap = snapAgg.get(`${dow}:${dp}`);
+      if (snap && snap.count > 0) {
+        const snapMean = snap.sum / snap.count;
+        const wS = snap.count / (snap.count + 2);
+        predicted = wS * snapMean + (1 - wS) * predicted;
+        observed = observed === null ? round2(snapMean) : observed;
+        samples += snap.count;
+      }
+
       cells.push({ dow, daypart: dp, observed, predicted: round2(predicted), samples });
     }
   }
@@ -165,7 +199,16 @@ function toMin(t: string): number {
   return (h || 0) * 60 + (m || 0);
 }
 function overlaps(s1: string, e1: string, s2: string, e2: string): boolean {
-  return toMin(s1) < toMin(e2) && toMin(s2) < toMin(e1);
+  // 자정 넘김 블록(예: 21:00~00:00, 22:00~02:00)은 [s1,24:00]+[00:00,e1]로 분해해 비교
+  const a = toMin(s1);
+  let b = toMin(e1);
+  const c = toMin(s2);
+  const d = toMin(e2);
+  if (b <= a) {
+    // wrap: [a,1440) 또는 [0,b)와 겹치면 커버
+    return (a < d && c < 1440) || (0 < d && c < b);
+  }
+  return a < d && c < b;
 }
 
 // 유휴 정도 → 할인율(%) 매핑
@@ -195,15 +238,16 @@ export function suggestRules(params: {
   units: TableUnitInput[];
   rules: ExistingRuleInput[];
   category?: string;
+  snapshots?: OccupancySnapshot[];
   idleThreshold?: number; // 이 값 미만이면 유휴 (기본 0.4)
   maxSuggestions?: number;
 }): { grid: Cell[]; suggestions: Suggestion[] } {
-  const { reservations, units, rules, category } = params;
+  const { reservations, units, rules, category, snapshots } = params;
   const idleThreshold = params.idleThreshold ?? 0.4;
   const maxSuggestions = params.maxSuggestions ?? 8;
   const seats = totalSeats(units);
 
-  const grid = buildOccupancyGrid({ reservations, units, category });
+  const grid = buildOccupancyGrid({ reservations, units, category, snapshots });
 
   const candidates = grid
     .filter((c) => c.predicted < idleThreshold)

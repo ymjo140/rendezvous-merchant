@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "@/components/ui/toaster";
 import { useTableUnits } from "@/lib/hooks/useTableUnits";
+import { useAppReservations } from "@/lib/hooks/useAppReservations";
 
-// 🪑 테이블 맵 v2 — 수용량 메뉴 통합판.
-// 모양(네모/원형/긴/바)·인원·위치속성(홀/창가/룸/야외/바)으로 테이블을 배치하고,
-// 탭 한 번으로 🟢비어있음/⬜사용중/🟡예약석 전환. 빈 테이블엔 '그 테이블만 할인'.
-// 룸/야외 테이블이 있으면 손님 앱 필터(룸·루프탑)에 자동 태깅된다.
+// 🪑 테이블 맵 v2.5 — 수용량 통합 + 예약 배정 + 합석 + 구역/층 + 실측 스냅샷.
+// 상태가 바뀔 때마다 점유 스냅샷(store_table_events)을 남겨 AI 수익엔진의
+// 점유율 추정이 '실측'으로 진화한다.
 
 type TableStatus = "empty" | "occupied" | "reserved";
 type TableShape = "square" | "round" | "long" | "bar";
@@ -24,17 +24,21 @@ type StoreTable = {
   max_capacity: number | null;
   shape: TableShape;
   zone_type: ZoneType;
+  area: string;
   pos_x: number;
   pos_y: number;
   rotated: boolean;
   status: TableStatus;
-  is_empty: boolean; // 하위호환(항상 status==='empty'와 동기화해 저장)
+  is_empty: boolean; // 하위호환
+  mergeable: boolean;
+  reserved_note: string | null;
   deal_percent: number | null;
 };
 
 const COLS = 6;
 const ROWS = 8;
 const DEALS = [null, 10, 20, 30] as const;
+const DEFAULT_AREA = "1층";
 
 const SHAPES: { key: TableShape; label: string; icon: string }[] = [
   { key: "square", label: "네모", icon: "⬜" },
@@ -61,7 +65,6 @@ const STATUS_STYLE: Record<TableStatus, string> = {
   reserved: "border-amber-400 bg-amber-100",
 };
 
-/** long 테이블이 차지하는 셀들(가로 2칸 또는 세로 2칸) */
 function cellsOf(t: Pick<StoreTable, "pos_x" | "pos_y" | "shape" | "rotated">): [number, number][] {
   const cells: [number, number][] = [[t.pos_x, t.pos_y]];
   if (t.shape === "long") {
@@ -80,7 +83,10 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
   const [addCapacity, setAddCapacity] = useState(4);
   const [addZone, setAddZone] = useState<ZoneType>("hall");
   const [moveMode, setMoveMode] = useState(false);
+  const [area, setArea] = useState(DEFAULT_AREA);
+  const [assignRes, setAssignRes] = useState<{ id: string; time: string; party: number } | null>(null);
   const { data: units = [] } = useTableUnits(storeId);
+  const { data: appReservations = [] } = useAppReservations(storeId);
 
   const load = async () => {
     if (!Number.isFinite(placeId)) return;
@@ -98,18 +104,66 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [placeId]);
 
-  // 점유 셀 집합(긴 테이블은 2칸)
+  // 구역 목록(등록된 것 + 기본)
+  const areas = useMemo(() => {
+    const set = new Set<string>([DEFAULT_AREA]);
+    tables.forEach((t) => set.add(t.area || DEFAULT_AREA));
+    return Array.from(set);
+  }, [tables]);
+
+  const areaTables = useMemo(
+    () => tables.filter((t) => (t.area || DEFAULT_AREA) === area),
+    [tables, area]
+  );
+
+  // 현재 구역 점유 셀
   const covered = useMemo(() => {
     const map = new Map<string, StoreTable>();
-    tables.forEach((t) => cellsOf(t).forEach(([x, y]) => map.set(`${x},${y}`, t)));
+    areaTables.forEach((t) => cellsOf(t).forEach(([x, y]) => map.set(`${x},${y}`, t)));
     return map;
-  }, [tables]);
+  }, [areaTables]);
 
   const emptyTables = tables.filter((t) => t.status === "empty");
   const emptySeats = emptyTables.reduce((a, t) => a + t.capacity, 0);
   const totalSeats = tables.reduce((a, t) => a + t.capacity, 0);
 
-  // 상태 변경 → 손님앱 신호(vacancy) + 룸/야외 시설 자동 태깅(추가만, 삭제 안 함)
+  // 오늘의 다가오는 앱 예약(확정) — 테이블 배정 대상
+  const upcomingReservations = useMemo(() => {
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const nowMin = today.getHours() * 60 + today.getMinutes();
+    const assignedIds = new Set(
+      tables.filter((t) => t.reserved_note).map((t) => (t.reserved_note || "").split("|")[0])
+    );
+    return appReservations
+      .filter((r) => r.status === "confirmed" && r.date === todayStr)
+      .filter((r) => {
+        const [h, m] = (r.time || "00:00").split(":").map(Number);
+        return h * 60 + (m || 0) >= nowMin - 30; // 30분 지난 예약은 제외
+      })
+      .filter((r) => !assignedIds.has(String(r.id)))
+      .slice(0, 5);
+  }, [appReservations, tables]);
+
+  // 📸 점유 스냅샷 기록 — AI 수익엔진 실측 점유율의 원천
+  const logSnapshot = async (nextTables: StoreTable[]) => {
+    try {
+      const total = nextTables.reduce((a, t) => a + t.capacity, 0);
+      const occupied = nextTables
+        .filter((t) => t.status !== "empty")
+        .reduce((a, t) => a + t.capacity, 0);
+      await supabase.from("store_table_events").insert({
+        place_id: placeId,
+        occupied_seats: occupied,
+        total_seats: total,
+        empty_tables: nextTables.filter((t) => t.status === "empty").length,
+      });
+    } catch {
+      /* 스냅샷 실패는 무시 */
+    }
+  };
+
+  // 상태 변경 → 손님앱 신호 + 시설 자동 태깅 + 스냅샷
   const syncPlaceMeta = async (nextTables: StoreTable[]) => {
     const anyEmpty = nextTables.some((t) => t.status === "empty");
     const patch: Record<string, any> = {
@@ -125,9 +179,10 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
         patch.features = { ...feat, ...featAdd };
       }
     } catch {
-      /* 태깅 실패는 무시(신호가 우선) */
+      /* 태깅 실패 무시 */
     }
     await supabase.from("places").update(patch).eq("id", placeId);
+    logSnapshot(nextTables);
   };
 
   const canPlace = (x: number, y: number, shape: TableShape, rotated: boolean, ignoreId?: number) => {
@@ -141,9 +196,7 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
 
   const addTable = async () => {
     if (!addCell) return;
-    const rotated = addShape === "long" && !canPlace(addCell.x, addCell.y, "long", false)
-      ? true
-      : false;
+    const rotated = addShape === "long" && !canPlace(addCell.x, addCell.y, "long", false);
     if (!canPlace(addCell.x, addCell.y, addShape, rotated)) {
       toast("자리가 부족해요. 다른 칸을 선택해주세요.", "error");
       return;
@@ -157,11 +210,13 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
         capacity: addCapacity,
         shape: addShape,
         zone_type: addZone,
+        area,
         pos_x: addCell.x,
         pos_y: addCell.y,
         rotated,
         status: "occupied",
         is_empty: false,
+        mergeable: false,
       })
       .select("*")
       .single();
@@ -176,7 +231,6 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
     toast(`${label} · ${ZONE_LABEL[addZone]} ${addCapacity}인 추가!`, "success");
   };
 
-  // 기존 '수용량' 등록 정보에서 자동 배치
   const importFromUnits = async () => {
     if (units.length === 0) {
       toast("기존 수용량 정보가 없어요. 빈 칸을 탭해 직접 추가해주세요.", "error");
@@ -192,11 +246,13 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
           capacity: u.max_capacity || 4,
           shape: "square",
           zone_type: "hall",
+          area: DEFAULT_AREA,
           pos_x: idx % COLS,
           pos_y: Math.floor(idx / COLS),
           rotated: false,
           status: "occupied",
           is_empty: false,
+          mergeable: false,
         });
         idx += 1;
       }
@@ -210,18 +266,24 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
     toast(`${rows.length}개 테이블을 불러왔어요. 탭해서 모양·위치를 다듬어주세요.`, "success");
   };
 
-  const updateTable = async (t: StoreTable, patch: Partial<StoreTable>) => {
-    // status 변경 시 하위호환 is_empty 동기 저장
-    if (patch.status) patch.is_empty = patch.status === "empty";
+  const updateTable = async (t: StoreTable, patch: Partial<StoreTable>): Promise<boolean> => {
+    if (patch.status) {
+      patch.is_empty = patch.status === "empty";
+      // 착석(occupied)은 배정 기록(note)을 유지해 '다가오는 예약' 중복 배정을 막고,
+      // 비움(empty)일 때만 배정 해제. 할인은 빈 테이블에만 유효.
+      if (patch.status === "empty") patch.reserved_note = null;
+      if (patch.status !== "empty") patch.deal_percent = null;
+    }
     const { error } = await supabase.from("store_tables").update(patch).eq("id", t.id);
     if (error) {
       toast("저장에 실패했어요.", "error");
-      return;
+      return false;
     }
     const next = tables.map((x) => (x.id === t.id ? { ...x, ...patch } : x));
     setTables(next);
     setSelected((prev) => (prev && prev.id === t.id ? { ...prev, ...patch } : prev));
     if ("status" in patch || "zone_type" in patch) await syncPlaceMeta(next);
+    return true;
   };
 
   const removeTable = async (t: StoreTable) => {
@@ -243,26 +305,51 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
       toast("그 자리엔 놓을 수 없어요.", "error");
       return;
     }
-    await updateTable(selected, { pos_x: x, pos_y: y });
+    const ok = await updateTable(selected, { pos_x: x, pos_y: y, area });
+    if (!ok) return; // 저장 실패 시 이동 모드 유지(성공 오인 방지)
     setMoveMode(false);
     toast("이동 완료!", "success");
   };
 
-  // 일괄 리셋 — 영업 시작/마감용
   const bulkStatus = async (status: TableStatus) => {
     const { error } = await supabase
       .from("store_tables")
-      .update({ status, is_empty: status === "empty", deal_percent: null })
+      .update({ status, is_empty: status === "empty", deal_percent: null, reserved_note: null })
       .eq("place_id", placeId);
     if (error) {
       toast("일괄 변경에 실패했어요.", "error");
       return;
     }
-    const next = tables.map((t) => ({ ...t, status, is_empty: status === "empty", deal_percent: null }));
+    const next = tables.map((t) => ({
+      ...t, status, is_empty: status === "empty", deal_percent: null, reserved_note: null,
+    }));
     setTables(next);
     setSelected(null);
     await syncPlaceMeta(next);
     toast(status === "empty" ? "전부 비움으로 변경!" : "전부 사용중으로 변경!", "success");
+  };
+
+  // 예약 → 테이블 배정
+  const assignToTable = async (t: StoreTable) => {
+    if (!assignRes) return;
+    if (t.status === "occupied" && !window.confirm(`${t.label}은 지금 사용중이에요. 이 테이블에 예약을 배정할까요?`)) {
+      return;
+    }
+    const res = assignRes;
+    const ok = await updateTable(t, {
+      status: "reserved",
+      reserved_note: `${res.id}|${res.time} ${res.party}인 예약`,
+    });
+    if (!ok) return; // 저장 실패 시 배정 모드 유지(성공 오인 방지)
+    setAssignRes(null);
+    toast(`${t.label}에 ${res.time} 예약 배정!`, "success");
+  };
+
+  const noteText = (t: StoreTable) => (t.reserved_note || "").split("|")[1] || "";
+
+  const addArea = () => {
+    const name = window.prompt("새 구역 이름 (예: 2층, 테라스, 룸존)");
+    if (name && name.trim()) setArea(name.trim());
   };
 
   return (
@@ -307,11 +394,68 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
         </CardContent>
       </Card>
 
-      {/* 이동 모드 안내 */}
+      {/* 🟡 다가오는 앱 예약 → 테이블 배정 */}
+      {upcomingReservations.length > 0 && (
+        <Card className="border-amber-200">
+          <CardContent className="p-4 space-y-2">
+            <div className="text-sm font-bold text-amber-700">
+              📅 오늘 다가오는 예약 {upcomingReservations.length}건 — 테이블을 배정해두세요
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {upcomingReservations.map((r) => (
+                <button
+                  key={r.id}
+                  onClick={() =>
+                    setAssignRes(
+                      assignRes?.id === String(r.id)
+                        ? null
+                        : { id: String(r.id), time: r.time, party: r.party_size }
+                    )
+                  }
+                  className={`rounded-xl border-2 px-3 py-2 text-xs font-bold transition-colors ${
+                    assignRes?.id === String(r.id)
+                      ? "border-amber-500 bg-amber-100 text-amber-800"
+                      : "border-slate-200 text-slate-600 hover:border-amber-300"
+                  }`}
+                >
+                  {r.time} · {r.party_size}인
+                  {assignRes?.id === String(r.id) ? " → 테이블 탭!" : ""}
+                </button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 구역/층 탭 */}
+      <div className="flex items-center gap-1.5 overflow-x-auto">
+        {areas.map((a) => (
+          <button
+            key={a}
+            onClick={() => setArea(a)}
+            className={`rounded-full px-3.5 py-1.5 text-xs font-bold flex-shrink-0 transition-colors ${
+              area === a ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+            }`}
+          >
+            {a}
+          </button>
+        ))}
+        <button onClick={addArea} className="rounded-full bg-slate-100 px-3 py-1.5 text-xs text-slate-400 flex-shrink-0 hover:bg-slate-200">
+          + 구역
+        </button>
+      </div>
+
+      {/* 이동/배정 모드 안내 */}
       {moveMode && selected && (
         <div className="rounded-xl bg-sky-50 border border-sky-200 px-4 py-2.5 text-sm font-bold text-sky-700 flex items-center justify-between">
-          <span>📍 {selected.label} 테이블을 옮길 칸을 탭하세요</span>
+          <span>📍 {selected.label} 테이블을 옮길 칸을 탭하세요 (다른 구역 탭으로 이동도 가능)</span>
           <button onClick={() => setMoveMode(false)} className="text-xs text-sky-500">취소</button>
+        </div>
+      )}
+      {assignRes && (
+        <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-2.5 text-sm font-bold text-amber-700 flex items-center justify-between">
+          <span>🟡 {assignRes.time} {assignRes.party}인 예약 — 배정할 테이블을 탭하세요</span>
+          <button onClick={() => setAssignRes(null)} className="text-xs text-amber-500">취소</button>
         </div>
       )}
 
@@ -323,12 +467,8 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
           ) : (
             <div
               className="grid gap-1.5 rounded-xl bg-slate-100 p-2"
-              style={{
-                gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))`,
-                gridAutoRows: "1fr",
-              }}
+              style={{ gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))`, gridAutoRows: "1fr" }}
             >
-              {/* 빈 칸 (+) */}
               {Array.from({ length: COLS * ROWS }, (_, i) => {
                 const x = i % COLS;
                 const y = Math.floor(i / COLS);
@@ -358,8 +498,7 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
                 );
               })}
 
-              {/* 테이블 */}
-              {tables.map((t) => {
+              {areaTables.map((t) => {
                 const isSel = selected?.id === t.id;
                 const spanCol = t.shape === "long" && !t.rotated ? 2 : 1;
                 const spanRow = t.shape === "long" && t.rotated ? 2 : 1;
@@ -373,6 +512,10 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
                       gridRowEnd: `span ${spanRow}`,
                     }}
                     onClick={() => {
+                      if (assignRes) {
+                        assignToTable(t);
+                        return;
+                      }
                       setAddCell(null);
                       setSelected(t);
                       setMoveMode(false);
@@ -381,16 +524,19 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
                       t.shape === "round" ? "rounded-full aspect-square" : "rounded-lg"
                     } ${t.shape !== "long" ? "aspect-square" : ""} ${STATUS_STYLE[t.status] || STATUS_STYLE.occupied} ${
                       isSel ? "ring-2 ring-brand ring-offset-1" : ""
-                    }`}
+                    } ${assignRes ? "hover:ring-2 hover:ring-amber-400" : ""}`}
                   >
                     <span className="text-[11px] font-bold text-slate-700 leading-tight">
                       {t.shape === "bar" ? "🍸" : ""}{t.label}
+                      {t.mergeable ? " ⛓" : ""}
                     </span>
                     <span className="text-[10px] text-slate-500 leading-tight">
                       {t.capacity}인{t.zone_type !== "hall" ? ` · ${ZONE_LABEL[t.zone_type]}` : ""}
                     </span>
                     {t.status === "reserved" && (
-                      <span className="text-[9px] font-bold text-amber-600">예약석</span>
+                      <span className="text-[9px] font-bold text-amber-600 leading-tight truncate max-w-full px-0.5">
+                        {noteText(t) || "예약석"}
+                      </span>
                     )}
                     {t.status === "empty" && t.deal_percent ? (
                       <span className="absolute -top-1.5 -right-1.5 rounded-full bg-rose-500 px-1.5 py-0.5 text-[9px] font-bold text-white">
@@ -406,7 +552,8 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
             <span>🟩 비어있음</span>
             <span>⬜ 사용중</span>
             <span>🟨 예약석</span>
-            <span>🔴 -N% = 그 테이블만 할인</span>
+            <span>⛓ 합석 가능</span>
+            <span>🔴 -N% 테이블 한정 할인</span>
           </div>
         </CardContent>
       </Card>
@@ -416,7 +563,7 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white p-4 shadow-2xl">
           <div className="mx-auto max-w-3xl space-y-3">
             <div className="flex items-center justify-between">
-              <div className="text-sm font-bold text-slate-700">새 테이블</div>
+              <div className="text-sm font-bold text-slate-700">새 테이블 · {area}</div>
               <button onClick={() => setAddCell(null)} className="text-xs text-slate-400">취소</button>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -490,7 +637,9 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
                 <span className="ml-2 text-xs">
                   {selected.status === "empty" && <span className="text-emerald-600 font-bold">🟢 비어있음</span>}
                   {selected.status === "occupied" && <span className="text-slate-400">⬜ 사용중</span>}
-                  {selected.status === "reserved" && <span className="text-amber-600 font-bold">🟡 예약석</span>}
+                  {selected.status === "reserved" && (
+                    <span className="text-amber-600 font-bold">🟡 {noteText(selected) || "예약석"}</span>
+                  )}
                 </span>
               </div>
               <div className="flex gap-3">
@@ -506,7 +655,6 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
               </div>
             </div>
 
-            {/* 상태 3버튼 */}
             <div className="grid grid-cols-3 gap-2">
               {([
                 { key: "empty", label: "🟢 비어있음", cls: "border-emerald-400 bg-emerald-50 text-emerald-700" },
@@ -529,6 +677,18 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
                 </button>
               ))}
             </div>
+
+            {/* ⛓ 합석 가능 */}
+            <button
+              onClick={() => updateTable(selected, { mergeable: !selected.mergeable })}
+              className={`w-full rounded-xl border-2 py-2.5 text-sm font-bold transition-colors ${
+                selected.mergeable
+                  ? "border-indigo-400 bg-indigo-50 text-indigo-700"
+                  : "border-slate-200 text-slate-400 hover:border-slate-300"
+              }`}
+            >
+              ⛓ 옆 테이블과 합석(붙이기) 가능 {selected.mergeable ? "ON" : "OFF"}
+            </button>
 
             {selected.status === "empty" && (
               <div>

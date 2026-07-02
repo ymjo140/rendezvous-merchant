@@ -8,6 +8,7 @@ import { useAppReservations } from "@/lib/hooks/useAppReservations";
 import { useReservations } from "@/lib/hooks/useReservations";
 import { useTableUnits } from "@/lib/hooks/useTableUnits";
 import { useStoreTables } from "@/lib/hooks/useStoreTables";
+import { useTableSnapshots } from "@/lib/hooks/useTableSnapshots";
 import { useRules } from "@/lib/hooks/useRules";
 import { suggestRules } from "@/domain/offers/yieldEngine";
 import { fetchWithAuth } from "@/lib/api/client";
@@ -50,6 +51,7 @@ export function HomePage({ storeId }: { storeId?: string }) {
   const { data: manualReservations = [] } = useReservations(storeId);
   const { data: legacyUnits = [] } = useTableUnits(storeId);
   const { data: storeTables = [] } = useStoreTables(storeId);
+  const { data: snapshots = [] } = useTableSnapshots(storeId);
   // 좌석 SSOT: 테이블 맵 우선, 미등록 매장은 기존 수용량 폴백
   const units =
     storeTables.length > 0
@@ -121,13 +123,14 @@ export function HomePage({ storeId }: { storeId?: string }) {
           days: r.days,
           time_blocks: r.time_blocks,
         })),
+        snapshots, // 🪑 테이블맵 실측 스냅샷
         maxSuggestions: 1,
       });
       return suggestions[0] ?? null;
     } catch {
       return null;
     }
-  }, [manualReservations, units, activeHotdeals]);
+  }, [manualReservations, appReservations, units, activeHotdeals, snapshots]);
 
   return (
     <div className="space-y-5">
