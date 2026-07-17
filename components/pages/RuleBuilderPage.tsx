@@ -67,6 +67,30 @@ function snap15(t: string): string {
   return `${String(Math.floor(total / 60) % 24).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
 }
 
+// 15분 단위 전용 시간 드롭다운 — 브라우저 time input은 step을 무시하는 경우가 있어 확실하게
+const TIME_OPTIONS: string[] = (() => {
+  const out: string[] = [];
+  for (let h = 0; h < 24; h += 1) {
+    for (const m of [0, 15, 30, 45]) {
+      out.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+    }
+  }
+  return out;
+})();
+
+function TimeSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const v = snap15(value);
+  return (
+    <Select value={v} onChange={(event) => onChange(event.target.value)}>
+      {TIME_OPTIONS.map((t) => (
+        <option key={t} value={t}>
+          {t}
+        </option>
+      ))}
+    </Select>
+  );
+}
+
 const mockRule = {
   name: "평일 저녁 4인 룰",
   days: [true, true, true, true, false, false, false],
@@ -397,9 +421,12 @@ export function RuleBuilderPage({
       name,
       enabled: true,
       days,
-      recurrence_days: recurrenceDays,
-      active_time_start: activeTimeStart,
-      active_time_end: activeTimeEnd,
+      // 반복 정보는 UI에서 재입력받지 않고 요일/첫 시간대에서 자동 유도
+      recurrence_days: days
+        .map((enabled, idx) => (enabled ? dayCodes[idx] : null))
+        .filter(Boolean) as string[],
+      active_time_start: timeBlocks[0]?.start ?? activeTimeStart,
+      active_time_end: timeBlocks[0]?.end ?? activeTimeEnd,
       is_auto_apply: isAutoApply,
       time_blocks: timeBlocks,
       party_min: Number(partyMin),
@@ -511,31 +538,19 @@ export function RuleBuilderPage({
               <div className="space-y-2">
                 {timeBlocks.map((block, index) => (
                   <div key={`${block.start}-${index}`} className="flex gap-2">
-                    <Input
-                      type="time"
-                      step={900}
+                    <TimeSelect
                       value={block.start}
-                      onChange={(event) =>
+                      onChange={(v) =>
                         setTimeBlocks((prev) =>
-                          prev.map((item, idx) =>
-                            idx === index
-                              ? { ...item, start: snap15(event.target.value) }
-                              : item
-                          )
+                          prev.map((item, idx) => (idx === index ? { ...item, start: v } : item))
                         )
                       }
                     />
-                    <Input
-                      type="time"
-                      step={900}
+                    <TimeSelect
                       value={block.end}
-                      onChange={(event) =>
+                      onChange={(v) =>
                         setTimeBlocks((prev) =>
-                          prev.map((item, idx) =>
-                            idx === index
-                              ? { ...item, end: snap15(event.target.value) }
-                              : item
-                          )
+                          prev.map((item, idx) => (idx === index ? { ...item, end: v } : item))
                         )
                       }
                     />
@@ -559,56 +574,20 @@ export function RuleBuilderPage({
                 {"시간대 추가"}
               </Button>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{"반복 요일 선택"}</label>
-              <div className="flex flex-wrap gap-2">
-                {dayLabels.map((label, index) => {
-                  const code = dayCodes[index];
-                  const checked = recurrenceDays.includes(code);
-                  return (
-                    <label key={`recurrence-${label}`} className="flex items-center gap-1 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() =>
-                          setRecurrenceDays((prev) =>
-                            checked
-                              ? prev.filter((item) => item !== code)
-                              : [...prev, code]
-                          )
-                        }
-                      />
-                      {label}
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{"반복 적용 시간대"}</label>
-              <div className="grid gap-2 md:grid-cols-2">
-                <Input
-                  type="time"
-                  step={900}
-                  value={activeTimeStart}
-                  onChange={(event) => setActiveTimeStart(snap15(event.target.value))}
-                />
-                <Input
-                  type="time"
-                  step={900}
-                  value={activeTimeEnd}
-                  onChange={(event) => setActiveTimeEnd(snap15(event.target.value))}
-                />
-              </div>
-              <label className="flex items-center gap-2 text-sm text-slate-600">
-                <input
-                  type="checkbox"
-                  checked={isAutoApply}
-                  onChange={(event) => setIsAutoApply(event.target.checked)}
-                />
-                {"스케줄러에 자동 적용 표시"}
-              </label>
-            </div>
+            {/* 반복은 별도 요일/시간 재입력 없이 체크 하나 — 위의 요일·시간대가 매주 그대로 반복됨 */}
+            <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={isAutoApply}
+                onChange={(event) => setIsAutoApply(event.target.checked)}
+              />
+              <span>
+                {"🔁 매주 반복"}
+                <span className="ml-1 text-xs text-slate-400">
+                  {"— 위에서 고른 요일·시간대가 매주 자동 적용돼요 (예약 스케줄러에도 표시)"}
+                </span>
+              </span>
+            </label>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <label className="text-sm font-medium">{"인원 제한 (최소)"}</label>

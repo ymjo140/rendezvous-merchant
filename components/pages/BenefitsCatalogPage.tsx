@@ -32,6 +32,7 @@ const typeOptionsByCategory: Record<
     value: BenefitType;
     label: string;
     inputType: "number" | "text";
+    desc?: string;
     placeholder: string;
     unitLabel: string;
   }>
@@ -39,6 +40,7 @@ const typeOptionsByCategory: Record<
   [BenefitCategory.FINANCIAL]: [
     {
       value: BenefitType.PERCENT_DISCOUNT,
+      desc: "전체 금액에서 비율로 할인 (예: 10% 할인)",
       label: "정률 할인",
       inputType: "number",
       placeholder: "10",
@@ -46,6 +48,7 @@ const typeOptionsByCategory: Record<
     },
     {
       value: BenefitType.FIXED_AMOUNT_OFF,
+      desc: "정해진 금액만큼 할인 (예: 5,000원 할인)",
       label: "정액 할인",
       inputType: "number",
       placeholder: "5000",
@@ -55,6 +58,7 @@ const typeOptionsByCategory: Record<
   [BenefitCategory.GOODS]: [
     {
       value: BenefitType.FREE_MENU_ITEM,
+      desc: "특정 메뉴를 무료 제공 (예: 감자튀김 서비스)",
       label: "메뉴 증정",
       inputType: "text",
       placeholder: "감자튀김",
@@ -62,6 +66,7 @@ const typeOptionsByCategory: Record<
     },
     {
       value: BenefitType.SIZE_UPGRADE,
+      desc: "주문 메뉴를 큰 사이즈로 무료 변경",
       label: "사이즈업",
       inputType: "text",
       placeholder: "라지 사이즈",
@@ -69,6 +74,7 @@ const typeOptionsByCategory: Record<
     },
     {
       value: BenefitType.UNLIMITED_REFILL,
+      desc: "음료·사이드 무제한 리필 제공",
       label: "무제한 리필",
       inputType: "text",
       placeholder: "무제한 리필",
@@ -78,6 +84,7 @@ const typeOptionsByCategory: Record<
   [BenefitCategory.TIME]: [
     {
       value: BenefitType.TIME_EXTENSION,
+      desc: "이용 시간을 N분 연장 (룸·스터디카페 등)",
       label: "시간 연장",
       inputType: "number",
       placeholder: "30",
@@ -85,6 +92,7 @@ const typeOptionsByCategory: Record<
     },
     {
       value: BenefitType.EARLY_ACCESS,
+      desc: "예약 시간보다 N분 일찍 입장 허용",
       label: "얼리 체크인",
       inputType: "number",
       placeholder: "15",
@@ -92,6 +100,7 @@ const typeOptionsByCategory: Record<
     },
     {
       value: BenefitType.LATE_CHECKOUT,
+      desc: "마감 후 N분 더 이용 허용",
       label: "레이트 체크아웃",
       inputType: "number",
       placeholder: "20",
@@ -101,6 +110,7 @@ const typeOptionsByCategory: Record<
   [BenefitCategory.EXPERIENCE]: [
     {
       value: BenefitType.SPACE_UPGRADE,
+      desc: "더 좋은 자리·룸으로 무료 업그레이드",
       label: "룸/좌석 업그레이드",
       inputType: "text",
       placeholder: "4인실 → 6인실",
@@ -108,6 +118,7 @@ const typeOptionsByCategory: Record<
     },
     {
       value: BenefitType.FREE_EQUIPMENT,
+      desc: "장비·물품 무료 대여 (스피커, 빔 등)",
       label: "장비 대여",
       inputType: "text",
       placeholder: "블루투스 스피커",
@@ -115,6 +126,7 @@ const typeOptionsByCategory: Record<
     },
     {
       value: BenefitType.CORKAGE_FREE,
+      desc: "주류 반입 콜키지 비용 면제",
       label: "콜키지 프리",
       inputType: "text",
       placeholder: "콜키지 프리",
@@ -333,13 +345,19 @@ export function BenefitsCatalogPage({ storeId }: { storeId?: string }) {
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium">{"상세 타입 선택"}</label>
-            <Select {...register("type")}> 
+            <Select {...register("type")}>
               {typeOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
+                  {option.desc ? ` — ${option.desc}` : ""}
                 </option>
               ))}
             </Select>
+            {activeTypeConfig?.desc && (
+              <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
+                💡 {activeTypeConfig.desc}
+              </p>
+            )}
             {errors.type && (
               <p className="text-xs text-rose-500">{errors.type.message}</p>
             )}
