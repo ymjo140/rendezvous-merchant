@@ -8,11 +8,17 @@ import { cn } from "@/lib/utils/cn";
 
 export type SubTabItem = { label: string; slug: string };
 
+// 핫딜 = 운영(진행 중 핫딜 확인/수정) — AI 분석과 분리
 export const OFFER_TABS: SubTabItem[] = [
-  { label: "🤖 AI 제안", slug: "offers/ai" },
   { label: "🔥 내 핫딜", slug: "offers/rules" },
   { label: "🎁 혜택", slug: "offers/benefits" },
   { label: "👀 미리보기", slug: "offers/simulator" },
+];
+
+// 분석 = AI 수익엔진 제안 + 인사이트
+export const ANALYTICS_TABS: SubTabItem[] = [
+  { label: "🤖 AI 제안", slug: "offers/ai" },
+  { label: "📈 인사이트", slug: "insights" },
 ];
 
 export const MANAGE_TABS: SubTabItem[] = [

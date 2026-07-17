@@ -14,9 +14,9 @@ function todayStr() {
 const navItems = [
   { label: "\uD83D\uDCCA \uC624\uB298", slug: "", match: [""] },
   { label: "\uD83D\uDCC5 \uC608\uC57D", slug: "reservations", match: ["reservations"] },
-  { label: "\uD83D\uDD25 \uD56B\uB51C", slug: "offers/ai", match: ["offers"] },
+  { label: "\uD83D\uDD25 \uD56B\uB51C", slug: "offers/rules", match: ["offers/rules", "offers/benefits", "offers/simulator"] },
+  { label: "\uD83E\uDD16 \uBD84\uC11D", slug: "offers/ai", match: ["offers/ai", "insights"] },
   { label: "\uD83C\uDFEA \uAC00\uAC8C \uAD00\uB9AC", slug: "menus", match: ["menus", "tables", "capacity", "settings"] },
-  { label: "\uD83D\uDCC8 \uC778\uC0AC\uC774\uD2B8", slug: "insights", match: ["insights"] },
 ];
 
 export function SidebarNav({
