@@ -10,13 +10,13 @@ function todayStr() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-// \uC0AC\uC7A5\uB2D8 \uBA58\uD0C8\uBAA8\uB378 \uAE30\uC900 5\uAC1C \uADF8\uB8F9 \u2014 \uD558\uC704 \uC774\uB3D9\uC740 \uAC01 \uD398\uC774\uC9C0 \uC0C1\uB2E8 SubTabs\uAC00 \uB2F4\uB2F9
+// 사장님 멘탈모델 기준 5개 그룹 — 하위 이동은 각 페이지 상단 SubTabs가 담당
 const navItems = [
-  { label: "\uD83D\uDCCA \uC624\uB298", slug: "", match: [""] },
-  { label: "\uD83D\uDCC5 \uC608\uC57D", slug: "reservations", match: ["reservations"] },
-  { label: "\uD83D\uDD25 \uD56B\uB51C", slug: "offers/rules", match: ["offers/rules", "offers/benefits", "offers/simulator"] },
-  { label: "\uD83E\uDD16 \uBD84\uC11D", slug: "offers/ai", match: ["offers/ai", "insights"] },
-  { label: "\uD83C\uDFEA \uAC00\uAC8C \uAD00\uB9AC", slug: "menus", match: ["menus", "tables", "capacity", "settings"] },
+  { label: "📊 오늘", slug: "", match: [""] },
+  { label: "📅 예약", slug: "reservations", match: ["reservations"] },
+  { label: "🔥 핫딜", slug: "offers/rules", match: ["offers/rules", "offers/benefits", "offers/simulator"] },
+  { label: "🤖 분석", slug: "offers/ai", match: ["offers/ai", "insights"] },
+  { label: "🏪 가게 관리", slug: "menus", match: ["menus", "tables", "capacity", "settings"] },
 ];
 
 export function SidebarNav({
@@ -41,9 +41,9 @@ export function SidebarNav({
 
   return (
     <nav className="flex h-full flex-col gap-4 p-6">
-      <div className="text-lg font-bold text-brand">\uB791\uB370\uBD80</div>
+      <div className="text-lg font-bold text-brand">랑데부</div>
       <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-        {"\uC0AC\uC7A5\uB2D8 \uCEE8\uC194"}
+        {"사장님 컨솔"}
       </div>
       <div className="mt-4 flex flex-col gap-1">
         {navItems.map((item) => {

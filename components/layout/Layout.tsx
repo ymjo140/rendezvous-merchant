@@ -84,12 +84,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
         <SheetContent>
           <div className="flex items-center justify-between border-b border-slate-200 p-4">
-            <div className="text-sm font-semibold">{"\uBA54\uB274"}</div>
+            <div className="text-sm font-semibold">{"메뉴"}</div>
             <button
               className="text-sm text-slate-500"
               onClick={() => setMobileOpen(false)}
             >
-              {"\uB2EB\uAE30"}
+              {"닫기"}
             </button>
           </div>
           <SidebarNav

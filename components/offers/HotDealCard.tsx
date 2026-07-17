@@ -10,16 +10,16 @@ const fallbackImages = {
 
 function getFallbackImage(category?: string) {
   const value = (category ?? "").toLowerCase();
-  if (value.includes("\uC220") || value.includes("\uD3EC\uCC28") || value.includes("\uBC14")) {
+  if (value.includes("술") || value.includes("포차") || value.includes("바")) {
     return fallbackImages.bar;
   }
-  if (value.includes("\uCE74\uD398") || value.includes("\uB514\uC800\uD2B8")) {
+  if (value.includes("카페") || value.includes("디저트")) {
     return fallbackImages.cafe;
   }
-  if (value.includes("\uC2A4\uD130\uB514") || value.includes("\uD30C\uD2F0") || value.includes("\uB8F8")) {
+  if (value.includes("스터디") || value.includes("파티") || value.includes("룸")) {
     return fallbackImages.room;
   }
-  if (value.includes("\uC2DD\uB2F9") || value.includes("\uBC25") || value.includes("\uACF5\uAC04")) {
+  if (value.includes("식당") || value.includes("밥") || value.includes("공간")) {
     return fallbackImages.dining;
   }
   return fallbackImages.default;
@@ -55,14 +55,14 @@ export function HotDealCard({
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
         <div className="absolute left-4 top-4 flex flex-wrap items-center gap-2">
           <Badge className="bg-amber-400 text-slate-900">
-            {"\uD56B\uB51C"}
+            {"핫딜"}
           </Badge>
           <Badge className="bg-rose-500 text-white">
-            {"\uB9C8\uAC10\uC784\uBC15"}
+            {"마감임박"}
           </Badge>
           {visibility === "private" ? (
             <Badge className="bg-slate-900 text-white">
-              {"\uD83D\uDD12 \uC2DC\uD06C\uB9BF \uC624\uD37C"}
+              {"🔒 시크릿 오퍼"}
             </Badge>
           ) : null}
         </div>

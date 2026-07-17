@@ -80,11 +80,11 @@ const mockStoreId = "dev-store";
 
 const mockReservations: ReservationEntry[] = [];
 const statusLabelMap: Record<ReservationEntry["status"], string> = {
-  confirmed: "\uD655\uC815",
-  pending: "\uB300\uAE30",
-  cancelled: "\uCDE8\uC18C",
-  no_show: "\uB178\uC1FC",
-  blocked: "\uC608\uC57D \uB9C9\uC74C",
+  confirmed: "확정",
+  pending: "대기",
+  cancelled: "취소",
+  no_show: "노쇼",
+  blocked: "예약 막음",
 };
 
 const statusStyles: Record<ReservationEntry["status"], string> = {
@@ -96,12 +96,12 @@ const statusStyles: Record<ReservationEntry["status"], string> = {
 };
 
 const statusOptions = [
-  { value: "all", label: "\uC804\uCCB4" },
-  { value: "confirmed", label: "\uD655\uC815" },
-  { value: "pending", label: "\uB300\uAE30" },
-  { value: "cancelled", label: "\uCDE8\uC18C" },
-  { value: "no_show", label: "\uB178\uC1FC" },
-  { value: "blocked", label: "\uC608\uC57D \uB9C9\uC74C" },
+  { value: "all", label: "전체" },
+  { value: "confirmed", label: "확정" },
+  { value: "pending", label: "대기" },
+  { value: "cancelled", label: "취소" },
+  { value: "no_show", label: "노쇼" },
+  { value: "blocked", label: "예약 막음" },
 ];
 
 const startMinutes = 9 * 60;
@@ -109,13 +109,13 @@ const endMinutes = 24 * 60;
 const slotMinutes = 30;
 const labelColumnWidth = 160;
 const dayLabels = [
-  "\uC77C",
-  "\uC6D4",
-  "\uD654",
-  "\uC218",
-  "\uBAA9",
-  "\uAE08",
-  "\uD1A0",
+  "일",
+  "월",
+  "화",
+  "수",
+  "목",
+  "금",
+  "토",
 ];
 const dayCodes = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
@@ -183,7 +183,7 @@ function formatDateLabel(dateString: string) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   const weekday = dayLabels[date.getDay()];
-  return `${year}\uB144 ${month}\uC6D4 ${day}\uC77C (${weekday})`;
+  return `${year}년 ${month}월 ${day}일 (${weekday})`;
 }
 
 function getDayCode(dateString: string) {
@@ -322,7 +322,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
   if (!resolvedStoreId) {
     return (
       <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600">
-        {"\uAC00\uAC8C \uC815\uBCF4\uB97C \uBD88\uB7EC\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uB9E4\uC7A5\uC744 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694."}
+        {"가게 정보를 불러올 수 없습니다. 매장을 선택해 주세요."}
       </div>
     );
   }
@@ -330,7 +330,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
   if (hasDataAccessError) {
     return (
       <div className="rounded-lg border border-rose-200 bg-white p-6 text-sm text-rose-600">
-        {"\uB370\uC774\uD130 \uC811\uADFC\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4. \uC11C\uBC84 \uAD8C\uD55C(RLS) \uC124\uC815\uACFC \uB85C\uADF8\uC778 \uC138\uC158\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694."}
+        {"데이터 접근에 실패했습니다. 서버 권한(RLS) 설정과 로그인 세션을 확인해 주세요."}
       </div>
     );
   }
@@ -408,7 +408,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
   const dateKey = selectedDate || "1970-01-01";
   const dateLabel = selectedDate
     ? formatDateLabel(selectedDate)
-    : "\uB0A0\uC9DC \uB85C\uB529 \uC911";
+    : "날짜 로딩 중";
 
   const filtered = useMemo(() => {
     return reservations.filter((item) => {
@@ -465,7 +465,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
   function openDetail(item: ReservationEntry) {
     if (item.source === "external") {
       window.alert(
-        "\uC678\uBD80 \uD50C\uB7AB\uD3FC\uC5D0\uC11C \uAD00\uB9AC\uB418\uB294 \uC608\uC57D\uC785\uB2C8\uB2E4."
+        "외부 플랫폼에서 관리되는 예약입니다."
       );
       return;
     }
@@ -521,12 +521,12 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
 
     if (!id.trim() || !guestName.trim()) {
       window.alert(
-        "\uC608\uC57D \uBC88\uD638\uC640 \uACE0\uAC1D \uC774\uB984\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694."
+        "예약 번호와 고객 이름을 입력해주세요."
       );
       return;
     }
     if (!createForm.unit_id) {
-      window.alert("\uD14C\uC774\uBE14 \uC720\uD615\uC744 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.");
+      window.alert("테이블 유형을 선택해 주세요.");
       return;
     }
 
@@ -534,7 +534,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
     const end = timeToMinutes(endTime);
     if (end <= start) {
       window.alert(
-        "\uC885\uB8CC \uC2DC\uAC04\uC740 \uC2DC\uC791 \uC2DC\uAC04\uBCF4\uB2E4 \uB2A6\uC5B4\uC57C \uD569\uB2C8\uB2E4."
+        "종료 시간은 시작 시간보다 늦어야 합니다."
       );
       return;
     }
@@ -551,7 +551,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
 
     if (overlap) {
       window.alert(
-        "\uD574\uB2F9 \uC2DC\uAC04\uC5D0 \uC774\uBBF8 \uC608\uC57D\uC774 \uC788\uC2B5\uB2C8\uB2E4."
+        "해당 시간에 이미 예약이 있습니다."
       );
       return;
     }
@@ -575,12 +575,12 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
         assignedUnitId = assignment.unit_id;
         assignedUnitIndex = assignment.unit_index;
         window.alert(
-          `\u2705 ${assignment.label} \uD14C\uC774\uBE14\uC5D0 \uBC30\uC815\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`
+          `✅ ${assignment.label} 테이블에 배정되었습니다.`
         );
       } else {
         nextStatus = "pending";
         window.alert(
-          "\u26A0\uFE0F \uAC00\uB2A5\uD55C \uBE48 \uD14C\uC774\uBE14\uC774 \uC5C6\uC2B5\uB2C8\uB2E4. \uB300\uAE30 \uC0C1\uD0DC\uB85C \uB4F1\uB85D\uD569\uB2C8\uB2E4."
+          "⚠️ 가능한 빈 테이블이 없습니다. 대기 상태로 등록합니다."
         );
       }
     }
@@ -615,7 +615,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
   function openTimeDealCreate(slot?: string) {
     const benefit = activeBenefit ?? benefits[0];
     if (!benefit) {
-      window.alert("\uD0C0\uC784\uC138\uC77C\uC744 \uB9CC\uB4E4 \uD61C\uD0DD\uC744 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.");
+      window.alert("타임세일을 만들 혜택을 선택해 주세요.");
       return;
     }
     const startTime = slot ?? slots[0] ?? "18:00";
@@ -650,7 +650,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
     const end = timeToMinutes(timeDealForm.endTime);
     if (end <= start) {
       window.alert(
-        "\uC885\uB8CC \uC2DC\uAC04\uC740 \uC2DC\uC791 \uC2DC\uAC04\uBCF4\uB2E4 \uB2A6\uC5B4\uC57C \uD569\uB2C8\uB2E4."
+        "종료 시간은 시작 시간보다 늦어야 합니다."
       );
       return;
     }
@@ -707,7 +707,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
     });
     if (overlap) {
       window.alert(
-        "\uD574\uB2F9 \uC2DC\uAC04\uC5D0 \uC774\uBBF8 \uC608\uC57D \uB610\uB294 \uB9C9\uC74C \uC0C1\uD0DC\uC785\uB2C8\uB2E4."
+        "해당 시간에 이미 예약 또는 막음 상태입니다."
       );
       return;
     }
@@ -715,7 +715,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
     const newBlock: ReservationEntry = {
       id: `B-${Date.now()}`,
       store_id: storeKey,
-      guestName: "\uC678\uBD80 \uC608\uC57D/\uB9C8\uAC10",
+      guestName: "외부 예약/마감",
       partySize: 0,
       date: selectedDate,
       status: "blocked",
@@ -732,12 +732,12 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-semibold">{"\uC608\uC57D \uBAA9\uB85D"}</h1>
+          <h1 className="text-2xl font-semibold">{"예약 목록"}</h1>
           <div className="flex items-center gap-2 text-sm text-slate-500">
-            <span>{`\uB9E4\uC7A5 #${resolvedStoreId ?? ""}`}</span>
+            <span>{`매장 #${resolvedStoreId ?? ""}`}</span>
             {showOfflineBadge ? (
               <Badge className="bg-amber-100 text-amber-700">
-                {"\uC624\uD504\uB77C\uC778 \uC0C1\uD0DC"}
+                {"오프라인 상태"}
               </Badge>
             ) : null}
           </div>
@@ -771,11 +771,11 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
             className="border border-slate-300 text-slate-700"
             onClick={() =>
               window.alert(
-                "\uAD6C\uAE00/\uB124\uC774\uBC84 \uCE98\uB9B0\uB354\uC640 \uC5F0\uB3D9\uD558\uC5EC \uC911\uBCF5 \uC608\uC57D\uC744 \uBC29\uC9C0\uD569\uB2C8\uB2E4."
+                "구글/네이버 캘린더와 연동하여 중복 예약을 방지합니다."
               )
             }
           >
-            {"\uD83D\uDCC5 \uC678\uBD80 \uCE98\uB9B0\uB354 \uC5F0\uB3D9"}
+            {"📅 외부 캘린더 연동"}
           </Button>
           <select
             className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm"
@@ -793,19 +793,19 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
             className="h-9"
             onClick={() => setBlockMode((prev) => !prev)}
           >
-            {"\u26D4 \uC608\uC57D \uB9C9\uAE30 \uBAA8\uB4DC"}
+            {"⛔ 예약 막기 모드"}
           </Button>
           <Button
             variant={view === "scheduler" ? "primary" : "secondary"}
             onClick={() => setView("scheduler")}
           >
-            {"\uC2A4\uCF00\uC904\uB7EC \uBCF4\uAE30"}
+            {"스케줄러 보기"}
           </Button>
           <Button
             variant={view === "list" ? "primary" : "secondary"}
             onClick={() => setView("list")}
           >
-            {"\uB9AC\uC2A4\uD2B8 \uBCF4\uAE30"}
+            {"리스트 보기"}
           </Button>
         </div>
       </div>
@@ -817,11 +817,11 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
         <div className="space-y-4">
           <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
             <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
-              <div className="text-sm font-semibold">{"\uADDC\uCE59 \uBAA9\uB85D"}</div>
+              <div className="text-sm font-semibold">{"규칙 목록"}</div>
               {rules.length === 0 ? (
                 <p className="text-xs text-slate-500">
                   {
-                    "\uB4F1\uB85D\uB41C \uADDC\uCE59\uC774 \uC5C6\uC2B5\uB2C8\uB2E4. \uB8F0 \uC124\uC815\uC5D0\uC11C \uC0C8 \uADDC\uCE59\uC744 \uB9CC\uB4E4\uC5B4\uC8FC\uC138\uC694."
+                    "등록된 규칙이 없습니다. 룰 설정에서 새 규칙을 만들어주세요."
                   }
                 </p>
               ) : (
@@ -834,7 +834,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                       <div className="text-sm">
                         <div className="font-medium text-slate-900">{rule.name}</div>
                         <div className="text-xs text-slate-500">
-                          {rule.enabled ? "\uD65C\uC131" : "\uBE44\uD65C\uC131"}
+                          {rule.enabled ? "활성" : "비활성"}
                         </div>
                       </div>
                       <Button
@@ -842,7 +842,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                         className="h-8 px-3 text-xs"
                         onClick={() => toggleRule(rule.id)}
                       >
-                        {rule.enabled ? "\uCF1C\uC9D0" : "\uAEBC\uC9D0"}
+                        {rule.enabled ? "켜짐" : "꺼짐"}
                       </Button>
                     </div>
                   ))}
@@ -851,16 +851,16 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
             </div>
 
             <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
-              <div className="text-sm font-semibold">{"\uD61C\uD0DD \uBC84\uD2BC"}</div>
+              <div className="text-sm font-semibold">{"혜택 버튼"}</div>
               <p className="text-xs text-slate-500">
                 {
-                  "\uD0C0\uC784\uC138\uC77C\uC740 \uC2DC\uAC04\uB300\uB97C \uD074\uB9AD\uD55C \uD6C4 \uC2DC\uAC04\uC744 \uC124\uC815\uD574\uC11C \uC0DD\uC131\uD569\uB2C8\uB2E4."
+                  "타임세일은 시간대를 클릭한 후 시간을 설정해서 생성합니다."
                 }
               </p>
               {benefits.length === 0 ? (
                 <p className="text-xs text-slate-500">
                   {
-                    "\uD61C\uD0DD \uCE74\uD0C8\uB85C\uADF8\uC5D0\uC11C \uD61C\uD0DD\uC744 \uCD94\uAC00\uD574\uC8FC\uC138\uC694."
+                    "혜택 카탈로그에서 혜택을 추가해주세요."
                   }
                 </p>
               ) : (
@@ -887,7 +887,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
 
           <div className="text-sm text-slate-500">
             {
-              "\uBE48 \uC2DC\uAC04\uB300\uB294 AI\uAC00 \uC608\uC57D\uC744 \uCD94\uCC9C\uD560 \uC218 \uC788\uB294 \uC2AC\uB86F\uC785\uB2C8\uB2E4."
+              "빈 시간대는 AI가 예약을 추천할 수 있는 슬롯입니다."
             }
           </div>
 
@@ -898,7 +898,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
               gridTemplateColumns: `${labelColumnWidth}px repeat(${slots.length}, minmax(64px, 1fr))`,
             }}
           >
-            <div className="sticky left-0 z-20 bg-white p-2 font-medium">{"\uD14C\uC774\uBE14"}</div>
+            <div className="sticky left-0 z-20 bg-white p-2 font-medium">{"테이블"}</div>
             {slots.map((slot) => {
               const slotEnd = minutesToTime(timeToMinutes(slot) + slotMinutes);
               return (
@@ -920,7 +920,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                 gridTemplateColumns: `${labelColumnWidth}px repeat(${slots.length}, minmax(64px, 1fr))`,
               }}
             >
-              <div className="sticky left-0 z-20 bg-white p-2 text-slate-700">{"\uD0C0\uC784\uC138\uC77C"}</div>
+              <div className="sticky left-0 z-20 bg-white p-2 text-slate-700">{"타임세일"}</div>
                 {slots.map((slot) => (
                   <div
                     key={`deal-slot-${slot}`}
@@ -944,7 +944,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                 );
                 const columnStart = 2 + startIndex;
                 const columnEnd = Math.max(columnStart + 1, 2 + endIndex);
-                const label = `\uD83D\uDD04 [\uC790\uB3D9\uC801\uC6A9] ${rule.benefit_title ?? rule.name}`;
+                const label = `🔄 [자동적용] ${rule.benefit_title ?? rule.name}`;
 
                 return (
                   <div
@@ -1039,7 +1039,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                     const occupied = Boolean(blockingReservation);
                     const blockingLabel = blockingReservation
                       ? blockingReservation.status === "blocked"
-                        ? "\uC608\uC57D \uB9C9\uC74C"
+                        ? "예약 막음"
                         : blockingReservation.guestName
                       : "";
 
@@ -1060,11 +1060,11 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                               blockingReservation.end_time
                             ).toLocaleTimeString();
                             window.alert(
-                              `\u26D4 \uC608\uC57D \uBD88\uAC00 (\uC815\uBC00 \uC9C4\uB2E8)\\n\\n[${blockingLabel}]\uB2D8\uC758 \uC608\uC57D\uACFC \uACB9\uCE69\uB2C8\uB2E4.\\n--------------------------------\\n\uC120\uD0DD \uC2DC\uAC04: ${slot} (Timestamp: ${currentSlotTime})\\n\uC608\uC57D \uC2DC\uC791: ${startStr} (Timestamp: ${new Date(
+                              `⛔ 예약 불가 (정밀 진단)\\n\\n[${blockingLabel}]님의 예약과 겹칩니다.\\n--------------------------------\\n선택 시간: ${slot} (Timestamp: ${currentSlotTime})\\n예약 시작: ${startStr} (Timestamp: ${new Date(
                                 blockingReservation.start_time
-                              ).getTime()})\\n\uC608\uC57D \uC885\uB8CC: ${endStr} (Timestamp: ${new Date(
+                              ).getTime()})\\n예약 종료: ${endStr} (Timestamp: ${new Date(
                                 blockingReservation.end_time
-                              ).getTime()})\\n--------------------------------\\n\uC608\uC57D \uC885\uB8CC \uC2DC\uAC04\uC774 \uC608\uC0C1\uACFC \uB2E4\uB974\uBA74 (\uC624\uC804/\uC624\uD6C4, \uB0A0\uC9DC \uBC14\uB010 \uB4F1), DB \uD0C0\uC784\uC874 \uC800\uC7A5 \uBB38\uC81C\uB97C \uD655\uC778\uD574\uC8FC\uC138\uC694.`
+                              ).getTime()})\\n--------------------------------\\n예약 종료 시간이 예상과 다르면 (오전/오후, 날짜 바뀐 등), DB 타임존 저장 문제를 확인해주세요.`
                             );
                             return;
                           }
@@ -1122,7 +1122,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                         onClick={() => {
                           if (isExternal) {
                             window.alert(
-                              "\uC678\uBD80 \uD50C\uB7AB\uD3FC\uC5D0\uC11C \uAD00\uB9AC\uB418\uB294 \uC608\uC57D\uC785\uB2C8\uB2E4."
+                              "외부 플랫폼에서 관리되는 예약입니다."
                             );
                             return;
                           }
@@ -1130,7 +1130,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                         }}
                       >
                         <span>{reservation.guestName}</span>
-                        <span>{`${reservation.partySize}\uBA85`}</span>
+                        <span>{`${reservation.partySize}명`}</span>
                       </div>
                     );
                   })}
@@ -1146,13 +1146,13 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
         <Table>
           <thead>
             <tr>
-              <Th>{"\uC608\uC57D \uBC88\uD638"}</Th>
-              <Th>{"\uACE0\uAC1D"}</Th>
-              <Th>{"\uC778\uC6D0"}</Th>
-              <Th>{"\uB0A0\uC9DC"}</Th>
-              <Th>{"\uC2DC\uAC04"}</Th>
-              <Th>{"\uC0C1\uD0DC"}</Th>
-              <Th>{"\uC870\uCE58"}</Th>
+              <Th>{"예약 번호"}</Th>
+              <Th>{"고객"}</Th>
+              <Th>{"인원"}</Th>
+              <Th>{"날짜"}</Th>
+              <Th>{"시간"}</Th>
+              <Th>{"상태"}</Th>
+              <Th>{"조치"}</Th>
             </tr>
           </thead>
           <tbody>
@@ -1160,7 +1160,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
               <tr>
                 <Td colSpan={7}>
                   <div className="py-6 text-center text-sm text-slate-500">
-                    {"\uC120\uD0DD\uD55C \uB0A0\uC9DC\uC5D0\uB294 \uC608\uC57D\uC774 \uC5C6\uC2B5\uB2C8\uB2E4."}
+                    {"선택한 날짜에는 예약이 없습니다."}
                   </div>
                 </Td>
               </tr>
@@ -1173,7 +1173,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                       <span>{row.guestName}</span>
                       {row.source === "external" ? (
                         <Badge className="bg-slate-200 text-slate-600">
-                          {"\uC678\uBD80"}
+                          {"외부"}
                         </Badge>
                       ) : null}
                     </div>
@@ -1192,7 +1192,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                   </Td>
                   <Td>
                     <Button variant="ghost" onClick={() => openDetail(row)}>
-                      {"\uC0C1\uC138"}
+                      {"상세"}
                     </Button>
                   </Td>
                 </tr>
@@ -1205,30 +1205,30 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
         {selectedReservation ? (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <div className="text-lg font-semibold">{"\uC608\uC57D \uC0C1\uC138"}</div>
+              <div className="text-lg font-semibold">{"예약 상세"}</div>
               <Badge className={statusStyles[selectedReservation.status]}>
                 {statusLabelMap[selectedReservation.status]}
               </Badge>
             </div>
             <div className="space-y-2 text-sm text-slate-600">
               <div>
-                {"\uC608\uC57D \uBC88\uD638"}: {selectedReservation.id}
+                {"예약 번호"}: {selectedReservation.id}
               </div>
               <div>
-                {"\uACE0\uAC1D"}: {selectedReservation.guestName}
+                {"고객"}: {selectedReservation.guestName}
               </div>
               <div>
-                {"\uC5F0\uB77D\uCC98"}: {selectedReservation.guestPhone || "-"}
+                {"연락처"}: {selectedReservation.guestPhone || "-"}
               </div>
               <div>
-                {"\uC778\uC6D0"}: {selectedReservation.partySize}\uBA85
+                {"인원"}: {selectedReservation.partySize}명
               </div>
               <div>
-                {"\uC2DC\uAC04"}: {selectedReservation.start_time.slice(11, 16)}~
+                {"시간"}: {selectedReservation.start_time.slice(11, 16)}~
                 {selectedReservation.end_time.slice(11, 16)}
               </div>
               <div>
-                {"\uC694\uCCAD \uC0AC\uD56D"}: {selectedReservation.notes || "-"}
+                {"요청 사항"}: {selectedReservation.notes || "-"}
               </div>
             </div>
             {selectedReservation.status === "blocked" ? (
@@ -1239,7 +1239,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                     updateReservationStatus(selectedReservation.id, "cancelled")
                   }
                 >
-                  {"\uB9C9\uC74C \uD574\uC81C"}
+                  {"막음 해제"}
                 </Button>
               </div>
             ) : (
@@ -1249,7 +1249,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                     updateReservationStatus(selectedReservation.id, "confirmed")
                   }
                 >
-                  {"\uD655\uC815"}
+                  {"확정"}
                 </Button>
                 <Button
                   variant="secondary"
@@ -1258,7 +1258,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                     updateReservationStatus(selectedReservation.id, "no_show")
                   }
                 >
-                  {"\uB178\uC1FC"}
+                  {"노쇼"}
                 </Button>
                 <Button
                   variant="ghost"
@@ -1267,7 +1267,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                     updateReservationStatus(selectedReservation.id, "cancelled")
                   }
                 >
-                  {"\uCDE8\uC18C"}
+                  {"취소"}
                 </Button>
               </div>
             )}
@@ -1278,11 +1278,11 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
       <Dialog open={createOpen}>
         {createForm ? (
           <div className="space-y-4">
-            <div className="text-lg font-semibold">{"\uC0C8 \uC608\uC57D \uCD94\uAC00"}</div>
+            <div className="text-lg font-semibold">{"새 예약 추가"}</div>
             <div className="grid gap-3 text-sm">
               <div className="space-y-1">
                 <label className="text-xs text-slate-500">
-                  {"\uC608\uC57D \uBC88\uD638"}
+                  {"예약 번호"}
                 </label>
                 <input
                   className="h-10 w-full rounded-md border border-slate-200 px-3"
@@ -1294,7 +1294,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-slate-500">{"\uACE0\uAC1D"}</label>
+                <label className="text-xs text-slate-500">{"고객"}</label>
                 <input
                   className="h-10 w-full rounded-md border border-slate-200 px-3"
                   value={createForm.guestName}
@@ -1304,11 +1304,11 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                       guestName: event.target.value,
                     })
                   }
-                  placeholder="\uAE40\uBBFC\uC218"
+                  placeholder="김민수"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-slate-500">{"\uC5F0\uB77D\uCC98"}</label>
+                <label className="text-xs text-slate-500">{"연락처"}</label>
                 <input
                   className="h-10 w-full rounded-md border border-slate-200 px-3"
                   value={createForm.guestPhone}
@@ -1323,7 +1323,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
               </div>
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1">
-                  <label className="text-xs text-slate-500">{"\uC778\uC6D0"}</label>
+                  <label className="text-xs text-slate-500">{"인원"}</label>
                   <input
                     type="number"
                     className="h-10 w-full rounded-md border border-slate-200 px-3"
@@ -1337,7 +1337,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-slate-500">{"\uB0A0\uC9DC"}</label>
+                  <label className="text-xs text-slate-500">{"날짜"}</label>
                   <input
                     type="date"
                     className="h-10 w-full rounded-md border border-slate-200 px-3"
@@ -1351,7 +1351,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1">
                   <label className="text-xs text-slate-500">
-                    {"\uD14C\uC774\uBE14 \uC720\uD615"}
+                    {"테이블 유형"}
                   </label>
                   <select
                     className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
@@ -1375,7 +1375,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                   >
                     {unitOptions.length === 0 ? (
                       <option value="">
-                        {"\uC218\uC6A9\uB7C9\uC5D0\uC11C \uD14C\uC774\uBE14\uC744 \uB4F1\uB85D\uD574 \uC8FC\uC138\uC694."}
+                        {"수용량에서 테이블을 등록해 주세요."}
                       </option>
                     ) : null}
                     {unitOptions.map((unit) => (
@@ -1387,7 +1387,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs text-slate-500">
-                    {"\uD14C\uC774\uBE14 \uBC88\uD638"}
+                    {"테이블 번호"}
                   </label>
                   <select
                     className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
@@ -1414,7 +1414,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1">
                   <label className="text-xs text-slate-500">
-                    {"\uC2DC\uC791 \uC2DC\uAC04"}
+                    {"시작 시간"}
                   </label>
                   <select
                     className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
@@ -1435,7 +1435,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs text-slate-500">
-                    {"\uC885\uB8CC \uC2DC\uAC04"}
+                    {"종료 시간"}
                   </label>
                   <select
                     className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
@@ -1456,7 +1456,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-slate-500">{"\uC694\uCCAD \uC0AC\uD56D"}</label>
+                <label className="text-xs text-slate-500">{"요청 사항"}</label>
                 <input
                   className="h-10 w-full rounded-md border border-slate-200 px-3"
                   value={createForm.notes}
@@ -1466,13 +1466,13 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                       notes: event.target.value,
                     })
                   }
-                  placeholder="\uCC3D\uAC00 \uC88C\uC11D"
+                  placeholder="창가 좌석"
                 />
               </div>
               <div className="text-xs text-slate-500">
                 {selectedUnit
                   ? `${selectedUnit.label}-${createForm.unit_index}`
-                  : `\uD14C\uC774\uBE14 ${createForm.unit_id}-${createForm.unit_index}`}
+                  : `테이블 ${createForm.unit_id}-${createForm.unit_index}`}
               </div>
               <label className="flex items-center gap-2 text-sm text-slate-600">
                 <input
@@ -1482,14 +1482,14 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                     setCreateForm({ ...createForm, autoAssign: event.target.checked })
                   }
                 />
-                {"\uD14C\uC774\uBE14 \uC790\uB3D9 \uBC30\uC815"}
+                {"테이블 자동 배정"}
               </label>
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="secondary" onClick={() => setCreateOpen(false)}>
-                {"\uCDE8\uC18C"}
+                {"취소"}
               </Button>
-              <Button onClick={handleCreateSubmit}>{"\uCD94\uAC00"}</Button>
+              <Button onClick={handleCreateSubmit}>{"추가"}</Button>
             </div>
           </div>
         ) : null}
@@ -1500,13 +1500,13 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
           <div className="space-y-4">
             <div className="text-lg font-semibold">
               {timeDealForm.mode === "edit"
-                ? "\uD0C0\uC784\uC138\uC77C \uC218\uC815"
-                : "\uD0C0\uC784\uC138\uC77C \uC0DD\uC131"}
+                ? "타임세일 수정"
+                : "타임세일 생성"}
             </div>
             <div className="space-y-2 text-sm">
               <div className="space-y-1">
                 <label className="text-xs text-slate-500">
-                  {"\uD61C\uD0DD \uC120\uD0DD"}
+                  {"혜택 선택"}
                 </label>
                 <select
                   className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
@@ -1532,7 +1532,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1">
                   <label className="text-xs text-slate-500">
-                    {"\uC2DC\uC791 \uC2DC\uAC04"}
+                    {"시작 시간"}
                   </label>
                   <select
                     className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
@@ -1553,7 +1553,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs text-slate-500">
-                    {"\uC885\uB8CC \uC2DC\uAC04"}
+                    {"종료 시간"}
                   </label>
                   <select
                     className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
@@ -1581,17 +1581,17 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                   className="text-rose-600 hover:bg-rose-50"
                   onClick={handleTimeDealDelete}
                 >
-                  {"\uC0AD\uC81C"}
+                  {"삭제"}
                 </Button>
               ) : null}
               <Button
                 variant="secondary"
                 onClick={() => setTimeDealDialogOpen(false)}
               >
-                {"\uCDE8\uC18C"}
+                {"취소"}
               </Button>
               <Button onClick={handleTimeDealSubmit}>
-                {timeDealForm.mode === "edit" ? "\uC800\uC7A5" : "\uC0DD\uC131"}
+                {timeDealForm.mode === "edit" ? "저장" : "생성"}
               </Button>
             </div>
           </div>
@@ -1602,20 +1602,20 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
         {autoRuleDialog ? (
           <div className="space-y-4">
             <div className="text-lg font-semibold">
-              {"\uC790\uB3D9 \uC801\uC6A9 \uB8F0"}
+              {"자동 적용 룰"}
             </div>
             <div className="text-sm text-slate-600">
               {`${autoRuleDialog.name} (${autoRuleDialog.active_time_start ?? ""}~${autoRuleDialog.active_time_end ?? ""})`}
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="secondary" onClick={() => setAutoRuleDialog(null)}>
-                {"\uB2EB\uAE30"}
+                {"닫기"}
               </Button>
               <Button
                 className="bg-rose-600 hover:bg-rose-700"
                 onClick={() => hideAutoRuleForDate(String(autoRuleDialog.id))}
               >
-                {"\uC774 \uB0A0\uB9CC \uB04C\uAE30"}
+                {"이 날만 끌기"}
               </Button>
             </div>
           </div>

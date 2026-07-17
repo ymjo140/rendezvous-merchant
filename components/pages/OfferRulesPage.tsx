@@ -8,13 +8,13 @@ import { useRules, type RuleRow } from "@/lib/hooks/useRules";
 import { useStoreId } from "@/components/layout/Layout";
 
 const dayLabels = [
-  "\uC6D4",
-  "\uD654",
-  "\uC218",
-  "\uBAA9",
-  "\uAE08",
-  "\uD1A0",
-  "\uC77C",
+  "월",
+  "화",
+  "수",
+  "목",
+  "금",
+  "토",
+  "일",
 ];
 
 function formatDays(days: boolean[]) {
@@ -37,13 +37,13 @@ export function OfferRulesPage({ storeId }: { storeId?: string }) {
     return undefined;
   }, [storeId, contextStoreId]);
 
-  // \u26A0\uFE0F \uD6C5\uC740 \uC870\uAC74\uBD80 return\uBCF4\uB2E4 \uBA3C\uC800 \u2014 \uB9E4\uC7A5 \uBBF8\uC120\uD0DD\u2192\uC120\uD0DD \uC804\uD658 \uC2DC \uD6C5 \uC21C\uC11C\uAC00 \uBCC0\uD558\uBA74 \uD06C\uB798\uC2DC
+  // ⚠️ 훅은 조건부 return보다 먼저 — 매장 미선택→선택 전환 시 훅 순서가 변하면 크래시
   const { data: rules = [], updateRule, deleteRule } = useRules(resolvedStoreId);
 
   if (!resolvedStoreId) {
     return (
       <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600">
-        {"\uAC00\uAC8C \uC815\uBCF4\uB97C \uBD88\uB7EC\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uB9E4\uC7A5\uC744 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694."}
+        {"가게 정보를 불러올 수 없습니다. 매장을 선택해 주세요."}
       </div>
     );
   }
@@ -55,7 +55,7 @@ export function OfferRulesPage({ storeId }: { storeId?: string }) {
   }
 
   function handleDelete(ruleId: RuleRow["id"]) {
-    if (!window.confirm("\uB8F0\uC744 \uC0AD\uC81C\uD560\uAE4C\uC694?")) return;
+    if (!window.confirm("룰을 삭제할까요?")) return;
     deleteRule.mutate({ id: String(ruleId) });
   }
 
@@ -63,17 +63,17 @@ export function OfferRulesPage({ storeId }: { storeId?: string }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">{"\uB8F0 \uBAA9\uB85D"}</h1>
-          <p className="text-sm text-slate-500">{`\uB9E4\uC7A5 #${resolvedStoreId}`}</p>
+          <h1 className="text-2xl font-semibold">{"룰 목록"}</h1>
+          <p className="text-sm text-slate-500">{`매장 #${resolvedStoreId}`}</p>
         </div>
         <Button onClick={() => router.push(`/stores/${resolvedStoreId}/offers/rules/new`)}>
-          {"\uC0C8 \uB8F0 \uB9CC\uB4E4\uAE30"}
+          {"새 룰 만들기"}
         </Button>
       </div>
       <div className="space-y-3">
         {rules.length === 0 ? (
           <div className="rounded-xl border border-dashed border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
-            {"\uB4F1\uB85D\uB41C \uB8F0\uC774 \uC5C6\uC2B5\uB2C8\uB2E4. \uC0C8 \uB8F0\uC744 \uB9CC\uB4E4\uC5B4 \uC8FC\uC138\uC694."}
+            {"등록된 룰이 없습니다. 새 룰을 만들어 주세요."}
           </div>
         ) : null}
         {rules.map((rule) => (
@@ -96,10 +96,10 @@ export function OfferRulesPage({ storeId }: { storeId?: string }) {
                       : "bg-slate-100 text-slate-500"
                   }
                 >
-                  {rule.enabled ? "\uD65C\uC131" : "\uBE44\uD65C\uC131"}
+                  {rule.enabled ? "활성" : "비활성"}
                 </Badge>
                 <Button variant="ghost" onClick={() => toggleRule(rule.id)}>
-                  {rule.enabled ? "\uB044\uAE30" : "\uCF1C\uAE30"}
+                  {rule.enabled ? "끄기" : "켜기"}
                 </Button>
                 <Button
                   variant="secondary"
@@ -107,33 +107,33 @@ export function OfferRulesPage({ storeId }: { storeId?: string }) {
                     router.push(`/stores/${resolvedStoreId}/offers/rules/${rule.id}/edit`)
                   }
                 >
-                  {"\uC218\uC815"}
+                  {"수정"}
                 </Button>
                 <Button
                   variant="ghost"
                   className="text-rose-600 hover:bg-rose-50"
                   onClick={() => handleDelete(rule.id)}
                 >
-                  {"\uC0AD\uC81C"}
+                  {"삭제"}
                 </Button>
               </div>
             </div>
             <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-600">
               <span className="rounded-full bg-slate-100 px-2 py-1">
-                {"\uC801\uC6A9\uD560 \uC2DC\uAC04\uB300: "}
+                {"적용할 시간대: "}
                 {formatTimeBlocks(rule.time_blocks ?? [])}
               </span>
               <span className="rounded-full bg-slate-100 px-2 py-1">
-                {"\uC778\uC6D0 \uC81C\uD55C: "}
+                {"인원 제한: "}
                 {rule.party_min ?? "-"}~{rule.party_max ?? "-"}
               </span>
               <span className="rounded-full bg-slate-100 px-2 py-1">
-                {"\uC608\uC57D \uB9C8\uAC10/\uC624\uD508: "}
-                {rule.lead_min ?? "-"}~{rule.lead_max ?? "-"}{"\uBD84"}
+                {"예약 마감/오픈: "}
+                {rule.lead_min ?? "-"}~{rule.lead_max ?? "-"}{"분"}
               </span>
               {rule.benefit_title ? (
                 <span className="rounded-full bg-slate-100 px-2 py-1">
-                  {"\uD61C\uD0DD: "}{rule.benefit_title}
+                  {"혜택: "}{rule.benefit_title}
                 </span>
               ) : null}
             </div>

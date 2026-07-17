@@ -12,7 +12,7 @@ const initialUnits: TableUnitRow[] = [
   {
     id: "unit-1",
     store_id: "dev-store",
-    name: "\uD640 4\uC778\uC11D",
+    name: "홀 4인석",
     min_capacity: 2,
     max_capacity: 4,
     quantity: 6,
@@ -21,7 +21,7 @@ const initialUnits: TableUnitRow[] = [
   {
     id: "unit-2",
     store_id: "dev-store",
-    name: "\uD14C\uB77C\uC2A4 2\uC778\uC11D",
+    name: "테라스 2인석",
     min_capacity: 1,
     max_capacity: 2,
     quantity: 3,
@@ -30,7 +30,7 @@ const initialUnits: TableUnitRow[] = [
   {
     id: "unit-3",
     store_id: "dev-store",
-    name: "VIP \uB8F8",
+    name: "VIP 룸",
     min_capacity: 4,
     max_capacity: 8,
     quantity: 2,
@@ -55,7 +55,7 @@ export function CapacityPage({ storeId }: { storeId?: string }) {
     return undefined;
   }, [storeId, contextStoreId]);
 
-  // \u26A0\uFE0F \uD6C5\uC740 \uC870\uAC74\uBD80 return\uBCF4\uB2E4 \uBA3C\uC800(\uD6C5 \uC21C\uC11C \uACE0\uC815)
+  // ⚠️ 훅은 조건부 return보다 먼저(훅 순서 고정)
   const { data: unitRows = [], createUnit, updateUnit, isSupabaseConfigured } =
     useTableUnits(resolvedStoreId);
   const [open, setOpen] = useState(false);
@@ -80,7 +80,7 @@ export function CapacityPage({ storeId }: { storeId?: string }) {
   if (!resolvedStoreId) {
     return (
       <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600">
-        {"\uAC00\uAC8C \uC815\uBCF4\uB97C \uBD88\uB7EC\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uB9E4\uC7A5\uC744 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694."}
+        {"가게 정보를 불러올 수 없습니다. 매장을 선택해 주세요."}
       </div>
     );
   }
@@ -117,7 +117,7 @@ export function CapacityPage({ storeId }: { storeId?: string }) {
     const nextUnit: TableUnitRow = {
       id: editingId ?? crypto.randomUUID(),
       store_id: resolvedStoreId ?? "dev-store",
-      name: form.name.trim() || "\uD14C\uC774\uBE14",
+      name: form.name.trim() || "테이블",
       min_capacity: Number(form.minCapacity) || 1,
       max_capacity: Number(form.maxCapacity) || 2,
       quantity: Number(form.quantity) || 1,
@@ -139,12 +139,12 @@ export function CapacityPage({ storeId }: { storeId?: string }) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-semibold">{"\uC218\uC6A9\uB7C9 \uAD00\uB9AC"}</h1>
+          <h1 className="text-2xl font-semibold">{"수용량 관리"}</h1>
           <p className="text-sm text-slate-500">
-            {"\uD14C\uC774\uBE14 \uC720\uD615\uACFC \uC88C\uC11D \uC218\uB7C9\uC744 \uB4F1\uB85D\uD574 \uC8FC\uC138\uC694."}
+            {"테이블 유형과 좌석 수량을 등록해 주세요."}
           </p>
         </div>
-        <Button onClick={openAdd}>{"\uD14C\uC774\uBE14 \uD0C0\uC785 \uCD94\uAC00"}</Button>
+        <Button onClick={openAdd}>{"테이블 타입 추가"}</Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -154,17 +154,17 @@ export function CapacityPage({ storeId }: { storeId?: string }) {
               <CardTitle className="flex items-center justify-between">
                 <span>{unit.name}</span>
                 <span className="text-xs text-slate-500">
-                  {unit.is_private ? "\uB8F8" : "\uD640"}
+                  {unit.is_private ? "룸" : "홀"}
                 </span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm text-slate-600">
-              <div>{"\uCD5C\uC18C \uC778\uC6D0"}: {unit.min_capacity}{"\uBA85"}</div>
-              <div>{"\uCD5C\uB300 \uC778\uC6D0"}: {unit.max_capacity}{"\uBA85"}</div>
-              <div>{"\uBCF4\uC720 \uC218\uB7C9"}: {unit.quantity}{"\uAC1C"}</div>
+              <div>{"최소 인원"}: {unit.min_capacity}{"명"}</div>
+              <div>{"최대 인원"}: {unit.max_capacity}{"명"}</div>
+              <div>{"보유 수량"}: {unit.quantity}{"개"}</div>
               <div className="pt-2">
                 <Button variant="secondary" onClick={() => openEdit(unit)}>
-                  {"\uC218\uC815"}
+                  {"수정"}
                 </Button>
               </div>
             </CardContent>
@@ -175,22 +175,22 @@ export function CapacityPage({ storeId }: { storeId?: string }) {
       <Dialog open={open}>
         <div className="space-y-4">
           <div className="text-lg font-semibold">
-            {editingId ? "\uD14C\uC774\uBE14 \uD0C0\uC785 \uC218\uC815" : "\uD14C\uC774\uBE14 \uD0C0\uC785 \uCD94\uAC00"}
+            {editingId ? "테이블 타입 수정" : "테이블 타입 추가"}
           </div>
           <div className="grid gap-3">
             <div className="space-y-1">
-              <label className="text-xs text-slate-500">{"\uC774\uB984"}</label>
+              <label className="text-xs text-slate-500">{"이름"}</label>
               <Input
                 value={form.name}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, name: event.target.value }))
                 }
-                placeholder="\uD640 4\uC778\uC11D"
+                placeholder="홀 4인석"
               />
             </div>
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1">
-                <label className="text-xs text-slate-500">{"\uCD5C\uC18C \uC778\uC6D0"}</label>
+                <label className="text-xs text-slate-500">{"최소 인원"}</label>
                 <Input
                   type="number"
                   value={form.minCapacity}
@@ -203,7 +203,7 @@ export function CapacityPage({ storeId }: { storeId?: string }) {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-slate-500">{"\uCD5C\uB300 \uC778\uC6D0"}</label>
+                <label className="text-xs text-slate-500">{"최대 인원"}</label>
                 <Input
                   type="number"
                   value={form.maxCapacity}
@@ -218,7 +218,7 @@ export function CapacityPage({ storeId }: { storeId?: string }) {
             </div>
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1">
-                <label className="text-xs text-slate-500">{"\uBCF4\uC720 \uC218\uB7C9"}</label>
+                <label className="text-xs text-slate-500">{"보유 수량"}</label>
                 <Input
                   type="number"
                   value={form.quantity}
@@ -231,7 +231,7 @@ export function CapacityPage({ storeId }: { storeId?: string }) {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-slate-500">{"\uB8F8 \uC5EC\uBD80"}</label>
+                <label className="text-xs text-slate-500">{"룸 여부"}</label>
                 <select
                   className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
                   value={form.isPrivate ? "yes" : "no"}
@@ -242,17 +242,17 @@ export function CapacityPage({ storeId }: { storeId?: string }) {
                     }))
                   }
                 >
-                  <option value="no">{"\uC77C\uBC18 \uD640"}</option>
-                  <option value="yes">{"\uD504\uB77C\uC774\uBE57 \uB8F8"}</option>
+                  <option value="no">{"일반 홀"}</option>
+                  <option value="yes">{"프라이빗 룸"}</option>
                 </select>
               </div>
             </div>
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setOpen(false)}>
-              {"\uCDE8\uC18C"}
+              {"취소"}
             </Button>
-            <Button onClick={handleSave}>{"\uC800\uC7A5"}</Button>
+            <Button onClick={handleSave}>{"저장"}</Button>
           </div>
         </div>
       </Dialog>

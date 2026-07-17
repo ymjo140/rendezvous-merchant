@@ -119,12 +119,12 @@ export function ReservationDetailPage({
     <div className="space-y-4">
       {!storeId ? (
         <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600">
-          {"\uAC00\uAC8C \uC815\uBCF4\uB97C \uBD88\uB7EC\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uB9E4\uC7A5\uC744 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694."}
+          {"가게 정보를 불러올 수 없습니다. 매장을 선택해 주세요."}
         </div>
       ) : null}
       {storeId && !reservation ? (
         <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600">
-          {"\uC608\uC57D \uC815\uBCF4\uB97C \uBD88\uB7EC\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4."}
+          {"예약 정보를 불러올 수 없습니다."}
         </div>
       ) : null}
       <div className="flex items-center justify-between">

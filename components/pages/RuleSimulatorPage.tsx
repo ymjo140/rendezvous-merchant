@@ -8,23 +8,23 @@ import { BenefitType } from "@/domain/offers/types";
 const mockRules = [
   {
     id: "1",
-    name: "\uD3C9\uC77C \uC800\uB141 4\uC778 \uB8F0",
+    name: "평일 저녁 4인 룰",
     benefitType: BenefitType.TIME_EXTENSION,
-    benefitValue: "30\uBD84",
+    benefitValue: "30분",
     visibility: "public" as const,
   },
   {
     id: "2",
-    name: "\uC8FC\uB9D0 \uC810\uC2EC \uB8F0",
+    name: "주말 점심 룰",
     benefitType: BenefitType.SPACE_UPGRADE,
-    benefitValue: "4\uC778\uC2E4 \u2192 6\uC778\uC2E4",
+    benefitValue: "4인실 → 6인실",
     visibility: "private" as const,
   },
   {
     id: "3",
-    name: "\uD559\uC0DD \uBA54\uB274 \uC81C\uC548",
+    name: "학생 메뉴 제안",
     benefitType: BenefitType.FREE_MENU_ITEM,
-    benefitValue: "\uC74C\uB8CC 1\uC794",
+    benefitValue: "음료 1잔",
     visibility: "public" as const,
   },
 ];
@@ -32,36 +32,36 @@ const mockRules = [
 function buildBenefitMessage(type: BenefitType, value: string) {
   switch (type) {
     case BenefitType.TIME_EXTENSION:
-      return `\u23F0 \uC774\uC6A9 \uC2DC\uAC04 ${value || "30\uBD84"} \uC5F0\uC7A5 \uD61C\uD0DD!`;
+      return `⏰ 이용 시간 ${value || "30분"} 연장 혜택!`;
     case BenefitType.EARLY_ACCESS:
-      return `\u23F0 ${value || "10\uBD84"} \uC77C\uCC0D \uC785\uC7A5 \uD61C\uD0DD!`;
+      return `⏰ ${value || "10분"} 일찍 입장 혜택!`;
     case BenefitType.LATE_CHECKOUT:
-      return `\u23F0 ${value || "10\uBD84"} \uB291\uAC8C \uCCB4\uD06C\uC544\uC6C3 \uD61C\uD0DD!`;
+      return `⏰ ${value || "10분"} 늑게 체크아웃 혜택!`;
     case BenefitType.SPACE_UPGRADE:
-      return `\u2728 ${value || "\uB8F8/\uC88C\uC11D \uC5C5\uADF8\uB808\uC774\uB4DC"} \uBB34\uB8CC \uC5C5\uADF8\uB808\uC774\uB4DC!`;
+      return `✨ ${value || "룸/좌석 업그레이드"} 무료 업그레이드!`;
     case BenefitType.FREE_EQUIPMENT:
-      return `\u2728 ${value || "\uC7A5\uBE44"} \uB300\uC5EC \uD61C\uD0DD!`;
+      return `✨ ${value || "장비"} 대여 혜택!`;
     case BenefitType.CORKAGE_FREE:
-      return "\u2728 \uCF5C\uD0A4\uC9C0 \uD504\uB9AC \uD61C\uD0DD!";
+      return "✨ 콜키지 프리 혜택!";
     case BenefitType.FREE_MENU_ITEM:
-      return `\uD83C\uDF81 ${value || "\uBA54\uB274 \uC99D\uC815"} \uD61C\uD0DD!`;
+      return `🎁 ${value || "메뉴 증정"} 혜택!`;
     case BenefitType.SIZE_UPGRADE:
-      return `\uD83C\uDF81 ${value || "\uC0AC\uC774\uC988\uC5C5"} \uD61C\uD0DD!`;
+      return `🎁 ${value || "사이즈업"} 혜택!`;
     case BenefitType.UNLIMITED_REFILL:
-      return "\uD83C\uDF81 \uBB34\uC81C\uD55C \uB9AC\uD544 \uD61C\uD0DD!";
+      return "🎁 무제한 리필 혜택!";
     case BenefitType.PERCENT_DISCOUNT:
-      return `\uD83D\uDCB8 ${value || "10%"} \uD560\uC778 \uD61C\uD0DD!`;
+      return `💸 ${value || "10%"} 할인 혜택!`;
     case BenefitType.FIXED_AMOUNT_OFF:
-      return `\uD83D\uDCB8 ${value || "5000\uC6D0"} \uD560\uC778 \uD61C\uD0DD!`;
+      return `💸 ${value || "5000원"} 할인 혜택!`;
     default:
-      return value || "\uD61C\uD0DD";
+      return value || "혜택";
   }
 }
 
 export function RuleSimulatorPage() {
   const [selected, setSelected] = useState(mockRules[0]);
-  const storeName = "\uD14C\uC2A4\uD2B8 \uB9E4\uC7A5";
-  const storeCategory = "\uC2DD\uB2F9/\uBC25\uC9D1";
+  const storeName = "테스트 매장";
+  const storeCategory = "식당/밥집";
 
   const previewMessage = useMemo(
     () => buildBenefitMessage(selected.benefitType, selected.benefitValue),
@@ -71,9 +71,9 @@ export function RuleSimulatorPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold">{"\uB8F0 \uC2DC\uBBAC\uB808\uC774\uD130"}</h1>
+        <h1 className="text-2xl font-semibold">{"룰 시뮬레이터"}</h1>
         <p className="text-sm text-slate-500">
-          {"\uB8F0\uC744 \uC120\uD0DD\uD558\uBA74 \uC2E4\uC81C \uCE74\uB4DC \uC2DC\uAC01\uD654\uB85C \uBCF4\uC5EC\uC9D1\uB2C8\uB2E4."}
+          {"룰을 선택하면 실제 카드 시각화로 보여집니다."}
         </p>
       </div>
       <div className="flex flex-wrap gap-2">
@@ -90,7 +90,7 @@ export function RuleSimulatorPage() {
       <HotDealCard
         title={selected.name}
         benefit={previewMessage}
-        timer="\uB9C8\uAC10\uAE4C\uC9C0 01:20"
+        timer="마감까지 01:20"
         visibility={selected.visibility}
         storeName={storeName}
         category={storeCategory}

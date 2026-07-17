@@ -13,45 +13,62 @@ import { useRules } from "@/lib/hooks/useRules";
 import { useStoreId } from "@/components/layout/Layout";
 
 const dayLabels = [
-  "\uC6D4",
-  "\uD654",
-  "\uC218",
-  "\uBAA9",
-  "\uAE08",
-  "\uD1A0",
-  "\uC77C",
+  "월",
+  "화",
+  "수",
+  "목",
+  "금",
+  "토",
+  "일",
 ];
 const dayCodes = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
 const benefitTypes = [
-  { value: BenefitType.FREE_MENU_ITEM, label: "\uBA54\uB274 \uC99D\uC815" },
-  { value: BenefitType.SPACE_UPGRADE, label: "\uB8F8/\uC88C\uC11D \uC5C5\uADF8\uB808\uC774\uB4DC" },
-  { value: BenefitType.TIME_EXTENSION, label: "\uC2DC\uAC04 \uC5F0\uC7A5" },
-  { value: BenefitType.PERCENT_DISCOUNT, label: "\uC815\uB960 \uD560\uC778" },
-  { value: BenefitType.FIXED_AMOUNT_OFF, label: "\uC815\uC561 \uD560\uC778" },
+  { value: BenefitType.FREE_MENU_ITEM, label: "메뉴 증정" },
+  { value: BenefitType.SPACE_UPGRADE, label: "룸/좌석 업그레이드" },
+  { value: BenefitType.TIME_EXTENSION, label: "시간 연장" },
+  { value: BenefitType.PERCENT_DISCOUNT, label: "정률 할인" },
+  { value: BenefitType.FIXED_AMOUNT_OFF, label: "정액 할인" },
 ];
 
 const benefitTypeLabelMap: Record<BenefitType, string> = {
-  [BenefitType.PERCENT_DISCOUNT]: "\uC815\uB960 \uD560\uC778",
-  [BenefitType.FIXED_AMOUNT_OFF]: "\uC815\uC561 \uD560\uC778",
-  [BenefitType.FREE_MENU_ITEM]: "\uBA54\uB274 \uC99D\uC815",
-  [BenefitType.SIZE_UPGRADE]: "\uC0AC\uC774\uC988\uC5C5",
-  [BenefitType.UNLIMITED_REFILL]: "\uBB34\uC81C\uD55C \uB9AC\uD544",
-  [BenefitType.TIME_EXTENSION]: "\uC2DC\uAC04 \uC5F0\uC7A5",
-  [BenefitType.EARLY_ACCESS]: "\uC5BC\uB9AC \uCCB4\uD06C\uC778",
-  [BenefitType.LATE_CHECKOUT]: "\uB808\uC774\uD2B8 \uCCB4\uD06C\uC544\uC6C3",
-  [BenefitType.SPACE_UPGRADE]: "\uB8F8/\uC88C\uC11D \uC5C5\uADF8\uB808\uC774\uB4DC",
-  [BenefitType.FREE_EQUIPMENT]: "\uC7A5\uBE44 \uB300\uC5EC",
-  [BenefitType.CORKAGE_FREE]: "\uCF5C\uD0A4\uC9C0 \uD504\uB9AC",
+  [BenefitType.PERCENT_DISCOUNT]: "정률 할인",
+  [BenefitType.FIXED_AMOUNT_OFF]: "정액 할인",
+  [BenefitType.FREE_MENU_ITEM]: "메뉴 증정",
+  [BenefitType.SIZE_UPGRADE]: "사이즈업",
+  [BenefitType.UNLIMITED_REFILL]: "무제한 리필",
+  [BenefitType.TIME_EXTENSION]: "시간 연장",
+  [BenefitType.EARLY_ACCESS]: "얼리 체크인",
+  [BenefitType.LATE_CHECKOUT]: "레이트 체크아웃",
+  [BenefitType.SPACE_UPGRADE]: "룸/좌석 업그레이드",
+  [BenefitType.FREE_EQUIPMENT]: "장비 대여",
+  [BenefitType.CORKAGE_FREE]: "콜키지 프리",
 };
 
 const mockBenefits = [
-  { id: "1", title: "\uC74C\uB8CC 1\uC794", type: BenefitType.FREE_MENU_ITEM },
-  { id: "2", title: "\uCC3D\uAC00 \uC88C\uC11D", type: BenefitType.SPACE_UPGRADE },
+  { id: "1", title: "음료 1잔", type: BenefitType.FREE_MENU_ITEM },
+  { id: "2", title: "창가 좌석", type: BenefitType.SPACE_UPGRADE },
 ];
 
+// 혜택 종류별 입력 안내 — 사장님이 뭘 적어야 하는지 바로 알게
+const benefitValueHints: Partial<Record<BenefitType, { placeholder: string; hint: string }>> = {
+  [BenefitType.PERCENT_DISCOUNT]: { placeholder: "예: 10", hint: "할인율 숫자만 (%) — 10을 넣으면 10% 할인" },
+  [BenefitType.FIXED_AMOUNT_OFF]: { placeholder: "예: 5000", hint: "할인 금액 숫자만 (원)" },
+  [BenefitType.FREE_MENU_ITEM]: { placeholder: "예: 아메리카노 1잔", hint: "증정할 메뉴 이름" },
+  [BenefitType.SPACE_UPGRADE]: { placeholder: "예: 룸 무료 업그레이드", hint: "업그레이드 내용" },
+  [BenefitType.TIME_EXTENSION]: { placeholder: "예: 30분 연장", hint: "연장 내용" },
+};
+
+// 시간 입력 15분 단위 스냅
+function snap15(t: string): string {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(t);
+  if (!m) return t;
+  const total = Math.round((parseInt(m[1], 10) * 60 + parseInt(m[2], 10)) / 15) * 15;
+  return `${String(Math.floor(total / 60) % 24).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+
 const mockRule = {
-  name: "\uD3C9\uC77C \uC800\uB141 4\uC778 \uB8F0",
+  name: "평일 저녁 4인 룰",
   days: [true, true, true, true, false, false, false],
   timeBlocks: [{ start: "18:00", end: "20:00" }],
   partyMin: "4",
@@ -60,7 +77,7 @@ const mockRule = {
   leadMax: "240",
   benefitId: "1",
   benefitType: BenefitType.FREE_MENU_ITEM,
-  benefitValue: "\uC74C\uB8CC 1\uC794",
+  benefitValue: "음료 1잔",
   dailyCap: "20",
   minSpend: "30000",
   visibility: "public",
@@ -100,11 +117,11 @@ type PresetSetters = {
 const presets = [
   {
     key: "rainy",
-    label: "\u26A1 \uBE44\uC624\uB294 \uB0A0 \uACF5\uC2E4 \uCC44\uC6B0\uAE30",
+    label: "⚡ 비오는 날 공실 채우기",
     apply: (setters: PresetSetters) => {
-      setters.setName("\uBE44\uC624\uB294 \uB0A0 \uBC88\uAC1C");
+      setters.setName("비오는 날 번개");
       setters.setBenefitType(BenefitType.FREE_MENU_ITEM);
-      setters.setBenefitValue("\uC804/\uB9C9\uAC78\uB9AC");
+      setters.setBenefitValue("전/막걸리");
       setters.setPartyMin("2");
       setters.setPartyMax("4");
       setters.setLeadMin("0");
@@ -113,11 +130,11 @@ const presets = [
   },
   {
     key: "group",
-    label: "\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67\u200D\uD83D\uDC66 \uB2E8\uCCB4 \uD68C\uC2DD \uC720\uCE58",
+    label: "👨‍👩‍👧‍👦 단체 회식 유치",
     apply: (setters: PresetSetters) => {
-      setters.setName("\uB2E8\uCCB4 \uD68C\uC2DD \uC6B0\uB300");
+      setters.setName("단체 회식 우대");
       setters.setBenefitType(BenefitType.FREE_MENU_ITEM);
-      setters.setBenefitValue("\uC18C\uC8FC 2\uBCD1");
+      setters.setBenefitValue("소주 2병");
       setters.setPartyMin("6");
       setters.setPartyMax("12");
       setters.setMinSpend("100000");
@@ -125,9 +142,9 @@ const presets = [
   },
   {
     key: "closing",
-    label: "\u23F0 \uB9C8\uAC10 \uC9C1\uC804 \uD0C0\uC784\uC138\uC77C",
+    label: "⏰ 마감 직전 타임세일",
     apply: (setters: PresetSetters) => {
-      setters.setName("\uB9C8\uAC10 \uB5A8\uC774 \uD560\uC778");
+      setters.setName("마감 떨이 할인");
       setters.setBenefitType(BenefitType.PERCENT_DISCOUNT);
       setters.setBenefitValue("20%");
       setters.setTimeBlocks([{ start: "21:00", end: "23:00" }]);
@@ -140,29 +157,29 @@ const presets = [
 function buildBenefitMessage(type: BenefitType, value: string) {
   switch (type) {
     case BenefitType.TIME_EXTENSION:
-      return `\u23F0 \uC774\uC6A9 \uC2DC\uAC04 ${value || "30\uBD84"} \uC5F0\uC7A5 \uD61C\uD0DD!`;
+      return `⏰ 이용 시간 ${value || "30분"} 연장 혜택!`;
     case BenefitType.EARLY_ACCESS:
-      return `\u23F0 ${value || "10\uBD84"} \uC77C\uCC0D \uC785\uC7A5 \uD61C\uD0DD!`;
+      return `⏰ ${value || "10분"} 일찍 입장 혜택!`;
     case BenefitType.LATE_CHECKOUT:
-      return `\u23F0 ${value || "10\uBD84"} \uB291\uAC8C \uCCB4\uD06C\uC544\uC6C3 \uD61C\uD0DD!`;
+      return `⏰ ${value || "10분"} 늑게 체크아웃 혜택!`;
     case BenefitType.SPACE_UPGRADE:
-      return `\u2728 ${value || "\uB8F8/\uC88C\uC11D \uC5C5\uADF8\uB808\uC774\uB4DC"} \uBB34\uB8CC \uC5C5\uADF8\uB808\uC774\uB4DC!`;
+      return `✨ ${value || "룸/좌석 업그레이드"} 무료 업그레이드!`;
     case BenefitType.FREE_EQUIPMENT:
-      return `\u2728 ${value || "\uC7A5\uBE44"} \uB300\uC5EC \uD61C\uD0DD!`;
+      return `✨ ${value || "장비"} 대여 혜택!`;
     case BenefitType.CORKAGE_FREE:
-      return "\u2728 \uCF5C\uD0A4\uC9C0 \uD504\uB9AC \uD61C\uD0DD!";
+      return "✨ 콜키지 프리 혜택!";
     case BenefitType.FREE_MENU_ITEM:
-      return `\uD83C\uDF81 ${value || "\uBA54\uB274 \uC99D\uC815"} \uD61C\uD0DD!`;
+      return `🎁 ${value || "메뉴 증정"} 혜택!`;
     case BenefitType.SIZE_UPGRADE:
-      return `\uD83C\uDF81 ${value || "\uC0AC\uC774\uC988\uC5C5"} \uD61C\uD0DD!`;
+      return `🎁 ${value || "사이즈업"} 혜택!`;
     case BenefitType.UNLIMITED_REFILL:
-      return "\uD83C\uDF81 \uBB34\uC81C\uD55C \uB9AC\uD544 \uD61C\uD0DD!";
+      return "🎁 무제한 리필 혜택!";
     case BenefitType.PERCENT_DISCOUNT:
-      return `\uD83D\uDCB8 ${value || "10%"} \uD560\uC778 \uD61C\uD0DD!`;
+      return `💸 ${value || "10%"} 할인 혜택!`;
     case BenefitType.FIXED_AMOUNT_OFF:
-      return `\uD83D\uDCB8 ${value || "5000\uC6D0"} \uD560\uC778 \uD61C\uD0DD!`;
+      return `💸 ${value || "5000원"} 할인 혜택!`;
     default:
-      return value || "\uD61C\uD0DD";
+      return value || "혜택";
   }
 }
 
@@ -183,7 +200,7 @@ export function RuleBuilderPage({
   if (!resolvedStoreId) {
     return (
       <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600">
-        {"\uAC00\uAC8C \uC815\uBCF4\uB97C \uBD88\uB7EC\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uB9E4\uC7A5\uC744 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694."}
+        {"가게 정보를 불러올 수 없습니다. 매장을 선택해 주세요."}
       </div>
     );
   }
@@ -191,9 +208,9 @@ export function RuleBuilderPage({
   const storeIdValue = resolvedStoreId;
   const storeName =
     storeIdValue === "dev-store"
-      ? "\uD14C\uC2A4\uD2B8 \uB9E4\uC7A5"
-      : "\uB370\uBAA8 \uC2A4\uD1A0\uC5B4";
-  const storeCategory = "\uC2DD\uB2F9/\uBC25\uC9D1";
+      ? "테스트 매장"
+      : "데모 스토어";
+  const storeCategory = "식당/밥집";
   const { data: benefitRows = [] } = useBenefits(storeIdValue);
   const { data: ruleRows = [], createRule, updateRule } = useRules(storeIdValue);
 
@@ -226,6 +243,11 @@ export function RuleBuilderPage({
   const [validFrom, setValidFrom] = useState("");
   const [validTo, setValidTo] = useState("");
   const [catalog, setCatalog] = useState<BenefitItem[]>([]);
+  // 혜택 입력 모드: 저장된 혜택(카탈로그) 선택 vs 직접 입력
+  const [benefitMode, setBenefitMode] = useState<"saved" | "custom">("saved");
+  useEffect(() => {
+    if (catalog.length === 0) setBenefitMode("custom");
+  }, [catalog.length]);
 
   useEffect(() => {
     if (benefitRows.length > 0) {
@@ -329,10 +351,10 @@ export function RuleBuilderPage({
         .map((block) => `${block.start}~${block.end}`)
         .join(", "),
       partySize: `${partyMin}~${partyMax}`,
-      leadTime: `${leadMin}~${leadMax} \uBD84`,
+      leadTime: `${leadMin}~${leadMax} 분`,
       benefit: benefit ? benefit.title : benefitTypeLabelMap[benefitType],
       benefitValue,
-      guardrails: `\uD558\uB8E8 \uC120\uCC29\uC21C ${dailyCap}\uD300, \uCD5C\uC18C \uACB0\uC81C \uAE08\uC561 ${minSpend}\uC6D0`,
+      guardrails: `하루 선착순 ${dailyCap}팀, 최소 결제 금액 ${minSpend}원`,
       visibility,
       benefitType: benefit?.type ?? benefitType,
     };
@@ -402,11 +424,11 @@ export function RuleBuilderPage({
       } else {
         await createRule.mutateAsync(ruleRow);
       }
-      window.alert("\uC131\uACF5\uC801\uC73C\uB85C \uC800\uC7A5\uB418\uC5C8\uC2B5\uB2C8\uB2E4!");
+      window.alert("성공적으로 저장되었습니다!");
       router.push(`/stores/${storeIdValue}/offers/rules`);
     } catch (error) {
       console.error(error);
-      window.alert("\uC11C\uBC84 \uC800\uC7A5\uC744 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
+      window.alert("서버 저장을 실패했습니다.");
     }
   }
 
@@ -431,19 +453,19 @@ export function RuleBuilderPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">{"\uB8F0 \uBE4C\uB354"}</h1>
+          <h1 className="text-2xl font-semibold">{"룰 빌더"}</h1>
           <p className="text-sm text-slate-500">
-            {"\uC870\uAC74 / \uD61C\uD0DD / \uC0C1\uC138 \uC870\uAC74 \uC124\uC815 / \uBBF8\uB9AC\uBCF4\uAE30"}
+            {"조건 / 혜택 / 상세 조건 설정 / 미리보기"}
           </p>
         </div>
-        <Button onClick={handleSave}>{"\uC800\uC7A5"}</Button>
+        <Button onClick={handleSave}>{"저장"}</Button>
       </div>
       <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-4">
-        <div className="text-sm font-medium">{`\uB2E8\uACC4 ${step}`}</div>
+        <div className="text-sm font-medium">{`단계 ${step}`}</div>
         {step === 1 && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <div className="text-sm font-medium">{"\u26A1 \uC790\uC8FC \uC4F0\uB294 \uADDC\uCE59 \uBD88\uB7EC\uC624\uAE30"}</div>
+              <div className="text-sm font-medium">{"⚡ 자주 쓰는 규칙 불러오기"}</div>
               <div className="flex flex-wrap gap-2">
                 {presets.map((preset) => (
                   <Button
@@ -458,15 +480,15 @@ export function RuleBuilderPage({
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">{"\uADDC\uCE59 \uC774\uB984"}</label>
+              <label className="text-sm font-medium">{"규칙 이름"}</label>
               <Input
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                placeholder="\uD3C9\uC77C \uC800\uB141 4\uC778 \uB8F0"
+                placeholder="평일 저녁 4인 룰"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">{"\uC694\uC77C"}</label>
+              <label className="text-sm font-medium">{"요일"}</label>
               <div className="flex flex-wrap gap-2">
                 {dayLabels.map((label, index) => (
                   <label key={label} className="flex items-center gap-1 text-sm">
@@ -485,18 +507,19 @@ export function RuleBuilderPage({
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">{"\uC801\uC6A9\uD560 \uC2DC\uAC04\uB300"}</label>
+              <label className="text-sm font-medium">{"적용할 시간대"}</label>
               <div className="space-y-2">
                 {timeBlocks.map((block, index) => (
                   <div key={`${block.start}-${index}`} className="flex gap-2">
                     <Input
                       type="time"
+                      step={900}
                       value={block.start}
                       onChange={(event) =>
                         setTimeBlocks((prev) =>
                           prev.map((item, idx) =>
                             idx === index
-                              ? { ...item, start: event.target.value }
+                              ? { ...item, start: snap15(event.target.value) }
                               : item
                           )
                         )
@@ -504,12 +527,13 @@ export function RuleBuilderPage({
                     />
                     <Input
                       type="time"
+                      step={900}
                       value={block.end}
                       onChange={(event) =>
                         setTimeBlocks((prev) =>
                           prev.map((item, idx) =>
                             idx === index
-                              ? { ...item, end: event.target.value }
+                              ? { ...item, end: snap15(event.target.value) }
                               : item
                           )
                         )
@@ -521,7 +545,7 @@ export function RuleBuilderPage({
                         setTimeBlocks((prev) => prev.filter((_, idx) => idx !== index))
                       }
                     >
-                      {"\uC0AD\uC81C"}
+                      {"삭제"}
                     </Button>
                   </div>
                 ))}
@@ -532,11 +556,11 @@ export function RuleBuilderPage({
                   setTimeBlocks((prev) => [...prev, { start: "18:00", end: "20:00" }])
                 }
               >
-                {"\uC2DC\uAC04\uB300 \uCD94\uAC00"}
+                {"시간대 추가"}
               </Button>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">{"\uBC18\uBCF5 \uC694\uC77C \uC120\uD0DD"}</label>
+              <label className="text-sm font-medium">{"반복 요일 선택"}</label>
               <div className="flex flex-wrap gap-2">
                 {dayLabels.map((label, index) => {
                   const code = dayCodes[index];
@@ -561,17 +585,19 @@ export function RuleBuilderPage({
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">{"\uBC18\uBCF5 \uC801\uC6A9 \uC2DC\uAC04\uB300"}</label>
+              <label className="text-sm font-medium">{"반복 적용 시간대"}</label>
               <div className="grid gap-2 md:grid-cols-2">
                 <Input
                   type="time"
+                  step={900}
                   value={activeTimeStart}
-                  onChange={(event) => setActiveTimeStart(event.target.value)}
+                  onChange={(event) => setActiveTimeStart(snap15(event.target.value))}
                 />
                 <Input
                   type="time"
+                  step={900}
                   value={activeTimeEnd}
-                  onChange={(event) => setActiveTimeEnd(event.target.value)}
+                  onChange={(event) => setActiveTimeEnd(snap15(event.target.value))}
                 />
               </div>
               <label className="flex items-center gap-2 text-sm text-slate-600">
@@ -580,12 +606,12 @@ export function RuleBuilderPage({
                   checked={isAutoApply}
                   onChange={(event) => setIsAutoApply(event.target.checked)}
                 />
-                {"\uC2A4\uCF00\uC904\uB7EC\uC5D0 \uC790\uB3D9 \uC801\uC6A9 \uD45C\uC2DC"}
+                {"스케줄러에 자동 적용 표시"}
               </label>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-sm font-medium">{"\uC778\uC6D0 \uC81C\uD55C (\uCD5C\uC18C)"}</label>
+                <label className="text-sm font-medium">{"인원 제한 (최소)"}</label>
                 <Input
                   type="number"
                   value={partyMin}
@@ -593,7 +619,7 @@ export function RuleBuilderPage({
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">{"\uC778\uC6D0 \uC81C\uD55C (\uCD5C\uB300)"}</label>
+                <label className="text-sm font-medium">{"인원 제한 (최대)"}</label>
                 <Input
                   type="number"
                   value={partyMax}
@@ -604,22 +630,34 @@ export function RuleBuilderPage({
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <label className="text-sm font-medium">
-                  {"\uC608\uC57D \uB9C8\uAC10 (\uBC29\uBB38 N\uBD84 \uC804\uAE4C\uC9C0)"}
+                  {"예약 마감 (방문 N분 전까지)"}
                 </label>
                 <Input
                   type="number"
+                  step={15}
+                  min={0}
                   value={leadMin}
                   onChange={(event) => setLeadMin(event.target.value)}
+                  onBlur={(event) => {
+                    const n = Math.max(0, Math.round((Number(event.target.value) || 0) / 15) * 15);
+                    setLeadMin(String(n));
+                  }}
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">
-                  {"\uC608\uC57D \uC624\uD508 (\uBC29\uBB38 N\uBD84 \uC804\uBD80\uD130)"}
+                  {"예약 오픈 (방문 N분 전부터)"}
                 </label>
                 <Input
                   type="number"
+                  step={15}
+                  min={0}
                   value={leadMax}
                   onChange={(event) => setLeadMax(event.target.value)}
+                  onBlur={(event) => {
+                    const n = Math.max(0, Math.round((Number(event.target.value) || 0) / 15) * 15);
+                    setLeadMax(String(n));
+                  }}
                 />
               </div>
             </div>
@@ -627,87 +665,160 @@ export function RuleBuilderPage({
         )}
         {step === 2 && (
           <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{"\uB0B4 \uD61C\uD0DD \uBD88\uB7EC\uC624\uAE30"}</label>
-              {catalog.length === 0 ? (
-                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
-                  등록된 혜택이 없어요. <span className="font-bold">혜택 카탈로그</span>에서 먼저 혜택(예: 음료 서비스, 할인)을 만들어주세요.
-                </div>
-              ) : (
-                <Select
-                  value={benefitId}
-                  onChange={(event) => setBenefitId(event.target.value)}
-                >
-                  {catalog.map((benefit) => (
-                    <option key={benefit.id} value={String(benefit.id)}>
-                      {benefit.title}
-                    </option>
-                  ))}
-                </Select>
-              )}
+            <div>
+              <div className="text-sm font-medium">{"손님에게 어떤 혜택을 드릴까요?"}</div>
+              <p className="mt-0.5 text-xs text-slate-400">
+                {"자주 쓰는 혜택은 저장해두고 골라 쓸 수 있어요."}
+              </p>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{"\uD61C\uD0DD \uC885\uB958"}</label>
-              <Select
-                value={benefitType}
-                onChange={(event) => setBenefitType(event.target.value as BenefitType)}
+
+            {/* 모드 선택: 저장된 혜택 vs 직접 입력 */}
+            <div className="grid grid-cols-2 rounded-xl bg-slate-100 p-1 text-sm font-semibold">
+              <button
+                type="button"
+                onClick={() => catalog.length > 0 && setBenefitMode("saved")}
+                className={`rounded-lg py-2 transition-colors ${
+                  benefitMode === "saved"
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : catalog.length === 0
+                      ? "cursor-not-allowed text-slate-300"
+                      : "text-slate-500"
+                }`}
               >
-                {benefitTypes.map((type) => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </Select>
+                {`📁 저장된 혜택${catalog.length > 0 ? ` (${catalog.length})` : ""}`}
+              </button>
+              <button
+                type="button"
+                onClick={() => setBenefitMode("custom")}
+                className={`rounded-lg py-2 transition-colors ${
+                  benefitMode === "custom" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"
+                }`}
+              >
+                {"✏️ 직접 입력"}
+              </button>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{"\uD61C\uD0DD \uB0B4\uC6A9"}</label>
-              <Input
-                value={benefitValue}
-                onChange={(event) => setBenefitValue(event.target.value)}
-                placeholder="\uC608: \uC804/\uB9C9\uAC78\uB9AC, 10% \uD560\uC778"
-              />
-            </div>
+
+            {benefitMode === "saved" ? (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{"혜택 선택"}</label>
+                <div className="space-y-1.5">
+                  {catalog.map((benefit) => {
+                    const on = String(benefitId) === String(benefit.id);
+                    return (
+                      <button
+                        key={benefit.id}
+                        type="button"
+                        onClick={() => {
+                          setBenefitId(String(benefit.id));
+                          if (benefit.type) setBenefitType(benefit.type);
+                          setBenefitValue(benefit.title);
+                        }}
+                        className={`flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left text-sm transition-colors ${
+                          on ? "border-brand bg-amber-50 font-semibold" : "border-slate-200 bg-white hover:border-brand"
+                        }`}
+                      >
+                        <span>{benefit.title}</span>
+                        <span className="text-xs text-slate-400">
+                          {benefit.type ? benefitTypeLabelMap[benefit.type] ?? "" : ""}
+                          {on && " ✓"}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => router.push(`/stores/${storeIdValue}/offers/benefits`)}
+                  className="text-xs font-semibold text-brand"
+                >
+                  {"+ 새 혜택 만들기 (혜택 카탈로그로 이동)"}
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">{"혜택 종류"}</label>
+                  <Select
+                    value={benefitType}
+                    onChange={(event) => {
+                      setBenefitType(event.target.value as BenefitType);
+                      setBenefitValue("");
+                    }}
+                  >
+                    {benefitTypes.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">{"혜택 내용"}</label>
+                  <Input
+                    value={benefitValue}
+                    onChange={(event) => setBenefitValue(event.target.value)}
+                    placeholder={benefitValueHints[benefitType]?.placeholder ?? "예: 10% 할인"}
+                  />
+                  <p className="text-xs text-slate-400">
+                    {benefitValueHints[benefitType]?.hint ?? "손님 앱 핫딜 카드에 그대로 표시돼요."}
+                  </p>
+                </div>
+                {catalog.length === 0 && (
+                  <p className="text-xs text-slate-400">
+                    {"💡 자주 쓰는 혜택이라면 "}
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/stores/${storeIdValue}/offers/benefits`)}
+                      className="font-semibold text-brand"
+                    >
+                      {"혜택 카탈로그"}
+                    </button>
+                    {"에 저장해두면 다음부터 골라 쓸 수 있어요."}
+                  </p>
+                )}
+              </>
+            )}
           </div>
         )}
         {step === 3 && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">{"\uD558\uB8E8 \uC120\uCC29\uC21C (\uD300)"}</label>
+              <label className="text-sm font-medium">{"하루 선착순 (팀)"}</label>
               <Input
                 value={dailyCap}
                 onChange={(event) => setDailyCap(event.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">{"\uCD5C\uC18C \uACB0\uC81C \uAE08\uC561 (\uAC1D\uB2E8\uAC00)"}</label>
+              <label className="text-sm font-medium">{"최소 결제 금액 (객단가)"}</label>
               <Input
                 value={minSpend}
                 onChange={(event) => setMinSpend(event.target.value)}
               />
             </div>
-            {/* \uD56B\uB51C \uC218\uB7C9 / \uC720\uD6A8\uAE30\uAC04 (\uC18C\uC9C4\u00B7\uB9CC\uB8CC \uC2DC B2C \uB178\uCD9C \uC790\uB3D9 \uC911\uB2E8) */}
+            {/* 핫딜 수량 / 유효기간 (소진·만료 시 B2C 노출 자동 중단) */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">{"\uD56B\uB51C \uC218\uB7C9 (0 = \uBB34\uC81C\uD55C)"}</label>
+              <label className="text-sm font-medium">{"핫딜 수량 (0 = 무제한)"}</label>
               <Input
                 type="number"
                 value={inventoryCap}
                 onChange={(event) => setInventoryCap(event.target.value)}
-                placeholder="\uC608: 20 (\uC218\uB7C9 \uC18C\uC9C4 \uC2DC \uC790\uB3D9 \uB9C8\uAC10)"
+                placeholder="예: 20 (수량 소진 시 자동 마감)"
               />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-2">
-                <label className="text-sm font-medium">{"\uC720\uD6A8 \uC2DC\uC791\uC77C"}</label>
+                <label className="text-sm font-medium">{"유효 시작일"}</label>
                 <Input type="date" value={validFrom} onChange={(event) => setValidFrom(event.target.value)} />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">{"\uC720\uD6A8 \uC885\uB8CC\uC77C"}</label>
+                <label className="text-sm font-medium">{"유효 종료일"}</label>
                 <Input type="date" value={validTo} onChange={(event) => setValidTo(event.target.value)} />
               </div>
             </div>
-            <p className="text-xs text-slate-400">{"\uBE44\uC6CC\uB450\uBA74 \uC0C1\uC2DC \uC9C4\uD589. \uC218\uB7C9 \uC18C\uC9C4\u00B7\uAE30\uAC04 \uB9CC\uB8CC \uC2DC \uC571\uC5D0\uC11C \uC790\uB3D9\uC73C\uB85C \uB0B4\uB824\uAC11\uB2C8\uB2E4."}</p>
+            <p className="text-xs text-slate-400">{"비워두면 상시 진행. 수량 소진·기간 만료 시 앱에서 자동으로 내려갑니다."}</p>
             <div className="space-y-2">
-              <label className="text-sm font-medium">{"\uC0C1\uC138 \uC870\uAC74 \uC124\uC815"}</label>
+              <label className="text-sm font-medium">{"상세 조건 설정"}</label>
               <div className="space-y-2 text-sm text-slate-600">
                 <label className="flex items-center gap-2">
                   <input
@@ -717,9 +828,9 @@ export function RuleBuilderPage({
                     checked={visibility === "public"}
                     onChange={() => setVisibility("public")}
                   />
-                  {"\uACF5\uAC1C"}
+                  {"공개"}
                   <span className="text-xs text-slate-500">
-                    {"\uD56B\uB51C \uD0ED\uC5D0 \uBAA8\uB4E0 \uC0AC\uB78C\uC5D0\uAC8C \uB178\uCD9C\uD569\uB2C8\uB2E4. (\uACF5\uC2E4 \uD574\uACB0 \uCD5C\uC801)"}
+                    {"핫딜 탭에 모든 사람에게 노출합니다. (공실 해결 최적)"}
                   </span>
                 </label>
                 <label className="flex items-center gap-2">
@@ -730,10 +841,10 @@ export function RuleBuilderPage({
                     checked={visibility === "private"}
                     onChange={() => setVisibility("private")}
                   />
-                  {"\uBE44\uACF5\uAC1C \uC81C\uC548"}
+                  {"비공개 제안"}
                   <span className="text-xs text-slate-500">
                     {
-                      "\uD56B\uB51C \uD0ED\uC5D0 \uB178\uCD9C\uD558\uC9C0 \uC54A\uACE0, AI\uAC00 \uC801\uD569\uD55C \uC190\uB2D8\uC5D0\uAC8C\uB9CC \uC81C\uC548\uD569\uB2C8\uB2E4. (\uBE0C\uB79C\uB4DC \uBCF4\uD638)"
+                      "핫딜 탭에 노출하지 않고, AI가 적합한 손님에게만 제안합니다. (브랜드 보호)"
                     }
                   </span>
                 </label>
@@ -744,23 +855,23 @@ export function RuleBuilderPage({
         {step === 4 && (
           <Card>
             <CardHeader>
-              <CardTitle>{"\uBBF8\uB9AC\uBCF4\uAE30"}</CardTitle>
+              <CardTitle>{"미리보기"}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-sm text-slate-600">
-              <div>{"\uC0AC\uC7A5\uB2D8, \uD559\uC0DD\uB4E4\uC5D0\uAC8C\uB294 \uC774\uB807\uAC8C \uBCF4\uC785\uB2C8\uB2E4."}</div>
+              <div>{"사장님, 학생들에게는 이렇게 보입니다."}</div>
               <HotDealCard
                 title={summary.name || "-"}
                 benefit={previewMessage}
-                timer="\uB9C8\uAC10\uAE4C\uC9C0 02:15"
+                timer="마감까지 02:15"
                 visibility={summary.visibility}
                 storeName={storeName}
                 category={storeCategory}
               />
-              <div>{"\uC694\uC77C: "}{summary.days || "-"}</div>
-              <div>{"\uC2DC\uAC04\uB300: "}{summary.timeBlocks || "-"}</div>
-              <div>{"\uC778\uC6D0 \uC81C\uD55C: "}{summary.partySize}</div>
-              <div>{"\uC608\uC57D \uB9C8\uAC10/\uC624\uD508: "}{summary.leadTime}</div>
-              <div>{"\uC0C1\uC138 \uC870\uAC74 \uC124\uC815: "}{summary.guardrails}</div>
+              <div>{"요일: "}{summary.days || "-"}</div>
+              <div>{"시간대: "}{summary.timeBlocks || "-"}</div>
+              <div>{"인원 제한: "}{summary.partySize}</div>
+              <div>{"예약 마감/오픈: "}{summary.leadTime}</div>
+              <div>{"상세 조건 설정: "}{summary.guardrails}</div>
             </CardContent>
           </Card>
         )}
@@ -770,14 +881,14 @@ export function RuleBuilderPage({
             onClick={() => setStep((prev) => Math.max(1, prev - 1))}
             disabled={step === 1}
           >
-            {"\uC774\uC804"}
+            {"이전"}
           </Button>
           {step < 4 ? (
             <Button onClick={() => setStep((prev) => prev + 1)}>
-              {"\uB2E4\uC74C"}
+              {"다음"}
             </Button>
           ) : (
-            <Button onClick={handleSave}>{"\uC644\uB8CC"}</Button>
+            <Button onClick={handleSave}>{"완료"}</Button>
           )}
         </div>
       </div>

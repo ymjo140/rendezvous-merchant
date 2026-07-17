@@ -13,17 +13,17 @@ import { useBenefits, type BenefitRow } from "@/lib/hooks/useBenefits";
 import { useStoreId } from "@/components/layout/Layout";
 
 const categoryOptions = [
-  { value: BenefitCategory.GOODS, label: "\uBA54\uB274\u00B7\uBB3C\uD488 \uC81C\uACF5" },
-  { value: BenefitCategory.EXPERIENCE, label: "\uACF5\uAC04\u00B7\uACBD\uD5D8 \uD61C\uD0DD" },
-  { value: BenefitCategory.TIME, label: "\uC2DC\uAC04 \uC11C\uBE44\uC2A4" },
-  { value: BenefitCategory.FINANCIAL, label: "\uAE08\uC561 \uD560\uC778" },
+  { value: BenefitCategory.GOODS, label: "메뉴·물품 제공" },
+  { value: BenefitCategory.EXPERIENCE, label: "공간·경험 혜택" },
+  { value: BenefitCategory.TIME, label: "시간 서비스" },
+  { value: BenefitCategory.FINANCIAL, label: "금액 할인" },
 ];
 
 const categoryLabelMap: Record<BenefitCategory, string> = {
-  [BenefitCategory.FINANCIAL]: "\uAE08\uC561 \uD560\uC778",
-  [BenefitCategory.GOODS]: "\uBA54\uB274\u00B7\uBB3C\uD488 \uC81C\uACF5",
-  [BenefitCategory.TIME]: "\uC2DC\uAC04 \uC11C\uBE44\uC2A4",
-  [BenefitCategory.EXPERIENCE]: "\uACF5\uAC04\u00B7\uACBD\uD5D8 \uD61C\uD0DD",
+  [BenefitCategory.FINANCIAL]: "금액 할인",
+  [BenefitCategory.GOODS]: "메뉴·물품 제공",
+  [BenefitCategory.TIME]: "시간 서비스",
+  [BenefitCategory.EXPERIENCE]: "공간·경험 혜택",
 };
 
 const typeOptionsByCategory: Record<
@@ -39,85 +39,85 @@ const typeOptionsByCategory: Record<
   [BenefitCategory.FINANCIAL]: [
     {
       value: BenefitType.PERCENT_DISCOUNT,
-      label: "\uC815\uB960 \uD560\uC778",
+      label: "정률 할인",
       inputType: "number",
       placeholder: "10",
       unitLabel: "%",
     },
     {
       value: BenefitType.FIXED_AMOUNT_OFF,
-      label: "\uC815\uC561 \uD560\uC778",
+      label: "정액 할인",
       inputType: "number",
       placeholder: "5000",
-      unitLabel: "\uC6D0",
+      unitLabel: "원",
     },
   ],
   [BenefitCategory.GOODS]: [
     {
       value: BenefitType.FREE_MENU_ITEM,
-      label: "\uBA54\uB274 \uC99D\uC815",
+      label: "메뉴 증정",
       inputType: "text",
-      placeholder: "\uAC10\uC790\uD280\uAE40",
+      placeholder: "감자튀김",
       unitLabel: "",
     },
     {
       value: BenefitType.SIZE_UPGRADE,
-      label: "\uC0AC\uC774\uC988\uC5C5",
+      label: "사이즈업",
       inputType: "text",
-      placeholder: "\uB77C\uC9C0 \uC0AC\uC774\uC988",
+      placeholder: "라지 사이즈",
       unitLabel: "",
     },
     {
       value: BenefitType.UNLIMITED_REFILL,
-      label: "\uBB34\uC81C\uD55C \uB9AC\uD544",
+      label: "무제한 리필",
       inputType: "text",
-      placeholder: "\uBB34\uC81C\uD55C \uB9AC\uD544",
+      placeholder: "무제한 리필",
       unitLabel: "",
     },
   ],
   [BenefitCategory.TIME]: [
     {
       value: BenefitType.TIME_EXTENSION,
-      label: "\uC2DC\uAC04 \uC5F0\uC7A5",
+      label: "시간 연장",
       inputType: "number",
       placeholder: "30",
-      unitLabel: "\uBD84",
+      unitLabel: "분",
     },
     {
       value: BenefitType.EARLY_ACCESS,
-      label: "\uC5BC\uB9AC \uCCB4\uD06C\uC778",
+      label: "얼리 체크인",
       inputType: "number",
       placeholder: "15",
-      unitLabel: "\uBD84",
+      unitLabel: "분",
     },
     {
       value: BenefitType.LATE_CHECKOUT,
-      label: "\uB808\uC774\uD2B8 \uCCB4\uD06C\uC544\uC6C3",
+      label: "레이트 체크아웃",
       inputType: "number",
       placeholder: "20",
-      unitLabel: "\uBD84",
+      unitLabel: "분",
     },
   ],
   [BenefitCategory.EXPERIENCE]: [
     {
       value: BenefitType.SPACE_UPGRADE,
-      label: "\uB8F8/\uC88C\uC11D \uC5C5\uADF8\uB808\uC774\uB4DC",
+      label: "룸/좌석 업그레이드",
       inputType: "text",
-      placeholder: "4\uC778\uC2E4 \u2192 6\uC778\uC2E4",
+      placeholder: "4인실 → 6인실",
       unitLabel: "",
     },
     {
       value: BenefitType.FREE_EQUIPMENT,
-      label: "\uC7A5\uBE44 \uB300\uC5EC",
+      label: "장비 대여",
       inputType: "text",
-      placeholder: "\uBE14\uB8E8\uD22C\uC2A4 \uC2A4\uD53C\uCEE4",
+      placeholder: "블루투스 스피커",
       unitLabel: "",
     },
     {
       value: BenefitType.CORKAGE_FREE,
-      label: "\uCF5C\uD0A4\uC9C0 \uD504\uB9AC",
+      label: "콜키지 프리",
       inputType: "text",
-      placeholder: "\uCF5C\uD0A4\uC9C0 \uD504\uB9AC",
+      placeholder: "콜키지 프리",
       unitLabel: "",
     },
   ],
@@ -136,7 +136,7 @@ const benefitFormSchema = z
   .object({
     category: z.nativeEnum(BenefitCategory),
     type: z.nativeEnum(BenefitType),
-    title: z.string().min(1, "\uD61C\uD0DD \uC774\uB984\uC744 \uC785\uB825\uD574 \uC8FC\uC138\uC694."),
+    title: z.string().min(1, "혜택 이름을 입력해 주세요."),
     value: z.string().optional(),
   })
   .superRefine((data, ctx) => {
@@ -155,19 +155,19 @@ const benefitFormSchema = z
     switch (data.type) {
       case BenefitType.PERCENT_DISCOUNT:
         if (!isNumber || numberValue < 1 || numberValue > 100) {
-          addIssue("1~100 \uC0AC\uC774 \uC22B\uC790\uB85C \uC785\uB825\uD574 \uC8FC\uC138\uC694.");
+          addIssue("1~100 사이 숫자로 입력해 주세요.");
         }
         break;
       case BenefitType.FIXED_AMOUNT_OFF:
         if (!isNumber || numberValue <= 0) {
-          addIssue("\uAE08\uC561\uC740 \uC22B\uC790\uB85C \uC785\uB825\uD574 \uC8FC\uC138\uC694.");
+          addIssue("금액은 숫자로 입력해 주세요.");
         }
         break;
       case BenefitType.TIME_EXTENSION:
       case BenefitType.EARLY_ACCESS:
       case BenefitType.LATE_CHECKOUT:
         if (!isNumber || numberValue <= 0) {
-          addIssue("\uBD84 \uB2E8\uC704 \uC22B\uC790\uB85C \uC785\uB825\uD574 \uC8FC\uC138\uC694.");
+          addIssue("분 단위 숫자로 입력해 주세요.");
         }
         break;
       case BenefitType.FREE_MENU_ITEM:
@@ -177,7 +177,7 @@ const benefitFormSchema = z
       case BenefitType.FREE_EQUIPMENT:
       case BenefitType.CORKAGE_FREE:
         if (!rawValue) {
-          addIssue("\uD61C\uD0DD \uB0B4\uC6A9\uC744 \uC785\uB825\uD574 \uC8FC\uC138\uC694.");
+          addIssue("혜택 내용을 입력해 주세요.");
         }
         break;
       default:
@@ -191,19 +191,19 @@ const fallbackBenefits: BenefitRow[] = [
   {
     id: "benefit-1",
     store_id: "dev-store",
-    title: "\uC74C\uB8CC 1\uC794",
+    title: "음료 1잔",
     category: BenefitCategory.GOODS,
     type: BenefitType.FREE_MENU_ITEM,
-    value: "\uC544\uBA54\uB9AC\uCE74\uB178",
+    value: "아메리카노",
     is_active: true,
   },
   {
     id: "benefit-2",
     store_id: "dev-store",
-    title: "\uC88C\uC11D \uC5C5\uADF8\uB808\uC774\uB4DC",
+    title: "좌석 업그레이드",
     category: BenefitCategory.EXPERIENCE,
     type: BenefitType.SPACE_UPGRADE,
-    value: "\uCC3D\uAC00 \uC88C\uC11D",
+    value: "창가 좌석",
     is_active: true,
   },
 ];
@@ -219,7 +219,7 @@ export function BenefitsCatalogPage({ storeId }: { storeId?: string }) {
   if (!resolvedStoreId) {
     return (
       <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600">
-        {"\uAC00\uAC8C \uC815\uBCF4\uB97C \uBD88\uB7EC\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uB9E4\uC7A5\uC744 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694."}
+        {"가게 정보를 불러올 수 없습니다. 매장을 선택해 주세요."}
       </div>
     );
   }
@@ -301,17 +301,17 @@ export function BenefitsCatalogPage({ storeId }: { storeId?: string }) {
   }
 
   function handleDelete(targetId: BenefitRow["id"]) {
-    if (!window.confirm("\uD61C\uD0DD\uC744 \uC0AD\uC81C\uD560\uAE4C\uC694?")) return;
+    if (!window.confirm("혜택을 삭제할까요?")) return;
     deleteBenefit.mutate({ id: String(targetId) });
   }
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">{"\uD61C\uD0DD \uCE74\uD0C8\uB85C\uADF8"}</h1>
+        <h1 className="text-2xl font-semibold">{"혜택 카탈로그"}</h1>
         <p className="text-sm text-slate-500">
           {
-            "\uD61C\uD0DD \uC720\uD615\uC744 \uC120\uD0DD\uD558\uACE0 \uAC04\uB2E8\uD788 \uB4F1\uB85D\uD558\uC138\uC694. \uC11C\uBE44\uC2A4 \uC81C\uACF5\uD615 \uD61C\uD0DD\uC744 \uC6B0\uC120 \uCD94\uCC9C\uD569\uB2C8\uB2E4."
+            "혜택 유형을 선택하고 간단히 등록하세요. 서비스 제공형 혜택을 우선 추천합니다."
           }
         </p>
       </div>
@@ -319,7 +319,7 @@ export function BenefitsCatalogPage({ storeId }: { storeId?: string }) {
       <form onSubmit={handleSubmit(onSubmit)} className="rounded-xl border border-slate-200 bg-white p-6 space-y-4">
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <label className="text-sm font-medium">{"\uCE74\uD14C\uACE0\uB9AC \uC120\uD0DD"}</label>
+            <label className="text-sm font-medium">{"카테고리 선택"}</label>
             <Select {...register("category")}> 
               {categoryOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -332,7 +332,7 @@ export function BenefitsCatalogPage({ storeId }: { storeId?: string }) {
             )}
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">{"\uC0C1\uC138 \uD0C0\uC785 \uC120\uD0DD"}</label>
+            <label className="text-sm font-medium">{"상세 타입 선택"}</label>
             <Select {...register("type")}> 
               {typeOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -347,9 +347,9 @@ export function BenefitsCatalogPage({ storeId }: { storeId?: string }) {
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">{"\uD61C\uD0DD \uC774\uB984"}</label>
+          <label className="text-sm font-medium">{"혜택 이름"}</label>
           <Input
-            placeholder="\uC608: \uC74C\uB8CC 1\uC794, \uB8F8 \uC5C5\uADF8\uB808\uC774\uB4DC"
+            placeholder="예: 음료 1잔, 룸 업그레이드"
             {...register("title")}
           />
           {errors.title && (
@@ -358,7 +358,7 @@ export function BenefitsCatalogPage({ storeId }: { storeId?: string }) {
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">{"\uD61C\uD0DD \uB0B4\uC6A9"}</label>
+          <label className="text-sm font-medium">{"혜택 내용"}</label>
           <div className="flex items-center gap-2">
             <Input
               type={activeTypeConfig?.inputType ?? "text"}
@@ -378,7 +378,7 @@ export function BenefitsCatalogPage({ storeId }: { storeId?: string }) {
 
         <div className="flex justify-end">
           <Button type="submit" disabled={isSubmitting}>
-            {"\uD61C\uD0DD \uCD94\uAC00"}
+            {"혜택 추가"}
           </Button>
         </div>
       </form>
@@ -392,7 +392,7 @@ export function BenefitsCatalogPage({ storeId }: { storeId?: string }) {
             <div className="space-y-1">
               <div className="text-sm font-medium">{benefit.title}</div>
               <div className="text-xs text-slate-500">
-                {benefit.value ? `\uB0B4\uC6A9: ${benefit.value}` : "\uB0B4\uC6A9 \uC5C6\uC74C"}
+                {benefit.value ? `내용: ${benefit.value}` : "내용 없음"}
               </div>
               <div className="flex flex-wrap gap-2">
                 <Badge>{categoryLabelMap[benefit.category]}</Badge>
@@ -407,14 +407,14 @@ export function BenefitsCatalogPage({ storeId }: { storeId?: string }) {
                     : "bg-slate-100 text-slate-500"
                 }
               >
-                {benefit.is_active ? "\uC0AC\uC6A9 \uC911" : "\uBE44\uD65C\uC131"}
+                {benefit.is_active ? "사용 중" : "비활성"}
               </Badge>
               <Button
                 variant="ghost"
                 className="text-rose-600 hover:bg-rose-50"
                 onClick={() => handleDelete(benefit.id)}
               >
-                {"\uC0AD\uC81C"}
+                {"삭제"}
               </Button>
             </div>
           </div>

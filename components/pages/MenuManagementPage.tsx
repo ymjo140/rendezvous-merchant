@@ -10,9 +10,9 @@ import { useMenus, type MenuRow } from "@/lib/hooks/useMenus";
 import { useStoreId } from "@/components/layout/Layout";
 
 const categoryOptions = [
-  { value: "MAIN", label: "\uBA54\uC778" },
-  { value: "SIDE", label: "\uC0AC\uC774\uB4DC" },
-  { value: "DRINK", label: "\uC74C\uB8CC" },
+  { value: "MAIN", label: "메인" },
+  { value: "SIDE", label: "사이드" },
+  { value: "DRINK", label: "음료" },
 ];
 
 const placeholderImages = [
@@ -22,8 +22,8 @@ const placeholderImages = [
 ];
 
 function formatPrice(value?: number | null) {
-  if (!value) return "\uAC00\uACA9 \uBBF8\uC785\uB825";
-  return `${value.toLocaleString()}\uC6D0`;
+  if (!value) return "가격 미입력";
+  return `${value.toLocaleString()}원`;
 }
 
 export function MenuManagementPage({ storeId }: { storeId?: string }) {
@@ -54,7 +54,7 @@ export function MenuManagementPage({ storeId }: { storeId?: string }) {
   if (!resolvedStoreId) {
     return (
       <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600">
-        {"\uAC00\uAC8C \uC815\uBCF4\uB97C \uBD88\uB7EC\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uB9E4\uC7A5\uC744 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694."}
+        {"가게 정보를 불러올 수 없습니다. 매장을 선택해 주세요."}
       </div>
     );
   }
@@ -93,7 +93,7 @@ export function MenuManagementPage({ storeId }: { storeId?: string }) {
 
   const handleSave = async () => {
     if (!name.trim()) {
-      window.alert("\uBA54\uB274 \uC774\uB984\uC744 \uC785\uB825\uD574 \uC8FC\uC138\uC694.");
+      window.alert("메뉴 이름을 입력해 주세요.");
       return;
     }
     const payload = {
@@ -121,12 +121,12 @@ export function MenuManagementPage({ storeId }: { storeId?: string }) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">{"\uBA54\uB274 \uAD00\uB9AC"}</h1>
+          <h1 className="text-2xl font-semibold">{"메뉴 관리"}</h1>
           <p className="text-sm text-slate-500">
-            {"\uBA54\uB274 \uC815\uBCF4\uB97C \uB4F1\uB85D\uD558\uACE0 \uCD94\uCC9C \uBA54\uB274\uB97C \uAC00\uB824\uBCF4\uC138\uC694."}
+            {"메뉴 정보를 등록하고 추천 메뉴를 가려보세요."}
           </p>
         </div>
-        <Button onClick={openCreate}>{"+\u00A0\uBA54\uB274 \uCD94\uAC00"}</Button>
+        <Button onClick={openCreate}>{"+ 메뉴 추가"}</Button>
       </div>
 
       <Tabs
@@ -136,10 +136,10 @@ export function MenuManagementPage({ storeId }: { storeId?: string }) {
       />
 
       {isLoading ? (
-        <div className="text-sm text-slate-500">{"\uB85C\uB529 \uC911..."}</div>
+        <div className="text-sm text-slate-500">{"로딩 중..."}</div>
       ) : filteredMenus.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
-          {"\uC774 \uCE74\uD14C\uACE0\uB9AC\uC5D0 \uBA54\uB274\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4."}
+          {"이 카테고리에 메뉴가 없습니다."}
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -157,12 +157,12 @@ export function MenuManagementPage({ storeId }: { storeId?: string }) {
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-xs text-slate-400">
-                    {"\uC0AC\uC9C4 \uC5C6\uC74C"}
+                    {"사진 없음"}
                   </div>
                 )}
                 {menu.is_recommended ? (
                   <Badge className="absolute left-3 top-3 bg-amber-400 text-slate-900">
-                    {"\uCD94\uCC9C"}
+                    {"추천"}
                   </Badge>
                 ) : null}
               </div>
@@ -171,14 +171,14 @@ export function MenuManagementPage({ storeId }: { storeId?: string }) {
                 <div className="text-xs text-slate-500">{formatPrice(menu.price)}</div>
                 <div className="flex gap-2">
                   <Button variant="secondary" onClick={() => openEdit(menu)}>
-                    {"\uC218\uC815"}
+                    {"수정"}
                   </Button>
                   <Button
                     variant="ghost"
                     className="text-rose-600 hover:bg-rose-50"
                     onClick={() => deleteMenu.mutate(menu.id)}
                   >
-                    {"\uC0AD\uC81C"}
+                    {"삭제"}
                   </Button>
                 </div>
               </div>
@@ -190,15 +190,15 @@ export function MenuManagementPage({ storeId }: { storeId?: string }) {
       <Dialog open={dialogOpen}>
         <div className="space-y-4">
           <div className="text-lg font-semibold">
-            {editingMenu ? "\uBA54\uB274 \uC218\uC815" : "\uBA54\uB274 \uCD94\uAC00"}
+            {editingMenu ? "메뉴 수정" : "메뉴 추가"}
           </div>
           <div className="grid gap-3 text-sm">
             <div className="space-y-1">
-              <label className="text-xs text-slate-500">{"\uBA54\uB274 \uC774\uB984"}</label>
+              <label className="text-xs text-slate-500">{"메뉴 이름"}</label>
               <Input value={name} onChange={(event) => setName(event.target.value)} />
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-slate-500">{"\uAC00\uACA9"}</label>
+              <label className="text-xs text-slate-500">{"가격"}</label>
               <Input
                 type="number"
                 value={price}
@@ -206,7 +206,7 @@ export function MenuManagementPage({ storeId }: { storeId?: string }) {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-slate-500">{"\uCE74\uD14C\uACE0\uB9AC"}</label>
+              <label className="text-xs text-slate-500">{"카테고리"}</label>
               <select
                 className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
                 value={category}
@@ -220,14 +220,14 @@ export function MenuManagementPage({ storeId }: { storeId?: string }) {
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-slate-500">{"\uC774\uBBF8\uC9C0 URL"}</label>
+              <label className="text-xs text-slate-500">{"이미지 URL"}</label>
               <Input
                 value={imageUrl}
                 onChange={(event) => setImageUrl(event.target.value)}
                 placeholder="https://"
               />
               <Button variant="secondary" onClick={handleRandomImage}>
-                {"\uB354\uBBF8 \uC774\uBBF8\uC9C0 \uCD94\uAC00"}
+                {"더미 이미지 추가"}
               </Button>
             </div>
             <label className="flex items-center gap-2 text-sm">
@@ -236,15 +236,15 @@ export function MenuManagementPage({ storeId }: { storeId?: string }) {
                 checked={isRecommended}
                 onChange={(event) => setIsRecommended(event.target.checked)}
               />
-              {"\uCD94\uCC9C \uBA54\uB274\uB85C \uD45C\uC2DC"}
+              {"추천 메뉴로 표시"}
             </label>
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setDialogOpen(false)}>
-              {"\uCDE8\uC18C"}
+              {"취소"}
             </Button>
             <Button onClick={handleSave}>
-              {editingMenu ? "\uC800\uC7A5" : "\uCD94\uAC00"}
+              {editingMenu ? "저장" : "추가"}
             </Button>
           </div>
         </div>

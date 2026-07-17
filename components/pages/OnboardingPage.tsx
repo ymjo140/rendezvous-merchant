@@ -9,17 +9,17 @@ import { searchPlaces, type Place } from "@/lib/api/places";
 import { supabase } from "@/lib/supabase/client";
 
 const steps = [
-  { id: 1, label: "\uAE30\uBCF8 \uC815\uBCF4" },
-  { id: 2, label: "\uACF5\uAC04/\uC88C\uC11D" },
-  { id: 3, label: "\uB300\uD45C \uBA54\uB274" },
+  { id: 1, label: "기본 정보" },
+  { id: 2, label: "공간/좌석" },
+  { id: 3, label: "대표 메뉴" },
 ];
 
 const categories = [
-  "\uC220\uC9D1/\uD3EC\uCC28",
-  "\uC2DD\uB2F9/\uBC25\uC9D1",
-  "\uCE74\uD398/\uB514\uC800\uD2B8",
-  "\uC2A4\uD130\uB514\uB8F8/\uACF5\uAC04",
-  "\uD30C\uD2F0\uB8F8",
+  "술집/포차",
+  "식당/밥집",
+  "카페/디저트",
+  "스터디룸/공간",
+  "파티룸",
 ];
 
 function Counter({
@@ -49,23 +49,23 @@ function Counter({
 
 function mapMainCategory(value?: string | null) {
   const key = (value ?? "").toUpperCase();
-  if (key.includes("CAFE")) return "\uCE74\uD398/\uB514\uC800\uD2B8";
-  if (key.includes("STUDY") || key.includes("OFFICE")) return "\uC2A4\uD130\uB514\uB8F8/\uACF5\uAC04";
-  if (key.includes("PARTY")) return "\uD30C\uD2F0\uB8F8";
+  if (key.includes("CAFE")) return "카페/디저트";
+  if (key.includes("STUDY") || key.includes("OFFICE")) return "스터디룸/공간";
+  if (key.includes("PARTY")) return "파티룸";
   if (key.includes("BAR") || key.includes("DRINK") || key.includes("PUB")) {
-    return "\uC220\uC9D1/\uD3EC\uCC28";
+    return "술집/포차";
   }
   if (key.includes("FOOD") || key.includes("RESTAURANT")) {
-    return "\uC2DD\uB2F9/\uBC25\uC9D1";
+    return "식당/밥집";
   }
-  return "\uC2DD\uB2F9/\uBC25\uC9D1";
+  return "식당/밥집";
 }
 
 function mapMainCategoryToDb(value: string) {
-  if (value.includes("\uCE74\uD398")) return "CAFE";
-  if (value.includes("\uC2A4\uD130\uB514\uB8F8") || value.includes("\uACF5\uAC04")) return "STUDY";
-  if (value.includes("\uD30C\uD2F0")) return "PARTY";
-  if (value.includes("\uC220\uC9D1") || value.includes("\uD3EC\uCC28")) return "BAR";
+  if (value.includes("카페")) return "CAFE";
+  if (value.includes("스터디룸") || value.includes("공간")) return "STUDY";
+  if (value.includes("파티")) return "PARTY";
+  if (value.includes("술집") || value.includes("포차")) return "BAR";
   return "FOOD";
 }
 
@@ -73,8 +73,8 @@ export function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [storeName, setStoreName] = useState("");
-  const [category, setCategory] = useState("\uC2DD\uB2F9/\uBC25\uC9D1");
-  const [location, setLocation] = useState("\uC548\uC554\uB3D9");
+  const [category, setCategory] = useState("식당/밥집");
+  const [location, setLocation] = useState("안암동");
   const [autoFilled, setAutoFilled] = useState(false);
   const [lat, setLat] = useState(37.5866076);
   const [lng, setLng] = useState(127.0294157);
@@ -97,23 +97,23 @@ export function OnboardingPage() {
   ]);
 
   const isSpaceBusiness =
-    category === "\uC2A4\uD130\uB514\uB8F8/\uACF5\uAC04" || category === "\uD30C\uD2F0\uB8F8";
+    category === "스터디룸/공간" || category === "파티룸";
 
   const menuPlaceholders = useMemo(() => {
-    if (category === "\uCE74\uD398/\uB514\uC800\uD2B8") {
-      return ["\uC544\uBA54\uB9AC\uCE74\uB178", "\uB77C\uB5BC", "\uD504\uB799\uCE58\uB178"];
+    if (category === "카페/디저트") {
+      return ["아메리카노", "라떼", "프랙치노"];
     }
-    if (category === "\uC220\uC9D1/\uD3EC\uCC28") {
-      return ["\uD574\uBB3C\uD30C\uC804", "\uBAA8\uB460 \uC624\uB384\uD0D5", "\uC0BC\uACB9 \uC219\uC8FC"];
+    if (category === "술집/포차") {
+      return ["해물파전", "모둠 오뎄탕", "삼겹 숙주"];
     }
-    return ["\uB300\uD45C \uBA54\uB274 1", "\uB300\uD45C \uBA54\uB274 2", "\uB300\uD45C \uBA54\uB274 3"];
+    return ["대표 메뉴 1", "대표 메뉴 2", "대표 메뉴 3"];
   }, [category]);
 
   const pricePlaceholders = useMemo(() => {
-    if (category === "\uCE74\uD398/\uB514\uC800\uD2B8") {
+    if (category === "카페/디저트") {
       return ["4500", "5200", "7000"];
     }
-    if (category === "\uC220\uC9D1/\uD3EC\uCC28") {
+    if (category === "술집/포차") {
       return ["15000", "18000", "22000"];
     }
     return ["10000", "12000", "15000"];
@@ -122,19 +122,19 @@ export function OnboardingPage() {
   const capacityLabels = useMemo(() => {
     if (isSpaceBusiness) {
       return {
-        seat1: "1\uC778 \uB370\uC2A4\uD06C",
-        seat2: "2\uC778 \uB370\uC2A4\uD06C",
-        seat4: "4\uC778\uC2E4",
-        seat6: "6\uC778\uC2E4 \uC774\uC0C1",
-        room: "\uD504\uB77C\uC774\uBE57 \uB8F8",
+        seat1: "1인 데스크",
+        seat2: "2인 데스크",
+        seat4: "4인실",
+        seat6: "6인실 이상",
+        room: "프라이빗 룸",
       };
     }
     return {
-      seat1: "1\uC778\uC11D (\uD640/\uBC14)",
-      seat2: "2\uC778\uC11D (\uCEE4\uD50C/\uCE5C\uAD6C)",
-      seat4: "4\uC778\uC11D (\uAE30\uBCF8)",
-      seat6: "6\uC778 \uC774\uC0C1 (\uB2E8\uCCB4\uC11D)",
-      room: "\uD504\uB77C\uC774\uBE57 \uB8F8",
+      seat1: "1인석 (홀/바)",
+      seat2: "2인석 (커플/친구)",
+      seat4: "4인석 (기본)",
+      seat6: "6인 이상 (단체석)",
+      room: "프라이빗 룸",
     };
   }, [isSpaceBusiness]);
 
@@ -195,7 +195,7 @@ export function OnboardingPage() {
     try {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData?.user) {
-        window.alert("\uB85C\uADF8\uC778 \uC0C1\uD0DC\uB97C \uD655\uC778\uD574 \uC8FC\uC138\uC694.");
+        window.alert("로그인 상태를 확인해 주세요.");
         return;
       }
 
@@ -300,7 +300,7 @@ export function OnboardingPage() {
         if (error || !store?.id) {
           if (error) console.error(error);
           window.alert(
-            `\uC11C\uBC84 \uC800\uC7A5\uC744 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.${
+            `서버 저장을 실패했습니다.${
               error?.message ? ` (${error.message})` : ""
             }`
           );
@@ -311,11 +311,11 @@ export function OnboardingPage() {
           await persistDetails(String(store.id));
         } catch (detailError) {
           console.error(detailError);
-          window.alert("\uC218\uC6A9\uB7C9/\uBA54\uB274 \uC800\uC7A5\uC744 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
+          window.alert("수용량/메뉴 저장을 실패했습니다.");
           return;
         }
 
-        window.alert("\uD83C\uDF89 \uC0AC\uC7A5\uB2D8, \uC900\uBE44\uAC00 \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4!");
+        window.alert("🎉 사장님, 준비가 완료되었습니다!");
         if (typeof window !== "undefined") {
           window.localStorage.setItem("rendezvous_last_store", String(store.id));
         }
@@ -337,7 +337,7 @@ export function OnboardingPage() {
       if (error || !store?.id) {
         if (error) console.error(error);
         window.alert(
-          `\uC11C\uBC84 \uC800\uC7A5\uC744 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.${
+          `서버 저장을 실패했습니다.${
             error?.message ? ` (${error.message})` : ""
           }`
         );
@@ -348,18 +348,18 @@ export function OnboardingPage() {
         await persistDetails(String(store.id));
       } catch (detailError) {
         console.error(detailError);
-        window.alert("\uC218\uC6A9\uB7C9/\uBA54\uB274 \uC800\uC7A5\uC744 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
+        window.alert("수용량/메뉴 저장을 실패했습니다.");
         return;
       }
 
-      window.alert("\uD83C\uDF89 \uC0AC\uC7A5\uB2D8, \uC900\uBE44\uAC00 \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4!");
+      window.alert("🎉 사장님, 준비가 완료되었습니다!");
       if (typeof window !== "undefined") {
         window.localStorage.setItem("rendezvous_last_store", String(store.id));
       }
       router.push(`/stores/${store.id}`);
       return;
     } catch {
-      window.alert("\uC11C\uBC84 \uC800\uC7A5\uC744 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
+      window.alert("서버 저장을 실패했습니다.");
     }
   }
 
@@ -368,9 +368,9 @@ export function OnboardingPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">{"\uC628\uBCF4\uB529"}</h1>
+        <h1 className="text-2xl font-semibold">{"온보딩"}</h1>
         <p className="text-sm text-slate-500">
-          {"\uAC00\uAC8C \uC815\uBCF4\uB97C \uC785\uB825\uD558\uC5EC \uB9E4\uC7A5 \uCEE8\uC194\uC744 \uC2DC\uC791\uD574 \uBCF4\uC138\uC694."}
+          {"가게 정보를 입력하여 매장 컨솔을 시작해 보세요."}
         </p>
       </div>
 
@@ -405,7 +405,7 @@ export function OnboardingPage() {
       {step === 1 && (
         <div className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6">
           <div className="space-y-2">
-            <label className="text-sm font-medium">{"\uAC00\uAC8C \uC774\uB984"}</label>
+            <label className="text-sm font-medium">{"가게 이름"}</label>
             <div className="relative">
               <Input
                 className="h-12 text-lg"
@@ -414,7 +414,7 @@ export function OnboardingPage() {
                   setStoreName(event.target.value);
                   setSelectedPlace(null);
                 }}
-                placeholder="\uC548\uC554\uB3D9 \uD14C\uC2A4\uD2B8 \uD3EC\uCC28"
+                placeholder="안암동 테스트 포차"
               />
               {showResults && searchResults.length > 0 ? (
                 <div className="absolute z-10 mt-2 w-full rounded-xl border border-slate-200 bg-white shadow-lg">
@@ -427,7 +427,7 @@ export function OnboardingPage() {
                     >
                       <span className="font-medium text-slate-900">{place.name}</span>
                       <span className="text-xs text-slate-500">
-                        {place.address ?? "\uC8FC\uC18C \uC815\uBCF4 \uC5C6\uC74C"}
+                        {place.address ?? "주소 정보 없음"}
                       </span>
                     </button>
                   ))}
@@ -435,26 +435,26 @@ export function OnboardingPage() {
               ) : null}
               {showResults && searchResults.length === 0 && !isSearching ? (
                 <div className="absolute z-10 mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 shadow-lg">
-                  {"\uAC80\uC0C9 \uACB0\uACFC\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uC0C8\uB85C \uC785\uB825\uD574 \uC8FC\uC138\uC694."}
+                  {"검색 결과가 없습니다. 새로 입력해 주세요."}
                 </div>
               ) : null}
             </div>
             <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-              {autoFilled ? "\uD83D\uDCCD \uAC80\uC0C9\uB41C \uC8FC\uC18C\uB97C \uBD88\uB7EC\uC654\uC2B5\uB2C8\uB2E4." : null}
+              {autoFilled ? "📍 검색된 주소를 불러왔습니다." : null}
               {selectedPlace ? (
                 <button
                   type="button"
                   className="text-slate-500 underline"
                   onClick={clearSelection}
                 >
-                  {"\uC0C8\uB85C \uC785\uB825\uD558\uAE30"}
+                  {"새로 입력하기"}
                 </button>
               ) : null}
-              {isSearching ? "\uAC80\uC0C9 \uC911..." : null}
+              {isSearching ? "검색 중..." : null}
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">{"\uC5C5\uC885 \uC120\uD0DD"}</label>
+            <label className="text-sm font-medium">{"업종 선택"}</label>
             <div className="flex flex-wrap gap-2">
               {categories.map((item) => {
                 const selected = category === item;
@@ -473,7 +473,7 @@ export function OnboardingPage() {
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">{"\uC704\uCE58"}</label>
+            <label className="text-sm font-medium">{"위치"}</label>
             <Input value={location} onChange={(event) => setLocation(event.target.value)} />
           </div>
         </div>
@@ -509,7 +509,7 @@ export function OnboardingPage() {
       {step === 3 && (
         <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6">
           <p className="text-sm text-slate-600">
-            {"\uC6B0\uB9AC \uAC00\uAC8C \uAC04\uD310 \uBA54\uB274 3\uAC1C\uB9CC \uC54C\uB824\uC8FC\uC138\uC694!"}
+            {"우리 가게 간판 메뉴 3개만 알려주세요!"}
           </p>
           <div className="space-y-3">
             {menus.map((menu, index) => (
@@ -536,15 +536,15 @@ export function OnboardingPage() {
           onClick={() => setStep((prev) => Math.max(1, prev - 1))}
           disabled={step === 1}
         >
-          {"\uC774\uC804"}
+          {"이전"}
         </Button>
         {step < 3 ? (
           <Button onClick={() => setStep((prev) => Math.min(3, prev + 1))} disabled={!canGoNext}>
-            {"\uB2E4\uC74C"}
+            {"다음"}
           </Button>
         ) : (
           <Button onClick={handleComplete}>
-            {"\uC644\uB8CC"}
+            {"완료"}
           </Button>
         )}
       </div>
