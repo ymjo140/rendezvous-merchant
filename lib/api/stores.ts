@@ -61,6 +61,8 @@ export async function createMerchantStore(payload: CreateStorePayload): Promise<
 
   // 2) 신규 매장 생성 (DB에 없는 가게)
   if (!payload.name?.trim()) throw new Error("매장 이름을 입력해주세요.");
+  // 주소 지오코딩 — 좌표가 서울시청 고정이면 B2C 지도/거리 추천이 전부 틀어짐
+  const coords = (await geocodeAddress(payload.address)) ?? { lat: 37.5665, lng: 126.978 };
   const { data: created, error: insErr } = await supabase
     .from("places")
     .insert({
@@ -69,11 +71,28 @@ export async function createMerchantStore(payload: CreateStorePayload): Promise<
       cuisine_type: payload.category ?? null,
       address: payload.address ?? null,
       owner_id: userId,
-      lat: 37.5665,
-      lng: 126.978,
+      lat: coords.lat,
+      lng: coords.lng,
     })
     .select("id, name, address")
     .single();
   if (insErr || !created) throw new Error("매장 생성에 실패했어요.");
   return { id: created.id, name: created.name, address: created.address ?? "" } as StoreSummary;
+}
+
+// 주소 → 좌표 (B2C 백엔드 공개 지오코딩 재사용). 실패 시 null(호출부에서 폴백).
+async function geocodeAddress(address?: string | null): Promise<{ lat: number; lng: number } | null> {
+  const addr = (address ?? "").trim();
+  if (!addr) return null;
+  try {
+    const base = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
+    if (!base) return null;
+    const res = await fetch(`${base}/api/geocode?query=${encodeURIComponent(addr)}`);
+    if (!res.ok) return null;
+    const items = await res.json();
+    const hit = Array.isArray(items) ? items.find((x: any) => x?.lat && x?.lng) : null;
+    return hit ? { lat: Number(hit.lat), lng: Number(hit.lng) } : null;
+  } catch {
+    return null;
+  }
 }

@@ -1,14 +1,14 @@
-﻿"use client";
+"use client";
 
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useMe } from "@/lib/auth/useMe";
-import { clearToken, getToken } from "@/lib/auth/tokenStore";
+import { getToken } from "@/lib/auth/tokenStore";
 
+// 인증 게이트 — 토큰(Supabase 로그인 시 저장) 없으면 /login으로.
+// (기존 useMe는 FastAPI 401 시 mock으로 항상 통과하던 무의미한 단계라 제거)
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { me, loading, error } = useMe();
   const token = getToken();
 
   useEffect(() => {
@@ -17,34 +17,9 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [token, pathname, router]);
 
-  useEffect(() => {
-    if (!loading && error && !me) {
-      clearToken();
-      router.replace("/login");
-    }
-  }, [loading, error, me, router]);
-
   if (!token) {
     return null;
   }
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-slate-500">
-        인증 확인 중...
-      </div>
-    );
-  }
-
-  if (!me) {
-    return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-slate-500">
-        계정 정보를 불러올 수 없습니다.
-      </div>
-    );
-  }
-
   return <>{children}</>;
 }
-
-

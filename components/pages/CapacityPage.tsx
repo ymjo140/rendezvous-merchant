@@ -55,14 +55,7 @@ export function CapacityPage({ storeId }: { storeId?: string }) {
     return undefined;
   }, [storeId, contextStoreId]);
 
-  if (!resolvedStoreId) {
-    return (
-      <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600">
-        {"\uAC00\uAC8C \uC815\uBCF4\uB97C \uBD88\uB7EC\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uB9E4\uC7A5\uC744 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694."}
-      </div>
-    );
-  }
-
+  // \u26A0\uFE0F \uD6C5\uC740 \uC870\uAC74\uBD80 return\uBCF4\uB2E4 \uBA3C\uC800(\uD6C5 \uC21C\uC11C \uACE0\uC815)
   const { data: unitRows = [], createUnit, updateUnit, isSupabaseConfigured } =
     useTableUnits(resolvedStoreId);
   const [open, setOpen] = useState(false);
@@ -83,6 +76,14 @@ export function CapacityPage({ storeId }: { storeId?: string }) {
       createUnit.mutate({ ...unit, store_id: resolvedStoreId });
     });
   }, [isSupabaseConfigured, unitRows.length, resolvedStoreId, createUnit]);
+
+  if (!resolvedStoreId) {
+    return (
+      <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600">
+        {"\uAC00\uAC8C \uC815\uBCF4\uB97C \uBD88\uB7EC\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uB9E4\uC7A5\uC744 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694."}
+      </div>
+    );
+  }
 
   function resetForm() {
     setForm({

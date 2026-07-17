@@ -490,8 +490,9 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
           {loading ? (
             <p className="py-8 text-center text-sm text-slate-400">불러오는 중...</p>
           ) : (
+            <div className="overflow-x-auto">
             <div
-              className="grid gap-1.5 rounded-xl bg-slate-100 p-2"
+              className="grid min-w-[560px] gap-1.5 rounded-xl bg-slate-100 p-2"
               style={{ gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))`, gridAutoRows: "1fr" }}
             >
               {Array.from({ length: COLS * ROWS }, (_, i) => {
@@ -571,6 +572,7 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
                   </button>
                 );
               })}
+            </div>
             </div>
           )}
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-500">

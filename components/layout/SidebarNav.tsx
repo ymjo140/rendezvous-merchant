@@ -10,17 +10,13 @@ function todayStr() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+// \uC0AC\uC7A5\uB2D8 \uBA58\uD0C8\uBAA8\uB378 \uAE30\uC900 5\uAC1C \uADF8\uB8F9 \u2014 \uD558\uC704 \uC774\uB3D9\uC740 \uAC01 \uD398\uC774\uC9C0 \uC0C1\uB2E8 SubTabs\uAC00 \uB2F4\uB2F9
 const navItems = [
-  { label: "\uB300\uC2DC\uBCF4\uB4DC", slug: "" },
-  { label: "AI \uC218\uC775\uC5D4\uC9C4", slug: "offers/ai" },
-  { label: "\uC608\uC57D", slug: "reservations" },
-  { label: "\uD14C\uC774\uBE14 \uB9F5", slug: "tables" },
-  { label: "\uB8F0 \uC124\uC815", slug: "offers/rules" },
-  { label: "\uD61C\uD0DD \uCE74\uD0C8\uB85C\uADF8", slug: "offers/benefits" },
-  { label: "\uB8F0 \uC2DC\uBBAC\uB808\uC774\uD130", slug: "offers/simulator" },
-  { label: "\uBA54\uB274 \uAD00\uB9AC", slug: "menus" },
-  { label: "\uC778\uC0AC\uC774\uD2B8", slug: "insights" },
-  { label: "\uC124\uC815", slug: "settings" },
+  { label: "\uD83D\uDCCA \uC624\uB298", slug: "", match: [""] },
+  { label: "\uD83D\uDCC5 \uC608\uC57D", slug: "reservations", match: ["reservations"] },
+  { label: "\uD83D\uDD25 \uD56B\uB51C", slug: "offers/ai", match: ["offers"] },
+  { label: "\uD83C\uDFEA \uAC00\uAC8C \uAD00\uB9AC", slug: "menus", match: ["menus", "tables", "capacity", "settings"] },
+  { label: "\uD83D\uDCC8 \uC778\uC0AC\uC774\uD2B8", slug: "insights", match: ["insights"] },
 ];
 
 export function SidebarNav({
@@ -56,7 +52,14 @@ export function SidebarNav({
               ? `/stores/${resolvedStoreId}/${item.slug}`
               : `/stores/${resolvedStoreId}`
             : "/stores/select";
-          const isActive = pathname === href;
+          const base = resolvedStoreId ? `/stores/${resolvedStoreId}` : "";
+          const isActive = base
+            ? item.match.some((m) =>
+                m === ""
+                  ? pathname === base
+                  : pathname === `${base}/${m}` || pathname.startsWith(`${base}/${m}/`)
+              )
+            : pathname === href;
           return (
             <Link
               key={item.label}

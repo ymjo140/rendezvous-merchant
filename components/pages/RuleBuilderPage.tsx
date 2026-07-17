@@ -225,7 +225,7 @@ export function RuleBuilderPage({
   const [inventoryCap, setInventoryCap] = useState("0");
   const [validFrom, setValidFrom] = useState("");
   const [validTo, setValidTo] = useState("");
-  const [catalog, setCatalog] = useState<BenefitItem[]>(mockBenefits);
+  const [catalog, setCatalog] = useState<BenefitItem[]>([]);
 
   useEffect(() => {
     if (benefitRows.length > 0) {
@@ -237,7 +237,8 @@ export function RuleBuilderPage({
         }))
       );
     } else {
-      setCatalog(mockBenefits);
+      // 혜택 미등록이면 가짜 혜택(mock) 대신 빈 목록 — 존재하지 않는 benefit_id로 룰 저장되는 것 방지
+      setCatalog([]);
     }
 
     async function loadRule() {
@@ -628,16 +629,22 @@ export function RuleBuilderPage({
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">{"\uB0B4 \uD61C\uD0DD \uBD88\uB7EC\uC624\uAE30"}</label>
-              <Select
-                value={benefitId}
-                onChange={(event) => setBenefitId(event.target.value)}
-              >
-                {catalog.map((benefit) => (
-                  <option key={benefit.id} value={String(benefit.id)}>
-                    {benefit.title}
-                  </option>
-                ))}
-              </Select>
+              {catalog.length === 0 ? (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
+                  등록된 혜택이 없어요. <span className="font-bold">혜택 카탈로그</span>에서 먼저 혜택(예: 음료 서비스, 할인)을 만들어주세요.
+                </div>
+              ) : (
+                <Select
+                  value={benefitId}
+                  onChange={(event) => setBenefitId(event.target.value)}
+                >
+                  {catalog.map((benefit) => (
+                    <option key={benefit.id} value={String(benefit.id)}>
+                      {benefit.title}
+                    </option>
+                  ))}
+                </Select>
+              )}
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">{"\uD61C\uD0DD \uC885\uB958"}</label>

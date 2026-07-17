@@ -5,11 +5,14 @@ export function Table({
   className,
   ...props
 }: React.TableHTMLAttributes<HTMLTableElement>) {
+  // 모바일: 컬럼이 많은 표는 컨테이너 안에서 가로 스크롤(페이지 전체가 밀리지 않게)
   return (
-    <table
-      className={cn("w-full text-left text-sm", className)}
-      {...props}
-    />
+    <div className="w-full overflow-x-auto">
+      <table
+        className={cn("w-full min-w-[560px] text-left text-sm", className)}
+        {...props}
+      />
+    </div>
   );
 }
 

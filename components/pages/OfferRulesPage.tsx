@@ -37,6 +37,9 @@ export function OfferRulesPage({ storeId }: { storeId?: string }) {
     return undefined;
   }, [storeId, contextStoreId]);
 
+  // \u26A0\uFE0F \uD6C5\uC740 \uC870\uAC74\uBD80 return\uBCF4\uB2E4 \uBA3C\uC800 \u2014 \uB9E4\uC7A5 \uBBF8\uC120\uD0DD\u2192\uC120\uD0DD \uC804\uD658 \uC2DC \uD6C5 \uC21C\uC11C\uAC00 \uBCC0\uD558\uBA74 \uD06C\uB798\uC2DC
+  const { data: rules = [], updateRule, deleteRule } = useRules(resolvedStoreId);
+
   if (!resolvedStoreId) {
     return (
       <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600">
@@ -44,8 +47,6 @@ export function OfferRulesPage({ storeId }: { storeId?: string }) {
       </div>
     );
   }
-
-  const { data: rules = [], updateRule, deleteRule } = useRules(resolvedStoreId);
 
   function toggleRule(ruleId: RuleRow["id"]) {
     const target = rules.find((item) => String(item.id) === String(ruleId));
