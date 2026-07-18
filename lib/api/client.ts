@@ -25,7 +25,21 @@ export async function fetchWithAuth<T>(
   options: RequestInit & { token?: string } = {}
 ): Promise<T> {
   const { token, headers, ...rest } = options;
-  const resolvedToken = token ?? (await import("@/lib/auth/tokenStore")).getToken();
+  // 살아있는 Supabase 세션에서 신선한 access_token 우선 사용(localStorage 박제본은 만료됨).
+  // → FastAPI 경유 호출(예약 상태변경 등)이 토큰 만료로 401 나던 문제 해결.
+  let resolvedToken = token ?? null;
+  if (!resolvedToken) {
+    try {
+      const { supabase } = await import("@/lib/supabase/client");
+      const { data } = await supabase.auth.getSession();
+      resolvedToken = data.session?.access_token ?? null;
+    } catch {
+      /* Supabase 미구성 등 — 아래 폴백 */
+    }
+  }
+  if (!resolvedToken) {
+    resolvedToken = (await import("@/lib/auth/tokenStore")).getToken();
+  }
 
   const response = await fetch(`${baseURL}${path}`, {
     ...rest,
