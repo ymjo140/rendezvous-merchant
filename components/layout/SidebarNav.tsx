@@ -14,6 +14,8 @@ function todayStr() {
 const navItems = [
   { label: "📊 오늘", slug: "", match: [""] },
   { label: "📅 예약", slug: "reservations", match: ["reservations"] },
+  { label: "💛 단골", slug: "regulars", match: ["regulars"] },
+  { label: "📷 손님 콘텐츠", slug: "content", match: ["content"] },
   { label: "🔥 핫딜", slug: "offers/rules", match: ["offers/rules", "offers/benefits", "offers/simulator"] },
   { label: "🤖 분석", slug: "offers/ai", match: ["offers/ai", "insights"] },
   { label: "🏪 가게 관리", slug: "menus", match: ["menus", "tables", "capacity", "settings"] },
