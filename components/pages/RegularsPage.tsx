@@ -16,8 +16,9 @@ type Regulars = {
 
 type Customer = {
   uid: number; persona: string; emoji: string; taste: string[]; visits: number; last: string;
-  revisit_intent: boolean; recent_interest: number; tier: string;
+  revisit_intent: boolean; recent_interest: number; tier: string; dormant: boolean;
 };
+type ReengageStats = { sent: number; returned: number; rate: number | null };
 type Group = { persona: string; emoji: string; visits: number; last: string; revisit_intent: boolean };
 type React2 = { persona: string; emoji: string; taste: string[]; interest: number; last: string };
 type Followup = { persona: string; emoji: string; reason: string; draft: string; tier: string };
@@ -37,9 +38,11 @@ const TIER_STYLE: Record<string, string> = {
 export function RegularsPage({ storeId }: { storeId?: string }) {
   const [reg, setReg] = useState<Regulars | null>(null);
   const [crm, setCrm] = useState<Crm | null>(null);
+  const [stats, setStats] = useState<ReengageStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState<string | null>(null);
   const [profileUid, setProfileUid] = useState<number | null>(null);
+  const [segment, setSegment] = useState<string>("all");
 
   useEffect(() => {
     if (!storeId) return;
@@ -47,12 +50,25 @@ export function RegularsPage({ storeId }: { storeId?: string }) {
     Promise.all([
       fetchWithAuth<Regulars>(`/api/merchant/stores/${storeId}/regulars`).catch(() => null),
       fetchWithAuth<Crm>(`/api/merchant/stores/${storeId}/crm`).catch(() => null),
-    ]).then(([r, c]) => {
+      fetchWithAuth<ReengageStats>(`/api/merchant/stores/${storeId}/reengage-stats`).catch(() => null),
+    ]).then(([r, c, st]) => {
       setReg(r);
       setCrm(c);
+      setStats(st);
       setLoading(false);
     });
   }, [storeId]);
+
+  const SEGMENTS: { key: string; label: string; fn: (c: Customer) => boolean }[] = [
+    { key: "all", label: "전체", fn: () => true },
+    { key: "vip", label: "VIP", fn: (c) => c.tier === "VIP" },
+    { key: "regular", label: "단골", fn: (c) => c.tier === "단골" || c.tier === "VIP" },
+    { key: "dormant", label: "휴면", fn: (c) => c.dormant },
+    { key: "intent", label: "💛 또갈래요", fn: (c) => c.revisit_intent },
+    { key: "interest", label: "관심↑", fn: (c) => c.recent_interest > 0 },
+  ];
+  const segFn = SEGMENTS.find((s) => s.key === segment)?.fn ?? (() => true);
+  const filteredCustomers = (crm?.customers ?? []).filter(segFn);
 
   const reengage = async (kind: "thanks" | "reminder") => {
     if (!storeId) return;
@@ -123,6 +139,24 @@ export function RegularsPage({ storeId }: { storeId?: string }) {
         <MiniStat label="VIP (4회+)" value={`${crm?.counts.vip ?? 0}명`} />
         <MiniStat label="뜸해진 단골" value={`${reg?.dormant_count ?? 0}명`} />
       </div>
+
+      {/* C. 재초대 성과 — 발송 대비 재방문 (루프 닫기) */}
+      <Card className="border-emerald-100">
+        <CardContent className="flex flex-wrap items-center gap-4 p-4">
+          <div className="text-sm font-semibold text-slate-800">📈 재초대 성과 <span className="font-normal text-slate-400">· 최근 30일</span></div>
+          <div className="flex items-center gap-5">
+            <div><span className="text-lg font-bold text-slate-900">{stats?.sent ?? 0}</span><span className="text-xs text-slate-400">명 발송</span></div>
+            <span className="text-slate-300">→</span>
+            <div><span className="text-lg font-bold text-emerald-700">{stats?.returned ?? 0}</span><span className="text-xs text-slate-400">명 재방문</span></div>
+            {stats?.rate != null && (
+              <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-700">전환 {stats.rate}%</span>
+            )}
+          </div>
+          {(stats?.sent ?? 0) === 0 && (
+            <span className="text-[11px] text-slate-400">쿠폰·리마인드를 보내면 그 손님이 돌아왔는지 여기서 추적돼요.</span>
+          )}
+        </CardContent>
+      </Card>
 
       {/* #2 리액티베이션 — 지금 재방문 타이밍 (차별점, 상단 배치) */}
       <Card className="border-brand/30">
@@ -201,13 +235,34 @@ export function RegularsPage({ storeId }: { storeId?: string }) {
               <div className="text-sm font-semibold text-slate-800">손님 카드</div>
               <span className="text-xs text-slate-400">개인정보 없이 취향·모임으로</span>
             </div>
+            {/* D. 세그먼트 필터 */}
+            {(crm?.customers?.length ?? 0) > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {SEGMENTS.map((s) => {
+                  const n = (crm?.customers ?? []).filter(s.fn).length;
+                  return (
+                    <button
+                      key={s.key}
+                      onClick={() => setSegment(s.key)}
+                      className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                        segment === s.key ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                      }`}
+                    >
+                      {s.label} {n > 0 && <span className={segment === s.key ? "text-slate-300" : "text-slate-400"}>{n}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             {(crm?.customers?.length ?? 0) === 0 ? (
               <p className="py-8 text-center text-sm text-slate-400">
                 아직 방문 손님 데이터가 없어요.<br />앱 예약·방문이 쌓이면 취향 카드가 생겨요.
               </p>
+            ) : filteredCustomers.length === 0 ? (
+              <p className="py-8 text-center text-sm text-slate-400">이 조건의 손님이 없어요.</p>
             ) : (
               <div className="mt-2 space-y-2">
-                {crm!.customers.map((c, i) => (
+                {filteredCustomers.map((c, i) => (
                   <button
                     key={i}
                     onClick={() => setProfileUid(c.uid)}
