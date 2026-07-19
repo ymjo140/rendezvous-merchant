@@ -5,7 +5,7 @@ import { fetchWithAuth } from "@/lib/api/client";
 import { toast } from "@/components/ui/toaster";
 
 type Detail = {
-  persona: string; emoji: string; tier: string; taste: string[];
+  persona: string; emoji: string; tier: string; tier_manual: boolean; taste: string[];
   visits: number; last: string; revisit_intent: boolean; recent_interest: number;
   store_cuisine: string | null; brief: string;
   timeline: { ago: string; party: number; revisit: boolean; first: boolean }[];
@@ -32,6 +32,9 @@ export function CustomerProfileSheet({
   const [loading, setLoading] = useState(true);
   const [memo, setMemo] = useState("");
   const [savingMemo, setSavingMemo] = useState(false);
+  const [tier, setTier] = useState<string>("신규");
+  const [tierManual, setTierManual] = useState(false);
+  const [savingTier, setSavingTier] = useState(false);
 
   useEffect(() => {
     if (!storeId || userId == null) return;
@@ -40,10 +43,30 @@ export function CustomerProfileSheet({
       .then((r) => {
         setD(r);
         setMemo(r.memo || "");
+        setTier(r.tier);
+        setTierManual(r.tier_manual);
       })
       .catch(() => setD(null))
       .finally(() => setLoading(false));
   }, [storeId, userId]);
+
+  const changeTier = async (t: string | null) => {
+    if (!storeId || userId == null || savingTier) return;
+    setSavingTier(true);
+    try {
+      await fetchWithAuth(`/api/merchant/stores/${storeId}/customer/${userId}/tier`, {
+        method: "POST",
+        body: JSON.stringify({ tier: t }),
+      });
+      setTierManual(t != null);
+      setTier(t ?? d?.tier ?? "신규"); // null이면 서버가 자동계산 — 새로고침 전엔 근사치
+      toast(t ? `${t}으로 지정했어요.` : "자동 등급으로 되돌렸어요.", "success");
+    } catch {
+      toast("변경에 실패했어요.", "error");
+    } finally {
+      setSavingTier(false);
+    }
+  };
 
   const saveMemo = async () => {
     if (!storeId || userId == null) return;
@@ -87,7 +110,8 @@ export function CustomerProfileSheet({
               <div className="flex-1">
                 <div className="flex items-center gap-1.5">
                   <span className="text-base font-semibold text-slate-900">{d.persona}</span>
-                  <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${TIER_STYLE[d.tier] ?? ""}`}>{d.tier}</span>
+                  <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${TIER_STYLE[tier] ?? "bg-slate-100 text-slate-500"}`}>{tier}</span>
+                  {tierManual && <span className="text-[10px] text-slate-400">(직접 지정)</span>}
                   {d.revisit_intent && <span className="text-xs">💛</span>}
                 </div>
                 <div className="text-[11px] text-slate-400">개인정보 없이 모임 유형·취향으로</div>
@@ -102,6 +126,34 @@ export function CustomerProfileSheet({
                 ))}
               </div>
             )}
+
+            {/* 등급 직접 지정 */}
+            <div>
+              <div className="mb-1.5 text-xs font-semibold text-slate-700">
+                등급 {tierManual ? <span className="font-normal text-slate-400">· 직접 지정됨</span> : <span className="font-normal text-slate-400">· 방문 {d.visits}회 기준 자동</span>}
+              </div>
+              <div className="flex gap-1.5">
+                {[
+                  { key: null as string | null, label: "자동" },
+                  { key: "단골", label: "단골" },
+                  { key: "VIP", label: "VIP" },
+                ].map((opt) => {
+                  const active = opt.key === null ? !tierManual : tierManual && tier === opt.key;
+                  return (
+                    <button
+                      key={opt.label}
+                      onClick={() => changeTier(opt.key)}
+                      disabled={savingTier}
+                      className={`flex-1 rounded-lg py-1.5 text-xs font-semibold transition-colors ${
+                        active ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
             {/* 접객 브리핑 */}
             {d.brief && (
