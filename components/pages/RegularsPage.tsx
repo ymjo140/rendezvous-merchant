@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { fetchWithAuth } from "@/lib/api/client";
 import { toast } from "@/components/ui/toaster";
+import { CustomerProfileSheet } from "@/components/crm/CustomerProfileSheet";
 
 type Regulars = {
   revisit_intent_count: number;
@@ -14,7 +15,7 @@ type Regulars = {
 };
 
 type Customer = {
-  persona: string; emoji: string; taste: string[]; visits: number; last: string;
+  uid: number; persona: string; emoji: string; taste: string[]; visits: number; last: string;
   revisit_intent: boolean; recent_interest: number; tier: string;
 };
 type Group = { persona: string; emoji: string; visits: number; last: string; revisit_intent: boolean };
@@ -38,6 +39,7 @@ export function RegularsPage({ storeId }: { storeId?: string }) {
   const [crm, setCrm] = useState<Crm | null>(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState<string | null>(null);
+  const [profileUid, setProfileUid] = useState<number | null>(null);
 
   useEffect(() => {
     if (!storeId) return;
@@ -206,7 +208,11 @@ export function RegularsPage({ storeId }: { storeId?: string }) {
             ) : (
               <div className="mt-2 space-y-2">
                 {crm!.customers.map((c, i) => (
-                  <div key={i} className="rounded-xl border border-slate-100 p-3">
+                  <button
+                    key={i}
+                    onClick={() => setProfileUid(c.uid)}
+                    className="block w-full rounded-xl border border-slate-100 p-3 text-left hover:border-brand/40 hover:bg-slate-50"
+                  >
                     <div className="flex items-center gap-2">
                       <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-50 text-base">{c.emoji}</div>
                       <div className="min-w-0 flex-1">
@@ -230,7 +236,7 @@ export function RegularsPage({ storeId }: { storeId?: string }) {
                         ))}
                       </div>
                     )}
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
@@ -301,6 +307,10 @@ export function RegularsPage({ storeId }: { storeId?: string }) {
           </Card>
         </div>
       </div>
+
+      {profileUid != null && (
+        <CustomerProfileSheet storeId={storeId} userId={profileUid} onClose={() => setProfileUid(null)} />
+      )}
     </div>
   );
 }
