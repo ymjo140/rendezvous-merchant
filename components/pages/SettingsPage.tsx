@@ -101,7 +101,14 @@ export function SettingsPage({ storeId }: { storeId?: string }) {
     }
     setSaving(true);
     // 시설 영어키 목록 → {key: true} dict
-    const featuresObj: Record<string, boolean> = {};
+    // ⚠ features에는 시설 외 키(hours=영업·브레이크 등)도 살아있음 — 통째로 덮으면 날아가므로 병합
+    const { data: curRow } = await supabase
+      .from("places").select("features").eq("id", placeId).maybeSingle();
+    const cur = (curRow?.features && typeof curRow.features === "object" ? curRow.features : {}) as Record<string, any>;
+    const featuresObj: Record<string, any> = {};
+    for (const [k, v] of Object.entries(cur)) {
+      if (typeof v !== "boolean") featuresObj[k] = v; // hours 등 비불리언 키 보존
+    }
     facilities.forEach((k) => {
       featuresObj[k] = true;
     });

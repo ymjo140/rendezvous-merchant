@@ -36,8 +36,17 @@ type StoreTable = {
   deal_percent: number | null;
 };
 
-const COLS = 6;
-const ROWS = 8;
+const COLS = 6;            // 수용량 임포트 기본 배치 폭(레거시)
+const MAX_COLS = 12;       // 격자 상한 — 이 이상은 구역 분할 유도
+const MAX_ROWS = 12;
+
+// 팔레트 프리셋 — 선택 후 빈 칸을 탭하면 즉시 배치 (연속 배치 최적화)
+const PALETTE: { key: string; label: string; shape: TableShape; capacity: number; zone: ZoneType }[] = [
+  { key: "hall4", label: "🟨 4인 홀", shape: "square", capacity: 4, zone: "hall" },
+  { key: "hall2", label: "▫️ 2인", shape: "square", capacity: 2, zone: "hall" },
+  { key: "room6", label: "🟪 룸 6인", shape: "square", capacity: 6, zone: "room" },
+  { key: "bar1", label: "🟩 바 1인", shape: "bar", capacity: 1, zone: "bar" },
+];
 const DEALS = [null, 10, 20, 30] as const;
 const DEFAULT_AREA = "1층";
 
@@ -88,6 +97,7 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
   const [addCapacity, setAddCapacity] = useState(4);
   const [addZone, setAddZone] = useState<ZoneType>("hall");
   const [moveMode, setMoveMode] = useState(false);
+  const [palette, setPalette] = useState<string | null>("hall4"); // 기본 4인 홀 — 탭 즉시 배치. null=직접 설정 패널
   const [area, setArea] = useState(DEFAULT_AREA);
   const [assignRes, setAssignRes] = useState<{ id: string; time: string; party: number } | null>(null);
   const { data: units = [] } = useTableUnits(resolvedStoreId);
@@ -196,31 +206,30 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
   const canPlace = (x: number, y: number, shape: TableShape, rotated: boolean, ignoreId?: number) => {
     const cells = cellsOf({ pos_x: x, pos_y: y, shape, rotated });
     return cells.every(([cx, cy]) => {
-      if (cx >= COLS || cy >= ROWS) return false;
+      if (cx >= MAX_COLS || cy >= MAX_ROWS) return false;
       const hit = covered.get(`${cx},${cy}`);
       return !hit || hit.id === ignoreId;
     });
   };
 
-  const addTable = async () => {
-    if (!addCell) return;
-    const rotated = addShape === "long" && !canPlace(addCell.x, addCell.y, "long", false);
-    if (!canPlace(addCell.x, addCell.y, addShape, rotated)) {
+  const placeTableAt = async (x: number, y: number, shape: TableShape, capacity: number, zone: ZoneType) => {
+    const rotated = shape === "long" && !canPlace(x, y, "long", false);
+    if (!canPlace(x, y, shape, rotated)) {
       toast("자리가 부족해요. 다른 칸을 선택해주세요.", "error");
       return;
     }
-    const label = `T${tables.length + 1}`;
+    const label = zone === "bar" ? `B${tables.filter((t) => t.zone_type === "bar").length + 1}` : `T${tables.length + 1}`;
     const { data, error } = await supabase
       .from("store_tables")
       .insert({
         place_id: placeId,
         label,
-        capacity: addCapacity,
-        shape: addShape,
-        zone_type: addZone,
+        capacity,
+        shape,
+        zone_type: zone,
         area,
-        pos_x: addCell.x,
-        pos_y: addCell.y,
+        pos_x: x,
+        pos_y: y,
         rotated,
         status: "occupied",
         is_empty: false,
@@ -236,7 +245,12 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
     setTables(next);
     setAddCell(null);
     syncPlaceMeta(next);
-    toast(`${label} · ${ZONE_LABEL[addZone]} ${addCapacity}인 추가!`, "success");
+    toast(`${label} · ${ZONE_LABEL[zone]} ${capacity}인 추가!`, "success");
+  };
+
+  const addTable = async () => {
+    if (!addCell) return;
+    await placeTableAt(addCell.x, addCell.y, addShape, addCapacity, addZone);
   };
 
   const importFromUnits = async () => {
@@ -361,12 +375,12 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
   };
 
   return (
-    <div className="space-y-4 pb-44">
+    <div className="-m-4 min-h-full space-y-3 bg-[#FBF3E4] p-4 pb-44 lg:-m-6 lg:p-6 lg:pb-44">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">🪑 테이블 맵</h1>
-          <p className="text-sm text-slate-500">
-            테이블 배치·인원·빈자리를 한 곳에서 관리해요. (기존 &lsquo;수용량&rsquo; 메뉴 통합)
+          <h1 className="text-[17px] font-bold text-slate-900">🪑 테이블 맵</h1>
+          <p className="text-[11.5px] text-[#B49A6A]">
+            그리면 예약판 배치·공실 감지가 실측이 돼요 · 총 {tables.length}테이블 {totalSeats}석
           </p>
         </div>
         <div className="flex gap-1.5 flex-shrink-0">
@@ -459,15 +473,43 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
             key={a}
             onClick={() => setArea(a)}
             className={`rounded-full px-3.5 py-1.5 text-xs font-bold flex-shrink-0 transition-colors ${
-              area === a ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+              area === a ? "bg-slate-900 text-white" : "border border-[#F0E6D2] bg-white text-slate-500"
             }`}
           >
             {a}
           </button>
         ))}
-        <button onClick={addArea} className="rounded-full bg-slate-100 px-3 py-1.5 text-xs text-slate-400 flex-shrink-0 hover:bg-slate-200">
+        <button onClick={addArea} className="rounded-full border border-dashed border-[#E0D5BC] bg-white px-3 py-1.5 text-xs text-[#B49A6A] flex-shrink-0">
           + 구역
         </button>
+      </div>
+
+      {/* 팔레트 — 종류 선택 후 빈 칸을 탭하면 즉시 배치 */}
+      <div>
+        <div className="flex items-center gap-1.5 overflow-x-auto">
+          {PALETTE.map((p) => (
+            <button
+              key={p.key}
+              onClick={() => setPalette(palette === p.key ? null : p.key)}
+              className={`flex-shrink-0 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                palette === p.key ? "border-[#F5A623] bg-[#FFF9EC] text-[#854F0B]" : "border-[#F0E6D2] bg-white text-slate-500"
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+          <button
+            onClick={() => setPalette(null)}
+            className={`flex-shrink-0 rounded-xl border px-3 py-1.5 text-xs font-semibold ${
+              palette === null ? "border-[#F5A623] bg-[#FFF9EC] text-[#854F0B]" : "border-[#F0E6D2] bg-white text-slate-500"
+            }`}
+          >
+            ⚙️ 직접 설정
+          </button>
+        </div>
+        <p className="mt-1 text-[10.5px] text-[#B49A6A]">
+          {palette ? "빈 칸을 탭하면 바로 배치돼요 — 연달아 탭해서 여러 개 배치" : "빈 칸을 탭하면 모양·인원·구역을 직접 고르는 패널이 열려요"}
+        </p>
       </div>
 
       {/* 이동/배정 모드 안내 */}
@@ -490,14 +532,23 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
           {loading ? (
             <p className="py-8 text-center text-sm text-slate-400">불러오는 중...</p>
           ) : (
-            <div className="overflow-x-auto">
+            (() => {
+              // 사용 영역 기반 동적 격자 — 작은 가게는 아담하게, 배치가 가장자리에 닿으면 자동 확장
+              const used = areaTables.flatMap((t) => cellsOf(t));
+              const maxX = used.length ? Math.max(...used.map((c) => c[0])) : -1;
+              const maxY = used.length ? Math.max(...used.map((c) => c[1])) : -1;
+              const gridCols = Math.min(MAX_COLS, Math.max(6, maxX + 3));
+              const gridRows = Math.min(MAX_ROWS, Math.max(4, maxY + 3));
+              const nearCap = gridCols >= MAX_COLS && gridRows >= MAX_ROWS;
+              return (
+            <div>
             <div
-              className="grid min-w-[560px] gap-1.5 rounded-xl bg-slate-100 p-2"
-              style={{ gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))`, gridAutoRows: "1fr" }}
+              className="grid gap-1 rounded-xl bg-[#FBF6EA] p-1.5"
+              style={{ gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))`, gridAutoRows: "1fr" }}
             >
-              {Array.from({ length: COLS * ROWS }, (_, i) => {
-                const x = i % COLS;
-                const y = Math.floor(i / COLS);
+              {Array.from({ length: gridCols * gridRows }, (_, i) => {
+                const x = i % gridCols;
+                const y = Math.floor(i / gridCols);
                 if (covered.has(`${x},${y}`)) return null;
                 return (
                   <button
@@ -509,17 +560,24 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
                         return;
                       }
                       setSelected(null);
+                      const preset = PALETTE.find((p) => p.key === palette);
+                      if (preset) {
+                        placeTableAt(x, y, preset.shape, preset.capacity, preset.zone);
+                        return;
+                      }
                       setAddCell({ x, y });
                     }}
-                    className={`aspect-square rounded-lg border-2 border-dashed transition-colors ${
+                    className={`group aspect-square rounded-md border border-dashed transition-colors ${
                       addCell?.x === x && addCell?.y === y
-                        ? "border-brand bg-amber-50"
+                        ? "border-[#F5A623] bg-amber-50"
                         : moveMode
                         ? "border-sky-300 bg-sky-50/60 hover:border-sky-400"
-                        : "border-slate-200 bg-white/60 hover:border-slate-300"
+                        : "border-[#EBE2CD] bg-white/50 hover:border-[#F5A623] hover:bg-[#FFF9EC]"
                     }`}
                   >
-                    <span className="text-slate-300 text-lg">{moveMode ? "📍" : "+"}</span>
+                    <span className={`text-sm ${moveMode ? "text-sky-400" : "text-transparent group-hover:text-[#E0C089]"}`}>
+                      {moveMode ? "📍" : "+"}
+                    </span>
                   </button>
                 );
               })}
@@ -573,7 +631,14 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
                 );
               })}
             </div>
+            {nearCap && (
+              <p className="mt-1.5 rounded-lg bg-[#FFF9EC] px-2.5 py-1.5 text-[11px] text-[#854F0B]">
+                이 구역이 거의 찼어요 — 상단 &lsquo;+ 구역&rsquo;으로 2층·테라스처럼 나누면 보기 편해요.
+              </p>
+            )}
             </div>
+              );
+            })()
           )}
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-500">
             <span>🟩 비어있음</span>

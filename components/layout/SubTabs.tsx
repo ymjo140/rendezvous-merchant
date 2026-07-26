@@ -22,6 +22,7 @@ export const ANALYTICS_TABS: SubTabItem[] = [
 ];
 
 export const MANAGE_TABS: SubTabItem[] = [
+  { label: "🏪 관리 홈", slug: "manage" },
   { label: "🍽️ 메뉴", slug: "menus" },
   { label: "🗺️ 테이블 맵", slug: "tables" },
   { label: "🪑 좌석 수용량", slug: "capacity" },
