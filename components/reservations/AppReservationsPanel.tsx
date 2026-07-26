@@ -93,7 +93,7 @@ export function AppReservationsPanel({ storeId }: { storeId?: string }) {
       </div>
 
       {visible.length === 0 ? (
-        <div className="py-8 text-center text-sm text-slate-400">아직 앱 예약이 없어요.</div>
+        <div className="py-1.5 text-xs text-slate-400">아직 앱 예약이 없어요 — 랑데부 앱에서 들어오면 여기에 떠요.</div>
       ) : (
         <div className="space-y-2">
           {visible.map((r) => {

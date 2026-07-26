@@ -18,6 +18,7 @@ import { useTimeDeals, type TimeDealRow } from "@/lib/hooks/useTimeDeals";
 import { autoAssign as runAutoAssign } from "@/lib/hooks/useAutoAssign";
 import { useStoreId } from "@/components/layout/Layout";
 import { AppReservationsPanel } from "@/components/reservations/AppReservationsPanel";
+import { fetchWithAuth } from "@/lib/api/client";
 
 type ReservationEntry = {
   id: string;
@@ -107,7 +108,7 @@ const statusOptions = [
 const startMinutes = 9 * 60;
 const endMinutes = 24 * 60;
 const slotMinutes = 30;
-const labelColumnWidth = 160;
+const labelColumnWidth = 88;
 const dayLabels = [
   "일",
   "월",
@@ -139,9 +140,11 @@ function parseDateSafe(dateStr: string) {
   return new Date(dateStr);
 }
 
-function buildSlots() {
+const TIME_OPTS = Array.from({ length: 49 }, (_, i) => minutesToTime(i * 30)); // 00:00~24:00
+
+function buildSlots(fromMinutes = startMinutes, toMinutes = endMinutes) {
   const slots: string[] = [];
-  for (let minutes = startMinutes; minutes < endMinutes; minutes += slotMinutes) {
+  for (let minutes = fromMinutes; minutes < toMinutes; minutes += slotMinutes) {
     const hour = Math.floor(minutes / 60);
     const min = minutes % 60;
     slots.push(`${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}`);
@@ -418,7 +421,45 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
     });
   }, [reservations, statusFilter, dateKey]);
 
-  const slots = useMemo(() => buildSlots(), []);
+  // ⚙ 영업·브레이크 — places.features.hours (스케줄러 범위 + 셀 차단 + 손님 앱 예약 차단의 소스)
+  const [hours, setHours] = useState({ open: "09:00", close: "24:00", break_from: "", break_to: "", break_days: "everyday" });
+  const [hoursOpen, setHoursOpen] = useState(false);
+  const [hoursDraft, setHoursDraft] = useState(hours);
+  const [hoursSaving, setHoursSaving] = useState(false);
+  useEffect(() => {
+    if (!resolvedStoreId) return;
+    fetchWithAuth<typeof hours>(`/api/merchant/stores/${resolvedStoreId}/hours`)
+      .then((h) => { if (h && h.open) setHours(h); })
+      .catch(() => {});
+  }, [resolvedStoreId]);
+  const saveHours = async () => {
+    if (!resolvedStoreId || hoursSaving) return;
+    setHoursSaving(true);
+    try {
+      const saved = await fetchWithAuth<typeof hours>(`/api/merchant/stores/${resolvedStoreId}/hours`, {
+        method: "POST",
+        body: JSON.stringify(hoursDraft),
+      });
+      setHours(saved);
+      setHoursOpen(false);
+    } catch (e) {
+      window.alert((e as Error)?.message || "저장에 실패했어요.");
+    } finally {
+      setHoursSaving(false);
+    }
+  };
+  const gridStart = timeToMinutes(hours.open);
+  const gridEnd = Math.max(gridStart + 60, timeToMinutes(hours.close));
+  const selectedIsWeekday = (() => {
+    const g = new Date(`${dateKey}T00:00:00`).getDay();
+    return g >= 1 && g <= 5;
+  })();
+  const inBreak = (slot: string) =>
+    Boolean(hours.break_from && hours.break_to) &&
+    (hours.break_days !== "weekday" || selectedIsWeekday) &&
+    slot >= hours.break_from && slot < hours.break_to;
+
+  const slots = useMemo(() => buildSlots(gridStart, gridEnd), [gridStart, gridEnd]);
   const rows = useMemo(() => buildRows(tableUnits), [tableUnits]);
   const timeDealsForDate = useMemo(
     () => timeDeals.filter((deal) => deal.date === dateKey),
@@ -729,10 +770,10 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="-m-4 min-h-full space-y-4 bg-[#FBF3E4] p-4 lg:-m-6 lg:p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-semibold">{"예약 목록"}</h1>
+          <h1 className="text-2xl font-semibold">{"예약"}</h1>
           <div className="flex items-center gap-2 text-sm text-slate-500">
             <span>{`매장 #${resolvedStoreId ?? ""}`}</span>
             {showOfflineBadge ? (
@@ -768,14 +809,10 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
           </div>
           <Button
             variant="ghost"
-            className="border border-slate-300 text-slate-700"
-            onClick={() =>
-              window.alert(
-                "구글/네이버 캘린더와 연동하여 중복 예약을 방지합니다."
-              )
-            }
+            className="border border-slate-300 bg-white text-slate-700"
+            onClick={() => { setHoursDraft(hours); setHoursOpen(true); }}
           >
-            {"📅 외부 캘린더 연동"}
+            {"⚙ 영업·브레이크"}
           </Button>
           <select
             className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm"
@@ -810,122 +847,140 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
         </div>
       </div>
 
+      {/* 요약 스트립 */}
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+        {[
+          { l: "이 날짜 예약", v: `${filtered.filter((r) => r.status !== "blocked" && r.status !== "cancelled").length}건` },
+          { l: "예상 손님", v: `${filtered.filter((r) => r.status !== "blocked" && r.status !== "cancelled").reduce((acc, r) => acc + (r.partySize || 0), 0)}명` },
+          { l: "영업 시간", v: `${hours.open}–${hours.close}` },
+          { l: "브레이크", v: hours.break_from ? `${hours.break_from}–${hours.break_to}${hours.break_days === "weekday" ? " (평일)" : ""}` : "없음" },
+        ].map((k) => (
+          <div key={k.l} className="rounded-2xl border border-[#F0E6D2] bg-white p-3 text-center">
+            <div className="truncate text-[15px] font-bold text-slate-900">{k.v}</div>
+            <div className="text-[10px] text-[#B49A6A]">{k.l}</div>
+          </div>
+        ))}
+      </div>
+
       {/* 📱 앱(B2C)에서 들어온 예약 — 확정/완료/취소(환불) */}
       <AppReservationsPanel storeId={resolvedStoreId} />
 
+      {/* ⚙ 영업·브레이크 설정 시트 — 저장 시 예약판·손님 앱에 즉시 반영 */}
+      {hoursOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setHoursOpen(false)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white p-5" onClick={(e) => e.stopPropagation()}>
+            <div className="text-sm font-bold text-slate-900">⚙ 영업 · 브레이크 타임</div>
+            <p className="mt-1 text-[11px] text-slate-400">예약판 표시 범위와 손님 앱 예약 가능 시간에 바로 적용돼요.</p>
+
+            <div className="mt-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="w-16 shrink-0 text-xs font-medium text-slate-500">영업</span>
+                <select value={hoursDraft.open} onChange={(e) => setHoursDraft({ ...hoursDraft, open: e.target.value })} className="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm">
+                  {TIME_OPTS.slice(0, 48).map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+                <span className="text-slate-300">~</span>
+                <select value={hoursDraft.close} onChange={(e) => setHoursDraft({ ...hoursDraft, close: e.target.value })} className="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm">
+                  {TIME_OPTS.slice(1).map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-16 shrink-0 text-xs font-medium text-slate-500">브레이크</span>
+                <select value={hoursDraft.break_from} onChange={(e) => setHoursDraft({ ...hoursDraft, break_from: e.target.value })} className="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm">
+                  <option value="">없음</option>
+                  {TIME_OPTS.slice(0, 48).map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+                <span className="text-slate-300">~</span>
+                <select value={hoursDraft.break_to} onChange={(e) => setHoursDraft({ ...hoursDraft, break_to: e.target.value })} className="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm">
+                  <option value="">없음</option>
+                  {TIME_OPTS.slice(1).map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-16 shrink-0 text-xs font-medium text-slate-500">적용 요일</span>
+                {[
+                  { k: "everyday", l: "매일" },
+                  { k: "weekday", l: "평일만" },
+                ].map((o) => (
+                  <button
+                    key={o.k}
+                    onClick={() => setHoursDraft({ ...hoursDraft, break_days: o.k })}
+                    className={`flex-1 rounded-lg py-2 text-xs font-semibold ${hoursDraft.break_days === o.k ? "bg-[#F5A623] text-white" : "bg-slate-100 text-slate-500"}`}
+                  >
+                    {o.l}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-5 flex gap-2">
+              <button onClick={() => setHoursOpen(false)} className="w-24 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-500">취소</button>
+              <button onClick={saveHours} disabled={hoursSaving} className="flex-1 rounded-xl bg-[#F5A623] py-2.5 text-sm font-bold text-white disabled:opacity-50">
+                {hoursSaving ? "저장 중…" : "저장"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {view === "scheduler" ? (
         <div className="space-y-4">
-          <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
-            <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
-              <div className="text-sm font-semibold">{"규칙 목록"}</div>
-              {rules.length === 0 ? (
-                <p className="text-xs text-slate-500">
-                  {
-                    "등록된 규칙이 없습니다. 룰 설정에서 새 규칙을 만들어주세요."
-                  }
-                </p>
-              ) : (
-                <div className="grid gap-2 md:grid-cols-2">
-                  {rules.map((rule) => (
-                    <div
-                      key={String(rule.id)}
-                      className="flex items-center justify-between gap-2 rounded-md border border-slate-200 px-3 py-2"
+          {/* ⚡ 타임세일 — 혜택 선택 후 '타임세일' 줄 시간대 클릭. 규칙 관리는 핫딜 탭으로 이동 */}
+          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-[#F0E6D2] bg-white px-3 py-2.5">
+            <span className="text-xs font-bold text-slate-700">⚡ 타임세일</span>
+            {benefits.length === 0 ? (
+              <span className="text-[11px] text-slate-400">혜택 카탈로그에서 혜택을 추가하면 여기서 선택할 수 있어요.</span>
+            ) : (
+              <>
+                <span className="text-[11px] text-slate-400">혜택 선택 → 아래 타임세일 줄 클릭</span>
+                {benefits.map((benefit) => {
+                  const isActive = activeBenefit?.id === benefit.id;
+                  return (
+                    <Button
+                      key={String(benefit.id)}
+                      variant={isActive ? "primary" : "secondary"}
+                      className="h-7 rounded-full px-3 text-xs"
+                      onClick={() => setActiveBenefit(isActive ? null : benefit)}
                     >
-                      <div className="text-sm">
-                        <div className="font-medium text-slate-900">{rule.name}</div>
-                        <div className="text-xs text-slate-500">
-                          {rule.enabled ? "활성" : "비활성"}
-                        </div>
-                      </div>
-                      <Button
-                        variant={rule.enabled ? "primary" : "secondary"}
-                        className="h-8 px-3 text-xs"
-                        onClick={() => toggleRule(rule.id)}
-                      >
-                        {rule.enabled ? "켜짐" : "꺼짐"}
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
-              <div className="text-sm font-semibold">{"혜택 버튼"}</div>
-              <p className="text-xs text-slate-500">
-                {
-                  "타임세일은 시간대를 클릭한 후 시간을 설정해서 생성합니다."
-                }
-              </p>
-              {benefits.length === 0 ? (
-                <p className="text-xs text-slate-500">
-                  {
-                    "혜택 카탈로그에서 혜택을 추가해주세요."
-                  }
-                </p>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {benefits.map((benefit) => {
-                    const isActive = activeBenefit?.id === benefit.id;
-                    return (
-                      <Button
-                        key={String(benefit.id)}
-                        variant={isActive ? "primary" : "secondary"}
-                        className="h-8 rounded-full px-3 text-xs"
-                        onClick={() => {
-                          setActiveBenefit(isActive ? null : benefit);
-                        }}
-                      >
-                        {benefit.title}
-                      </Button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+                      {benefit.title}
+                    </Button>
+                  );
+                })}
+              </>
+            )}
           </div>
 
-          <div className="text-sm text-slate-500">
-            {
-              "빈 시간대는 AI가 예약을 추천할 수 있는 슬롯입니다."
-            }
-          </div>
 
           <div className="overflow-x-auto pb-1">
           <div
             className="grid gap-px rounded-lg border border-slate-200 bg-slate-200 text-xs"
             style={{
-              gridTemplateColumns: `${labelColumnWidth}px repeat(${slots.length}, minmax(64px, 1fr))`,
+              gridTemplateColumns: `${labelColumnWidth}px repeat(${slots.length}, minmax(0, 1fr))`,
             }}
           >
-            <div className="sticky left-0 z-20 bg-white p-2 font-medium">{"테이블"}</div>
-            {slots.map((slot) => {
-              const slotEnd = minutesToTime(timeToMinutes(slot) + slotMinutes);
-              return (
-                <div
-                  key={slot}
-                  className="bg-white p-2 text-center text-[11px] text-slate-500 leading-tight"
-                >
-                  <div>{slot}</div>
-                  <div className="text-[10px] text-slate-400">
-                    {`~${slotEnd}`}
-                  </div>
-                </div>
-              );
-            })}
+            <div className="sticky left-0 z-20 bg-white p-1.5 text-[10px] font-medium">{"테이블"}</div>
+            {slots.map((slot) => (
+              <div key={slot} className="bg-white py-1 text-center text-[9px] leading-none">
+                {slot.endsWith(":00") ? (
+                  <span className="font-semibold text-slate-500">{slot.slice(0, 2)}</span>
+                ) : (
+                  <span className="text-slate-200">·</span>
+                )}
+              </div>
+            ))}
 
             <div
               className="col-span-full grid"
               style={{
-                gridTemplateColumns: `${labelColumnWidth}px repeat(${slots.length}, minmax(64px, 1fr))`,
+                gridTemplateColumns: `${labelColumnWidth}px repeat(${slots.length}, minmax(0, 1fr))`,
               }}
             >
-              <div className="sticky left-0 z-20 bg-white p-2 text-slate-700">{"타임세일"}</div>
+              <div className="sticky left-0 z-20 truncate bg-white p-1.5 text-[10px] text-slate-700">{"타임세일"}</div>
                 {slots.map((slot) => (
                   <div
                     key={`deal-slot-${slot}`}
-                    className="bg-white p-2 border-l border-slate-100 cursor-pointer"
-                    onClick={() => openTimeDealCreate(slot)}
+                    className={`h-7 border-l border-slate-100 ${inBreak(slot) ? "cursor-not-allowed" : "bg-white cursor-pointer hover:bg-amber-50"}`}
+                    style={inBreak(slot) ? { background: "repeating-linear-gradient(135deg,#F1EFE8 0 4px,#E7E3D8 4px 8px)" } : undefined}
+                    onClick={() => { if (inBreak(slot)) return; openTimeDealCreate(slot); }}
                   />
                 ))}
               {autoRulesForDate.map((rule) => {
@@ -933,13 +988,13 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                 const end = timeToMinutes(rule.active_time_end ?? "20:00");
                 const startIndex = Math.max(
                   0,
-                  Math.floor((start - startMinutes) / slotMinutes)
+                  Math.floor((start - gridStart) / slotMinutes)
                 );
                 const endIndex = Math.min(
                   slots.length,
                   Math.max(
                     startIndex + 1,
-                    Math.floor((end - startMinutes - 1) / slotMinutes) + 1
+                    Math.floor((end - gridStart - 1) / slotMinutes) + 1
                   )
                 );
                 const columnStart = 2 + startIndex;
@@ -969,13 +1024,13 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                 const end = timeToMinutes(deal.end_time.slice(11, 16));
                 const startIndex = Math.max(
                   0,
-                  Math.floor((start - startMinutes) / slotMinutes)
+                  Math.floor((start - gridStart) / slotMinutes)
                 );
                 const endIndex = Math.min(
                   slots.length,
                   Math.max(
                     startIndex + 1,
-                    Math.floor((end - startMinutes - 1) / slotMinutes) + 1
+                    Math.floor((end - gridStart - 1) / slotMinutes) + 1
                   )
                 );
                 const columnStart = 2 + startIndex;
@@ -1019,10 +1074,10 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                   key={row.id}
                   className="col-span-full grid"
                   style={{
-                    gridTemplateColumns: `${labelColumnWidth}px repeat(${slots.length}, minmax(64px, 1fr))`,
+                    gridTemplateColumns: `${labelColumnWidth}px repeat(${slots.length}, minmax(0, 1fr))`,
                   }}
                 >
-                  <div className="sticky left-0 z-20 bg-white p-2 text-slate-700">{row.label}</div>
+                  <div className="sticky left-0 z-20 truncate bg-white p-1.5 text-[10px] text-slate-700">{row.label}</div>
                   {slots.map((slot) => {
                     const currentSlotDate = new Date(`${selectedDate}T${slot}:00`);
                     const currentSlotTime = currentSlotDate.getTime();
@@ -1047,10 +1102,15 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                       <button
                         key={`${row.id}-${slot}`}
                         type="button"
-                        className={`bg-white p-2 border-l border-slate-100 ${
-                          occupied ? "bg-slate-50 cursor-pointer" : "hover:bg-slate-50"
+                        className={`h-7 border-l border-slate-100 ${
+                          occupied ? "bg-slate-50 cursor-pointer" : inBreak(slot) ? "cursor-not-allowed" : "bg-white hover:bg-amber-50"
                         }`}
+                        style={!occupied && inBreak(slot) ? { background: "repeating-linear-gradient(135deg,#F1EFE8 0 4px,#E7E3D8 4px 8px)" } : undefined}
                         onClick={() => {
+                          if (!occupied && inBreak(slot)) {
+                            window.alert("브레이크 타임이에요. ⚙ 영업·브레이크에서 변경할 수 있어요.");
+                            return;
+                          }
                           if (occupied && blockingReservation) {
                             const slotStr = currentSlotDate.toLocaleTimeString();
                             const startStr = new Date(
@@ -1082,13 +1142,13 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                     const end = timeToMinutes(reservation.end_time.slice(11, 16));
                     const startIndex = Math.max(
                       0,
-                      Math.floor((start - startMinutes) / slotMinutes)
+                      Math.floor((start - gridStart) / slotMinutes)
                     );
                     const endIndex = Math.min(
                       slots.length,
                       Math.max(
                         startIndex + 1,
-                        Math.floor((end - startMinutes - 1) / slotMinutes) + 1
+                        Math.floor((end - gridStart - 1) / slotMinutes) + 1
                       )
                     );
                     const columnStart = 2 + startIndex;
