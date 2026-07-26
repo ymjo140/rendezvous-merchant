@@ -13,7 +13,11 @@ type CrewSnap = {
   crew_type?: string; org_name?: string | null; verified_members?: number;
   visits_total?: number; revisit_rate?: number | null;
 };
-type AppRow = { id: number; status: string; message: string; created_at: string | null; crew: CrewSnap };
+type AppRow = {
+  id: number; status: string; message: string; created_at: string | null;
+  direction?: string;   // crew_apply=크루가 신청 / store_invite=내가 보낸 제안
+  crew: CrewSnap;
+};
 type Deal = {
   id: number; title: string; benefit: string; discount_pct: number | null;
   target: string; conditions: Record<string, any>; status: string;
@@ -26,6 +30,13 @@ type Resp = {
 };
 
 type Tab = "apps" | "deals" | "perf";
+
+// 제안 후보 크루 — 우리 가게에 온 적 있는 크루가 위로
+type Candidate = {
+  id: string; title: string; icon: string; members: number;
+  crew_type?: string; org_name?: string | null;
+  visits: number; amount: number; last_visit: string;
+};
 
 const TARGET_LABEL: Record<string, string> = { all: "모든 자격 크루", university: "🎓 대학 크루만", company: "🏢 직장 크루만" };
 const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
@@ -74,6 +85,12 @@ export function PartnershipsPage({ storeId }: { storeId?: string }) {
   const [showDone, setShowDone] = useState(false);
   const [showEnded, setShowEnded] = useState(false);
 
+  // 크루에 제안 시트
+  const [inviteFor, setInviteFor] = useState<Deal | null>(null);
+  const [cands, setCands] = useState<Candidate[] | null>(null);
+  const [picked, setPicked] = useState<string[]>([]);
+  const [inviteMsg, setInviteMsg] = useState("");
+
   // 새 딜 시트
   const [sheetOpen, setSheetOpen] = useState(false);
   const [tpl, setTpl] = useState<string | null>(null);
@@ -95,7 +112,10 @@ export function PartnershipsPage({ storeId }: { storeId?: string }) {
     out.sort((x, y) => (y.created_at || "").localeCompare(x.created_at || ""));
     return out;
   }, [data]);
-  const pendingApps = allApps.filter((a) => a.status === "pending");
+  const isInvite = (a: AppRow) => (a.direction || "crew_apply") === "store_invite";
+  // 할 일 = 크루가 낸 신청만. 내가 보낸 제안은 크루의 응답을 기다리는 것이라 따로 본다.
+  const pendingApps = allApps.filter((a) => a.status === "pending" && !isInvite(a));
+  const sentInvites = allApps.filter((a) => a.status === "pending" && isInvite(a));
   const doneApps = allApps.filter((a) => a.status !== "pending");
 
   const activeDeals = (data?.deals ?? []).filter((d) => d.status !== "ended");
@@ -142,6 +162,29 @@ export function PartnershipsPage({ storeId }: { storeId?: string }) {
       setTab("deals");
       load();
     } catch { toast("발행에 실패했어요.", "error"); } finally { setBusy(false); }
+  };
+
+  const openInvite = async (d: Deal) => {
+    setInviteFor(d); setCands(null); setPicked([]); setInviteMsg("");
+    try {
+      const r = await fetchWithAuth<{ items: Candidate[] }>(
+        `/api/merchant/stores/${storeId}/crew-candidates?partnership_id=${d.id}`
+      );
+      setCands(r.items || []);
+    } catch { setCands([]); }
+  };
+
+  const sendInvite = async () => {
+    if (!inviteFor || picked.length === 0 || busy) return;
+    setBusy(true);
+    try {
+      const r = await fetchWithAuth<{ sent: number; skipped: number }>(
+        `/api/merchant/partnerships/${inviteFor.id}/invite`,
+        { method: "POST", body: JSON.stringify({ community_ids: picked, message: inviteMsg.trim() || undefined }) }
+      );
+      toast(`${r.sent}개 크루에 제안을 보냈어요 — 수락하면 바로 제휴가 시작됩니다.`, "success");
+      setInviteFor(null); load();
+    } catch { toast("제안 발송에 실패했어요.", "error"); } finally { setBusy(false); }
   };
 
   if (loading)
@@ -206,7 +249,7 @@ export function PartnershipsPage({ storeId }: { storeId?: string }) {
             <div className="rounded-2xl border-2 border-dashed border-[#E7DCC2] bg-white py-12 text-center">
               <div className="text-2xl">📭</div>
               <p className="mt-2 text-sm text-slate-500">대기 중인 신청이 없어요.</p>
-              <p className="mt-1 text-[11px] text-slate-400">딜을 발행하면 자격을 갖춘 크루들이 신청할 수 있어요.</p>
+              <p className="mt-1 text-[11px] text-slate-400">딜을 발행하면 자격 크루가 신청할 수 있고, 우리 가게에 온 적 있는 크루에게 먼저 제안할 수도 있어요.</p>
               <button onClick={() => { setTab("deals"); setSheetOpen(true); }} className="mt-3 rounded-xl bg-[#F5A623] px-4 py-2 text-[12px] font-bold text-white">
                 + 첫 딜 발행하기
               </button>
@@ -256,6 +299,25 @@ export function PartnershipsPage({ storeId }: { storeId?: string }) {
             </div>
           )}
 
+          {sentInvites.length > 0 && (
+            <div className="rounded-2xl border border-[#F0E6D2] bg-white p-3.5">
+              <div className="text-[11.5px] font-semibold text-slate-600">
+                보낸 제안 {sentInvites.length}건 · 크루 응답 대기
+              </div>
+              <div className="mt-2 space-y-1.5 border-t border-[#F5EBD8] pt-2">
+                {sentInvites.map((a) => (
+                  <div key={a.id} className="flex items-center gap-2.5 rounded-xl bg-[#FBF6EA] px-3 py-2">
+                    <span className="text-base">{a.crew.icon}</span>
+                    <span className="min-w-0 flex-1 truncate text-[12px] text-slate-700">
+                      {a.crew.title} <span className="text-slate-400">· {a.deal.title}</span>
+                    </span>
+                    <span className="shrink-0 rounded-full bg-[#FAEEDA] px-2 py-0.5 text-[10px] font-bold text-[#854F0B]">대기</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {doneApps.length > 0 && (
             <div className="rounded-2xl border border-[#F0E6D2] bg-white p-3.5">
               <button onClick={() => setShowDone(!showDone)} className="flex w-full items-center text-[11.5px] text-slate-500">
@@ -269,7 +331,7 @@ export function PartnershipsPage({ storeId }: { storeId?: string }) {
                       <span className="text-base">{a.crew.icon}</span>
                       <span className="min-w-0 flex-1 truncate text-[12px] text-slate-700">{a.crew.title} <span className="text-slate-400">· {a.deal.title}</span></span>
                       <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${a.status === "approved" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-400"}`}>
-                        {a.status === "approved" ? "승인됨" : "거절됨"}
+                        {a.status === "approved" ? (isInvite(a) ? "제안 수락됨" : "승인됨") : isInvite(a) ? "제안 거절됨" : "거절됨"}
                       </span>
                     </div>
                   ))}
@@ -306,6 +368,11 @@ export function PartnershipsPage({ storeId }: { storeId?: string }) {
                     </span>
                     <b className="text-[13px] font-semibold text-slate-900">{d.title}</b>
                     <span className="ml-auto flex gap-1.5 text-[11px]">
+                      {d.status === "active" && (
+                        <button onClick={() => openInvite(d)} className="rounded-lg bg-[#F5A623] px-2.5 py-1 font-bold text-white hover:bg-[#e09415]">
+                          크루에 제안
+                        </button>
+                      )}
                       <button onClick={() => setStatus(d.id, d.status === "active" ? "paused" : "active")} className="rounded-lg bg-slate-100 px-2.5 py-1 font-semibold text-slate-600">
                         {d.status === "active" ? "일시정지" : "재개"}
                       </button>
@@ -397,6 +464,89 @@ export function PartnershipsPage({ storeId }: { storeId?: string }) {
       )}
 
       {/* ─────────────── + 새 딜 시트 ─────────────── */}
+      {/* 크루에 제안 시트 — 방문 이력 있는 크루가 위로 */}
+      {inviteFor && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center" onClick={() => setInviteFor(null)}>
+          <div className="max-h-[86vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-white p-5 sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2">
+              <div>
+                <h2 className="text-[15px] font-bold text-slate-900">크루에 제안 보내기</h2>
+                <p className="text-[11px] text-[#B49A6A]">{inviteFor.title}</p>
+              </div>
+              <button onClick={() => setInviteFor(null)} className="ml-auto text-[12px] text-slate-400">닫기</button>
+            </div>
+
+            {cands === null ? (
+              <p className="py-10 text-center text-[12px] text-slate-400">크루를 찾는 중...</p>
+            ) : cands.length === 0 ? (
+              <div className="py-10 text-center">
+                <p className="text-[12.5px] text-slate-500">제안할 만한 크루가 아직 없어요.</p>
+                <p className="mt-1 text-[11px] text-slate-400">우리 가게에 방문 기록이 있거나 멤버 3명 이상인 크루가 여기 뜹니다.</p>
+              </div>
+            ) : (
+              <>
+                <p className="mt-3 text-[11px] text-[#B49A6A]">
+                  우리 가게에 온 적 있는 크루가 위에 있어요 — 이미 아는 맛이라 수락률이 높아요.
+                </p>
+                <div className="mt-2 space-y-1.5">
+                  {cands.map((c) => {
+                    const on = picked.includes(c.id);
+                    return (
+                      <button
+                        key={c.id}
+                        onClick={() => setPicked((p) => (on ? p.filter((x) => x !== c.id) : [...p, c.id]))}
+                        className={`flex w-full items-center gap-2.5 rounded-xl border p-2.5 text-left transition-colors ${
+                          on ? "border-[#F5A623] bg-[#FFF9EC]" : "border-[#F0E6D2] bg-white"
+                        }`}
+                      >
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#FAEEDA] text-base">{c.icon}</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="flex flex-wrap items-center gap-1.5">
+                            <b className="text-[12.5px] font-semibold text-slate-900">{c.title}</b>
+                            {c.org_name && (
+                              <span className="rounded bg-[#FAEEDA] px-1.5 py-0.5 text-[9.5px] font-bold text-[#854F0B]">
+                                {c.crew_type === "university" ? "🎓" : "🏢"} {c.org_name}
+                              </span>
+                            )}
+                          </span>
+                          <span className="mt-0.5 block text-[11px] text-slate-500">
+                            멤버 {c.members}
+                            {c.visits > 0
+                              ? ` · 우리 가게 ${c.visits}번 방문 · ${c.amount.toLocaleString()}원`
+                              : " · 방문 기록 없음"}
+                          </span>
+                        </span>
+                        <span className={`shrink-0 text-[15px] ${on ? "text-[#F5A623]" : "text-slate-200"}`}>{on ? "✓" : "○"}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-3">
+                  <label className="text-[11.5px] font-semibold text-slate-600">사장님 한마디 (선택)</label>
+                  <textarea
+                    value={inviteMsg}
+                    onChange={(e) => setInviteMsg(e.target.value.slice(0, 200))}
+                    rows={2}
+                    placeholder="시험기간에 동아리 뒷풀이 오세요!"
+                    className="mt-1 w-full rounded-xl border border-[#F0E6D2] p-2.5 text-[12.5px] outline-none focus:border-[#F5A623]"
+                  />
+                  <p className="mt-0.5 text-[10.5px] text-[#B49A6A]">크루의 제휴 관리 화면에 그대로 보여요.</p>
+                </div>
+
+                <button
+                  onClick={sendInvite}
+                  disabled={picked.length === 0 || busy}
+                  className="mt-3 w-full rounded-xl bg-[#F5A623] py-3 text-[13px] font-bold text-white disabled:opacity-40"
+                >
+                  {picked.length === 0 ? "크루를 선택해주세요" : `${picked.length}개 크루에 제안 보내기`}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {sheetOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setSheetOpen(false)}>
           <div className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-5" onClick={(e) => e.stopPropagation()}>
