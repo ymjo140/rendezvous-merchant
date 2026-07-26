@@ -9,6 +9,7 @@ import { QRCodeCanvas } from "qrcode.react";
 import { toPng } from "html-to-image";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "@/components/ui/toaster";
+import { checkinUrl } from "@/lib/utils/appUrl";
 import { useMenus } from "@/lib/hooks/useMenus";
 import { useStoreTables } from "@/lib/hooks/useStoreTables";
 import { useTableUnits } from "@/lib/hooks/useTableUnits";
@@ -101,7 +102,7 @@ export function StoreManagePage({ storeId }: { storeId?: string }) {
   const pct = Math.round((doneCount / checks.length) * 100);
   const missing = checks.filter((c) => !c.ok);
 
-  const qrValue = useMemo(() => `https://rendezvous.app/checkin/${resolvedStoreId}`, [resolvedStoreId]);
+  const qrValue = useMemo(() => checkinUrl(resolvedStoreId), [resolvedStoreId]);
   const downloadQr = async () => {
     if (!qrRef.current) return;
     try {

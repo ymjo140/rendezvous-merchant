@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase/client";
 import { toast } from "@/components/ui/toaster";
+import { checkinUrl } from "@/lib/utils/appUrl";
 import { VIBE_OPTIONS, FACILITY_OPTIONS } from "@/domain/storeFilters";
 
 // 손님 앱(B2C) 장소 상세가 그대로 읽는 필드들 — 여기서 수정하면 앱에 바로 반영됨.
@@ -134,10 +135,7 @@ export function SettingsPage({ storeId }: { storeId?: string }) {
     toast("저장 완료! 손님 앱에 바로 반영됩니다.", "success");
   }
 
-  const qrValue = useMemo(
-    () => `https://rendezvous.app/checkin/${resolvedStoreId}`,
-    [resolvedStoreId]
-  );
+  const qrValue = useMemo(() => checkinUrl(resolvedStoreId), [resolvedStoreId]);
 
   async function handleDownload() {
     if (!qrRef.current) return;
