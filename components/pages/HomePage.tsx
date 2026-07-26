@@ -1,8 +1,11 @@
 "use client";
 
+// 📊 오늘 탭 v2 — 레이어드 카드 톤(크림 배경 + 브랜드 앰버).
+// 기간 토글(오늘/이번 주/이번 달)로 KPI·추이를 주가 차트처럼 전환.
+// 데이터: /api/merchant/stores/{id}/overview + pulse + 기존 훅(핫딜 제안·공실 카드 유지).
+
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAppReservations } from "@/lib/hooks/useAppReservations";
 import { useReservations } from "@/lib/hooks/useReservations";
@@ -14,72 +17,109 @@ import { suggestRules } from "@/domain/offers/yieldEngine";
 import { fetchWithAuth } from "@/lib/api/client";
 import { VacancyCard } from "@/components/home/VacancyCard";
 
-// 손님 앱(B2C) 행동로그 집계 — FastAPI /api/merchant/stores/{id}/pulse
-type StorePulse = {
-  impressions: number;
-  clicks: number;
-  saves: number;
-  ctr: number | null;
-  daily: Array<{ date: string; impressions: number; clicks: number }>;
-  week_reservations: number;
-  deposit_week: number;
-  deposit_month: number;
-  pending_reservations: number;
+type Period = "today" | "week" | "month";
+
+type Overview = {
+  period: Period;
+  store: { name: string; category: string };
+  kpis: {
+    reservations: number; guests: number; amount: number;
+    delta: { reservations: number | null; guests: number | null; amount: number | null };
+  };
+  series: { label: string; guests: number; is_current: boolean }[];
+  briefing: { time: string; party: number; tier: string }[];
+  todo: { pending_reservations: number; pending_partnership_apps: number };
 };
+
+type StorePulse = {
+  impressions: number; clicks: number; saves: number; ctr: number | null;
+  daily: Array<{ date: string; impressions: number; clicks: number }>;
+};
+
+const PERIOD_LABEL: Record<Period, string> = { today: "오늘", week: "이번 주", month: "이번 달" };
+const PREV_LABEL: Record<Period, string> = { today: "어제", week: "지난주", month: "지난달" };
 
 function todayStr() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function weekRange() {
-  // 이번 주(월~일)
-  const now = new Date();
-  const day = (now.getDay() + 6) % 7; // 월=0
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - day);
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-  const fmt = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  return { from: fmt(monday), to: fmt(sunday) };
+function Delta({ v, base }: { v: number | null; base: string }) {
+  if (v === null) return <span className="text-[10.5px] text-slate-300">{base} 데이터 없음</span>;
+  const up = v >= 0;
+  return (
+    <span className={`text-[10.5px] font-medium ${up ? "text-emerald-600" : "text-rose-500"}`}>
+      {up ? "▲" : "▼"} {Math.abs(v)}% <span className="font-normal text-slate-400">{base} 대비</span>
+    </span>
+  );
+}
+
+// 주가풍 영역 차트 — 마지막(현재) 포인트 강조
+function TrendChart({ series }: { series: Overview["series"] }) {
+  const W = 560, H = 120, PAD = 10;
+  const max = Math.max(1, ...series.map((s) => s.guests));
+  const pts = series.map((s, i) => ({
+    x: PAD + (i * (W - PAD * 2)) / Math.max(1, series.length - 1),
+    y: H - PAD - (s.guests / max) * (H - PAD * 2 - 16),
+    ...s,
+  }));
+  const line = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  const area = `${line} L${pts[pts.length - 1].x},${H} L${pts[0].x},${H} Z`;
+  const last = pts[pts.length - 1];
+  return (
+    <svg viewBox={`0 0 ${W} ${H + 18}`} className="mt-2 block w-full">
+      <path d={area} fill="#FAEEDA" />
+      <path d={line} fill="none" stroke="#F5A623" strokeWidth={2.5} strokeLinecap="round" />
+      {pts.map((p, i) => (
+        <circle key={i} cx={p.x} cy={p.y} r={p.is_current ? 4.5 : 2.5} fill={p.is_current ? "#F5A623" : "#FCE3B8"} stroke={p.is_current ? "#fff" : "none"} strokeWidth={1.5} />
+      ))}
+      <text x={Math.min(last.x, W - 4)} y={Math.max(12, last.y - 9)} textAnchor="end" fontSize={11} fontWeight={600} fill="#854F0B">{last.guests}명</text>
+      {pts.map((p, i) => (
+        <text key={i} x={p.x} y={H + 13} textAnchor={i === 0 ? "start" : i === pts.length - 1 ? "end" : "middle"} fontSize={9.5} fill="#B49A6A">{p.label}</text>
+      ))}
+    </svg>
+  );
 }
 
 export function HomePage({ storeId }: { storeId?: string }) {
   const router = useRouter();
+  const [period, setPeriod] = useState<Period>("today");
+  const [ov, setOv] = useState<Overview | null>(null);
+  const [pulse, setPulse] = useState<StorePulse | null>(null);
+  const [loading, setLoading] = useState(true);
+
   const { data: appReservations = [] } = useAppReservations(storeId);
   const { data: manualReservations = [] } = useReservations(storeId);
   const { data: legacyUnits = [] } = useTableUnits(storeId);
   const { data: storeTables = [] } = useStoreTables(storeId);
   const { data: snapshots = [] } = useTableSnapshots(storeId);
-  // 좌석 SSOT: 테이블 맵 우선, 미등록 매장은 기존 수용량 폴백
+  const { data: rules = [] } = useRules(storeId);
   const units =
     storeTables.length > 0
       ? storeTables.map((t) => ({ max_capacity: t.capacity, quantity: 1 } as any))
       : legacyUnits;
-  const { data: rules = [] } = useRules(storeId);
-  const [pulse, setPulse] = useState<StorePulse | null>(null);
 
-  const today = todayStr();
-  const week = weekRange();
+  useEffect(() => {
+    if (!storeId) return;
+    let active = true;
+    setLoading(true);
+    fetchWithAuth<Overview>(`/api/merchant/stores/${storeId}/overview?period=${period}`)
+      .then((d) => { if (active) setOv(d); })
+      .catch(() => { if (active) setOv(null); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [storeId, period]);
 
-  // 수요 레이더: 손님 앱에서 내 가게가 얼마나 보였는지 (실패해도 카드만 숨김)
   useEffect(() => {
     if (!storeId) return;
     let active = true;
     fetchWithAuth<StorePulse>(`/api/merchant/stores/${storeId}/pulse?days=7`)
-      .then((p) => {
-        if (active) setPulse(p);
-      })
-      .catch(() => {
-        if (active) setPulse(null);
-      });
-    return () => {
-      active = false;
-    };
+      .then((p) => { if (active) setPulse(p); })
+      .catch(() => { if (active) setPulse(null); });
+    return () => { active = false; };
   }, [storeId]);
 
-  // 1) 오늘 예약 (앱)
+  const today = todayStr();
   const todayReservations = useMemo(
     () =>
       appReservations
@@ -88,260 +128,205 @@ export function HomePage({ storeId }: { storeId?: string }) {
     [appReservations, today]
   );
 
-  // 2) 이번 주 예약 전환 (확정+완료)
-  const weekConversions = useMemo(
-    () =>
-      appReservations.filter(
-        (r) => r.date >= week.from && r.date <= week.to && (r.status === "confirmed" || r.status === "completed")
-      ).length,
-    [appReservations, week]
-  );
-
-  // 3) 노출 중인 핫딜 (enabled 룰)
   const activeHotdeals = useMemo(() => rules.filter((r) => r.enabled), [rules]);
-
-  // 4) AI 할인 제안 (가장 한가한 유휴 시간대)
   const topSuggestion = useMemo(() => {
     try {
       const { suggestions } = suggestRules({
-        // 수기 + 앱(B2C) 예약 합산
         reservations: [
-          ...manualReservations.map((r) => ({
-            party_size: r.party_size,
-            status: r.status,
-            start_time: r.start_time,
-          })),
-          ...appReservations.map((r) => ({
-            party_size: r.party_size,
-            status: r.status,
-            start_time: `${r.date}T${r.time || "00:00"}:00`,
-          })),
+          ...manualReservations.map((r) => ({ party_size: r.party_size, status: r.status, start_time: r.start_time })),
+          ...appReservations.map((r) => ({ party_size: r.party_size, status: r.status, start_time: `${r.date}T${r.time || "00:00"}:00` })),
         ],
         units: units.map((u) => ({ max_capacity: u.max_capacity, quantity: u.quantity })),
-        rules: activeHotdeals.map((r) => ({
-          enabled: r.enabled,
-          days: r.days,
-          time_blocks: r.time_blocks,
-        })),
-        snapshots, // 🪑 테이블맵 실측 스냅샷
+        rules: activeHotdeals.map((r) => ({ enabled: r.enabled, days: r.days, time_blocks: r.time_blocks })),
+        snapshots,
         maxSuggestions: 1,
       });
       return suggestions[0] ?? null;
-    } catch {
-      return null;
-    }
+    } catch { return null; }
   }, [manualReservations, appReservations, units, activeHotdeals, snapshots]);
 
+  const todoCount = (ov?.todo.pending_reservations ?? 0) + (ov?.todo.pending_partnership_apps ?? 0);
+  const kpis = ov?.kpis;
+  const dateLabel = new Date().toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "short" });
+  const gauge = (v: number, max: number) => `${Math.min(100, Math.round((v / Math.max(1, max)) * 100))}%`;
+
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">오늘 한눈에</h1>
-          <p className="text-sm text-slate-500">매장 #{storeId}</p>
+    <div className="-m-4 min-h-full bg-[#FBF3E4] p-4 lg:-m-6 lg:p-6">
+      {/* 헤더 — 가게 + 기간 토글 */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#F0E6D2] bg-white text-xl">🍽️</span>
+          <div className="min-w-0">
+            <h1 className="truncate text-[17px] font-bold text-slate-900">{ov?.store.name || "우리 가게"} — 한눈에</h1>
+            <p className="text-[11.5px] text-[#B49A6A]">{dateLabel}{ov?.store.category ? ` · ${ov.store.category}` : ""}</p>
+          </div>
         </div>
-        <Button className="bg-brand hover:bg-brand-dark" onClick={() => router.push(`/stores/${storeId}/offers/rules/new`)}>
-          + 핫딜 만들기
-        </Button>
+
+        <div className="ml-auto flex items-center gap-2">
+          <div className="flex rounded-xl border border-[#F0E6D2] bg-white p-1">
+            {(["today", "week", "month"] as Period[]).map((p) => (
+              <button
+                key={p}
+                onClick={() => setPeriod(p)}
+                className={`rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors ${
+                  period === p ? "bg-[#F5A623] text-white" : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                {PERIOD_LABEL[p]}
+              </button>
+            ))}
+          </div>
+          <Button className="hidden bg-slate-900 hover:bg-slate-800 sm:inline-flex" onClick={() => router.push(`/stores/${storeId}/offers/rules/new`)}>
+            + 딜 발행
+          </Button>
+        </div>
       </div>
 
-      {/* 🔴 지금 빈자리 원탭 알림 — 손님 앱 '지금 입장 가능' 노출 */}
-      <VacancyCard storeId={storeId} />
-
-      {/* 요약 4지표 */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <SummaryCard label="오늘 예약" value={`${todayReservations.length}건`} accent />
-        <SummaryCard label="이번 주 전환" value={`${weekConversions}건`} />
-        <SummaryCard label="노출 중 핫딜" value={`${activeHotdeals.length}개`} />
-        <SummaryCard
-          label="대기 중 예약"
-          value={`${appReservations.filter((r) => r.status === "confirmed" && r.date >= today).length}건`}
-        />
+      {/* 퀵 이동 칩 — 오늘의 동선 */}
+      <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
+        {[
+          { label: "📅 예약 현황", to: "reservations", badge: ov?.todo.pending_reservations || 0 },
+          { label: "🤝 제휴 신청", to: "partnerships", badge: ov?.todo.pending_partnership_apps || 0 },
+          { label: "💛 단골 알림", to: "regulars", badge: 0 },
+          { label: "🔥 핫딜", to: "offers/rules", badge: 0 },
+        ].map((c) => (
+          <button
+            key={c.to}
+            onClick={() => router.push(`/stores/${storeId}/${c.to}`)}
+            className="flex shrink-0 items-center gap-1.5 rounded-xl border border-[#F0E6D2] bg-white px-3 py-2 text-[12px] font-medium text-slate-600 transition-colors hover:border-[#F5A623]"
+          >
+            {c.label}
+            {c.badge > 0 && (
+              <span className="rounded-full bg-[#F5A623] px-1.5 py-0.5 text-[10px] font-bold text-white">{c.badge}</span>
+            )}
+          </button>
+        ))}
       </div>
 
-      {/* 📡 수요 레이더(손님 앱 실데이터) + 예약금 정산 */}
-      {pulse && (
-        <Card className="border-brand/30">
-          <CardHeader>
-            <CardTitle className="text-base">📡 수요 레이더 · 최근 7일 (손님 앱 실데이터)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-[1.2fr_1fr]">
-              <div>
-                <div className="flex flex-wrap gap-5">
-                  <PulseStat label="내 가게 노출" value={pulse.impressions} suffix="회" />
-                  <PulseStat label="클릭(상세 조회)" value={pulse.clicks} suffix="회" />
-                  <PulseStat label="저장/찜" value={pulse.saves} suffix="회" />
-                  {pulse.ctr !== null && (
-                    <PulseStat label="클릭률" value={Math.round(pulse.ctr * 100)} suffix="%" />
-                  )}
-                </div>
-                {pulse.daily.length > 0 ? (
-                  <div className="mt-4 flex h-16 items-end gap-1.5">
-                    {pulse.daily.map((d) => {
-                      const max = Math.max(...pulse.daily.map((x) => x.impressions + x.clicks), 1);
-                      const h = Math.max(8, Math.round(((d.impressions + d.clicks) / max) * 64));
-                      return (
-                        <div key={d.date} className="flex flex-col items-center gap-1" title={`${d.date}: 노출 ${d.impressions} · 클릭 ${d.clicks}`}>
-                          <div className="w-7 rounded-t bg-brand/70" style={{ height: `${h}px` }} />
-                          <div className="text-[9px] text-slate-400">{d.date.slice(5)}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p className="mt-4 text-xs text-slate-400">
-                    아직 노출 데이터가 없어요. 핫딜을 등록하면 손님 앱에 노출됩니다.
-                  </p>
-                )}
-              </div>
-              <div className="rounded-xl bg-slate-50 p-4">
-                <div className="text-xs font-bold text-slate-500">💰 예약금 정산</div>
-                <div className="mt-2 flex items-baseline gap-2">
-                  <span className="text-2xl font-bold text-slate-900">
-                    {pulse.deposit_week.toLocaleString()}원
-                  </span>
-                  <span className="text-xs text-slate-400">이번 주</span>
-                </div>
-                <div className="mt-1 text-xs text-slate-500">
-                  이번 달 누적 {pulse.deposit_month.toLocaleString()}원 · 예약 {pulse.week_reservations}건
-                </div>
-                <p className="mt-3 text-[11px] text-slate-400">
-                  손님이 캐시로 결제한 예약금입니다. 취소 시 자동 환불돼요.
-                </p>
-              </div>
+      {/* KPI 3 — 기간 연동 */}
+      <div className="mt-3 grid grid-cols-3 gap-2.5">
+        {[
+          { label: `${PERIOD_LABEL[period]} 예약`, v: kpis ? `${kpis.reservations}건` : "—", d: kpis?.delta.reservations ?? null, g: kpis ? gauge(kpis.reservations, period === "today" ? 15 : period === "week" ? 60 : 200) : "0%" },
+          { label: "예상 손님", v: kpis ? `${kpis.guests}명` : "—", d: kpis?.delta.guests ?? null, g: kpis ? gauge(kpis.guests, period === "today" ? 50 : period === "week" ? 250 : 800) : "0%" },
+          { label: "정산 금액", v: kpis ? `${kpis.amount.toLocaleString()}원` : "—", d: kpis?.delta.amount ?? null, g: kpis ? gauge(kpis.amount, period === "today" ? 300000 : period === "week" ? 1500000 : 5000000) : "0%" },
+        ].map((k) => (
+          <div key={k.label} className="rounded-2xl border border-[#F0E6D2] bg-white p-3.5">
+            <div className="text-[11px] text-[#B49A6A]">{k.label}</div>
+            <div className="mt-1 truncate text-[19px] font-bold text-slate-900">{loading ? "…" : k.v}</div>
+            <div className="mt-1 h-5 overflow-hidden">
+              <Delta v={k.d} base={PREV_LABEL[period]} />
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* 오늘 예약 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">📅 오늘 예약</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {todayReservations.length === 0 ? (
-              <p className="py-6 text-center text-sm text-slate-400">오늘 예약이 없습니다.</p>
-            ) : (
-              todayReservations.map((r) => (
-                <div key={r.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2.5">
-                  <div className="text-sm font-semibold text-slate-900">
-                    {r.time} · {r.party_size}명
-                  </div>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                      r.status === "completed"
-                        ? "bg-emerald-100 text-emerald-700"
-                        : "bg-amber-100 text-amber-700"
-                    }`}
-                  >
-                    {r.status === "completed" ? "방문완료" : "예약대기"}
-                  </span>
-                </div>
-              ))
-            )}
-            <Button
-              variant="ghost"
-              className="w-full text-sm text-slate-500"
-              onClick={() => router.push(`/stores/${storeId}/reservations`)}
-            >
-              예약 전체 보기 →
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* AI 할인 제안 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">🤖 AI 할인 제안</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {topSuggestion ? (
-              <>
-                <div className="rounded-xl border border-brand/30 bg-brand-light/50 p-4">
-                  <div className="text-lg font-bold text-slate-900">
-                    {topSuggestion.dowLabel} {topSuggestion.start}~{topSuggestion.end}{" "}
-                    <span className="text-brand-dark">{topSuggestion.discountPct}% 할인</span>
-                  </div>
-                  <p className="mt-1 text-xs text-slate-500">{topSuggestion.reason}</p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    예상 추가 {topSuggestion.expectedExtraSeats}석 · {topSuggestion.confidence}
-                  </p>
-                </div>
-                <Button
-                  className="w-full bg-brand hover:bg-brand-dark"
-                  onClick={() => router.push(`/stores/${storeId}/offers/rules/new`)}
-                >
-                  이 시간대 핫딜 만들기
-                </Button>
-              </>
-            ) : (
-              <p className="py-6 text-center text-sm text-slate-400">
-                지금은 한가한 시간대 제안이 없습니다.
-              </p>
-            )}
-            <Button
-              variant="ghost"
-              className="w-full text-sm text-slate-500"
-              onClick={() => router.push(`/stores/${storeId}/offers/ai`)}
-            >
-              AI 수익엔진 전체 보기 →
-            </Button>
-          </CardContent>
-        </Card>
+            <div className="relative h-[3px] overflow-hidden rounded bg-[#FAEEDA]">
+              <div className="absolute inset-y-0 left-0 rounded bg-[#F5A623] transition-all" style={{ width: k.g }} />
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* 노출 중 핫딜 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">🔥 노출 중인 핫딜</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {activeHotdeals.length === 0 ? (
-            <p className="py-4 text-center text-sm text-slate-400">진행 중인 핫딜이 없습니다.</p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {activeHotdeals.map((r) => (
-                <span
-                  key={r.id}
-                  className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700"
-                >
-                  {r.name || r.benefit_title || "핫딜"}
-                  {typeof r.inventory_cap === "number" && r.inventory_cap > 0 && (
-                    <span className="ml-1 text-slate-400">
-                      {Math.max(0, r.inventory_cap - (r.inventory_used ?? 0))}개 남음
-                    </span>
-                  )}
+      {/* 히어로 — 방문 손님 추이 (주가 차트 느낌) */}
+      <div className="mt-3 rounded-2xl border border-[#F0E6D2] bg-white p-4">
+        <div className="flex items-baseline justify-between gap-2">
+          <div>
+            <div className="text-[12px] font-semibold text-slate-700">방문 손님 추이</div>
+            <div className="mt-0.5 flex items-baseline gap-2">
+              <span className="text-[28px] font-bold text-[#854F0B]">{kpis ? `${kpis.guests}명` : "—"}</span>
+              <Delta v={kpis?.delta.guests ?? null} base={PREV_LABEL[period]} />
+            </div>
+          </div>
+          <span className="shrink-0 text-[10.5px] text-[#B49A6A]">
+            {period === "today" ? "최근 7일 · 일별" : period === "week" ? "최근 8주 · 주별" : "최근 6개월 · 월별"}
+          </span>
+        </div>
+        {ov && ov.series.length > 1 ? (
+          <TrendChart series={ov.series} />
+        ) : (
+          <div className="py-8 text-center text-[12px] text-slate-300">{loading ? "불러오는 중…" : "아직 데이터가 없어요"}</div>
+        )}
+        {/* 수요 레이더 슬림 — 노출/클릭/저장 (손님 앱 실데이터) */}
+        {pulse && (
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-[#F5EBD8] pt-3 text-[11.5px] text-slate-500">
+            <span className="font-semibold text-slate-600">📡 최근 7일 손님 앱</span>
+            <span>노출 <b className="text-slate-800">{pulse.impressions}</b></span>
+            <span>클릭 <b className="text-slate-800">{pulse.clicks}</b></span>
+            <span>저장 <b className="text-slate-800">{pulse.saves}</b></span>
+            {pulse.ctr !== null && <span>클릭률 <b className="text-slate-800">{Math.round(pulse.ctr * 100)}%</b></span>}
+          </div>
+        )}
+      </div>
+
+      {/* 오늘 브리핑 (오늘 기간에서만) */}
+      {period === "today" && (
+        <div className="mt-3 rounded-2xl border border-[#F0E6D2] bg-white p-4">
+          <div className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-700">💡 오늘 브리핑</div>
+          {ov && ov.briefing.length > 0 ? (
+            <p className="mt-1.5 text-[13px] leading-relaxed text-slate-600">
+              {ov.briefing.map((b, i) => (
+                <span key={i}>
+                  {i > 0 && " · "}
+                  <b className="font-semibold text-slate-800">{b.time}</b> {b.party}명
+                  <span className={`ml-1 rounded px-1 py-0.5 text-[10px] font-bold ${
+                    b.tier === "VIP" ? "bg-violet-100 text-violet-700"
+                    : b.tier === "단골" ? "bg-emerald-100 text-emerald-700"
+                    : b.tier === "재방문" ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"
+                  }`}>{b.tier}</span>
                 </span>
               ))}
-            </div>
+              {todoCount > 0 && (
+                <span className="text-slate-500"> — 처리할 일 <b className="text-[#854F0B]">{todoCount}건</b> (예약 대기 {ov.todo.pending_reservations} · 제휴 신청 {ov.todo.pending_partnership_apps})</span>
+              )}
+            </p>
+          ) : (
+            <p className="mt-1.5 text-[13px] text-slate-400">
+              오늘 확정 예약이 아직 없어요.{topSuggestion ? " 아래 제안으로 빈 시간대를 채워보세요 👇" : ""}
+            </p>
           )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
+        </div>
+      )}
 
-function PulseStat({ label, value, suffix }: { label: string; value: number; suffix: string }) {
-  return (
-    <div>
-      <div className="text-xs text-slate-500">{label}</div>
-      <div className="text-xl font-bold text-slate-900">
-        {value.toLocaleString()}
-        <span className="ml-0.5 text-xs font-medium text-slate-400">{suffix}</span>
+      {/* AI 제안 — 한가한 시간대 핫딜 */}
+      {topSuggestion && (
+        <div className="mt-3 flex items-center gap-3 rounded-2xl border border-[#F5A623]/40 bg-[#FFF9EC] p-4">
+          <span className="text-xl">🔥</span>
+          <div className="min-w-0 flex-1">
+            <div className="text-[13px] font-semibold text-slate-800">{(topSuggestion as any).title || "한가한 시간대에 핫딜을 걸어보세요"}</div>
+            <div className="mt-0.5 text-[11.5px] text-slate-500">{(topSuggestion as any).reason || "예약 데이터 기반 제안"}</div>
+          </div>
+          <Button className="shrink-0 bg-[#F5A623] hover:bg-[#e09415]" onClick={() => router.push(`/stores/${storeId}/offers/rules/new`)}>
+            발행
+          </Button>
+        </div>
+      )}
+
+      {/* 공실 현황 (기존 카드 유지) */}
+      <div className="mt-3">
+        <VacancyCard storeId={storeId} />
+      </div>
+
+      {/* 오늘 예약 미리보기 */}
+      <div className="mt-3 rounded-2xl border border-[#F0E6D2] bg-white p-4">
+        <div className="flex items-center justify-between">
+          <div className="text-[12px] font-semibold text-slate-700">📅 오늘 예약 {todayReservations.length}건</div>
+          <button onClick={() => router.push(`/stores/${storeId}/reservations`)} className="text-[11.5px] font-semibold text-[#B4791B]">
+            전체 보기 →
+          </button>
+        </div>
+        {todayReservations.length === 0 ? (
+          <p className="mt-2 text-[12.5px] text-slate-400">오늘 들어온 앱 예약이 없어요.</p>
+        ) : (
+          <div className="mt-2 space-y-1.5">
+            {todayReservations.slice(0, 4).map((r) => (
+              <div key={r.id} className="flex items-center gap-2.5 rounded-xl bg-[#FBF6EA] px-3 py-2">
+                <span className="text-[13px] font-bold text-slate-800">{r.time}</span>
+                <span className="text-[12px] text-slate-500">{r.party_size}명</span>
+                {r.table_label && <span className="rounded bg-white px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">🪑 {r.table_label}</span>}
+                <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                  r.status === "confirmed" ? "bg-amber-100 text-amber-700" : r.status === "completed" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-400"
+                }`}>{r.status === "confirmed" ? "대기" : r.status === "completed" ? "완료" : r.status}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
-  );
-}
-
-function SummaryCard({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
-  return (
-    <Card className={accent ? "border-brand/40 bg-brand-light/40" : ""}>
-      <CardContent className="p-4">
-        <div className="text-xs text-slate-500">{label}</div>
-        <div className="mt-1 text-2xl font-bold text-slate-900">{value}</div>
-      </CardContent>
-    </Card>
   );
 }
