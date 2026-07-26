@@ -243,8 +243,7 @@ export function StoreManagePage({ storeId }: { storeId?: string }) {
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-lg">🪑</span>
             <b className="text-[14px] font-bold text-slate-900">좌석 · 테이블</b>
-            <span className="ml-auto flex gap-1.5">
-              <button onClick={() => go("capacity")} className="rounded-lg border border-[#F0E6D2] px-3 py-1.5 text-[11.5px] font-semibold text-slate-600 hover:border-[#F5A623]">수용량</button>
+            <span className="ml-auto">
               <button onClick={() => go("tables")} className="rounded-lg bg-[#F5A623] px-3 py-1.5 text-[11.5px] font-bold text-white hover:bg-[#e09415]">
                 {seatInfo.source === "map" ? "테이블 맵" : "테이블 맵 그리기"}
               </button>
@@ -262,7 +261,7 @@ export function StoreManagePage({ storeId }: { storeId?: string }) {
           </div>
           {seatInfo.source !== "map" && (
             <div className="mt-1.5 rounded-lg bg-[#FFF9EC] px-3 py-2 text-[11.5px] text-[#854F0B]">
-              ⚠ 테이블 맵 미등록 — 맵을 그리면 <b>예약판 배치·공실 감지가 실측</b>으로 바뀌어요{seatInfo.source === "units" ? " (지금은 수용량 기준 대략치)" : ""}
+              ⚠ 테이블 맵 미등록 — 맵을 그리면 <b>예약판 배치·공실 감지가 실측</b>으로 바뀌어요{seatInfo.source === "units" ? " (지금은 예전 수용량 값 기준 대략치)" : ""}
             </div>
           )}
         </div>

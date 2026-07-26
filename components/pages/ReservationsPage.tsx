@@ -1435,7 +1435,7 @@ export function ReservationsPage({ storeId }: { storeId?: string }) {
                   >
                     {unitOptions.length === 0 ? (
                       <option value="">
-                        {"수용량에서 테이블을 등록해 주세요."}
+                        {"테이블 맵에서 테이블을 등록해 주세요."}
                       </option>
                     ) : null}
                     {unitOptions.map((unit) => (

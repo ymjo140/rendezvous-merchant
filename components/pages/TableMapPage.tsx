@@ -203,6 +203,57 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
     logSnapshot(nextTables);
   };
 
+  // 🔗 테이블 맵 → 좌석 수용량(table_units) 자동 파생 — 예약판·분석의 원천이 맵 하나가 되게 동기화.
+  // 기존 unit은 (최대인원, 룸 여부)로 매칭해 quantity만 갱신(id 보존 → 배정된 예약 안 깨짐), 없어진 그룹은 0으로.
+  const syncUnits = async (nextTables: StoreTable[]) => {
+    if (nextTables.length === 0) return; // 맵을 다 지운 경우엔 기존 수용량을 폴백으로 유지
+    if (!resolvedStoreId) return;
+    try {
+      const groups = new Map<string, { capacity: number; isPrivate: boolean; count: number }>();
+      nextTables.forEach((t) => {
+        const isPrivate = t.zone_type === "room";
+        const key = `${t.capacity}|${isPrivate}`;
+        const g = groups.get(key) ?? { capacity: t.capacity, isPrivate, count: 0 };
+        g.count += 1;
+        groups.set(key, g);
+      });
+      const { data: cur } = await supabase
+        .from("table_units")
+        .select("id, name, max_capacity, quantity, is_private")
+        .eq("store_id", String(resolvedStoreId));
+      const existing = (cur ?? []) as {
+        id: string; name: string; max_capacity: number; quantity: number; is_private: boolean;
+      }[];
+      const matched = new Set<string>();
+      for (const g of Array.from(groups.values())) {
+        const hit = existing.find(
+          (u) => !matched.has(u.id) && u.max_capacity === g.capacity && !!u.is_private === g.isPrivate
+        );
+        if (hit) {
+          matched.add(hit.id);
+          if (hit.quantity !== g.count)
+            await supabase.from("table_units").update({ quantity: g.count }).eq("id", hit.id);
+        } else {
+          await supabase.from("table_units").insert({
+            id: crypto.randomUUID(),
+            store_id: String(resolvedStoreId),
+            name: g.isPrivate ? `룸 ${g.capacity}인` : `${g.capacity}인 테이블`,
+            min_capacity: Math.max(1, g.capacity - 2),
+            max_capacity: g.capacity,
+            quantity: g.count,
+            is_private: g.isPrivate,
+          });
+        }
+      }
+      for (const u of existing) {
+        if (!matched.has(u.id) && u.quantity !== 0)
+          await supabase.from("table_units").update({ quantity: 0 }).eq("id", u.id);
+      }
+    } catch {
+      /* 파생 실패는 맵 저장을 막지 않음 */
+    }
+  };
+
   const canPlace = (x: number, y: number, shape: TableShape, rotated: boolean, ignoreId?: number) => {
     const cells = cellsOf({ pos_x: x, pos_y: y, shape, rotated });
     return cells.every(([cx, cy]) => {
@@ -245,6 +296,7 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
     setTables(next);
     setAddCell(null);
     syncPlaceMeta(next);
+    syncUnits(next);
     toast(`${label} · ${ZONE_LABEL[zone]} ${capacity}인 추가!`, "success");
   };
 
@@ -305,6 +357,7 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
     setTables(next);
     setSelected((prev) => (prev && prev.id === t.id ? { ...prev, ...patch } : prev));
     if ("status" in patch || "zone_type" in patch) await syncPlaceMeta(next);
+    if ("capacity" in patch || "zone_type" in patch) syncUnits(next);
     return true;
   };
 
@@ -319,6 +372,7 @@ export function TableMapPage({ storeId }: { storeId?: string }) {
     setSelected(null);
     setMoveMode(false);
     await syncPlaceMeta(next);
+    syncUnits(next);
   };
 
   const moveTo = async (x: number, y: number) => {
