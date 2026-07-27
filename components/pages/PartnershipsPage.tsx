@@ -19,14 +19,21 @@ type AppRow = {
   crew: CrewSnap;
 };
 type Deal = {
+  uses_this_month?: number;   // 이번 달 이 딜로 나간 할인 횟수(크루-일 기준)
   id: number; title: string; benefit: string; discount_pct: number | null;
   target: string; conditions: Record<string, any>; status: string;
   pending: number; approved: number; applications: AppRow[];
 };
-type ByCrew = { id: string; title: string; icon: string; visits: number; amount: number; revisits: number };
+type ByCrew = {
+  id: string; title: string; icon: string; visits: number; amount: number; revisits: number;
+  deal_uses?: number;   // 그 방문 중 실제로 할인이 나간 횟수
+};
 type Resp = {
   deals: Deal[];
-  performance: { approved_crews: number; visits: number; amount: number; revisits: number; by_crew?: ByCrew[] };
+  performance: {
+    approved_crews: number; visits: number; amount: number; revisits: number;
+    deal_uses?: number; by_crew?: ByCrew[];
+  };
 };
 
 type Tab = "apps" | "deals" | "perf";
@@ -398,6 +405,11 @@ export function PartnershipsPage({ storeId }: { storeId?: string }) {
                   <div className="mt-1.5 text-[11px] text-slate-500">
                     제휴 크루 <b className="text-slate-800">{d.approved}팀</b>
                     {d.pending > 0 && <> · 대기 <b className="text-[#854F0B]">{d.pending}건</b></>}
+                    {/* 한도는 저장된 숫자가 아니라 실제로 작동한다 — 그걸 보여준다 */}
+                    <> · 이번 달 <b className="text-[#854F0B]">
+                      {d.uses_this_month ?? 0}
+                      {d.conditions?.monthly_uses ? `/${d.conditions.monthly_uses}` : ""}회
+                    </b> 사용</>
                   </div>
                 </div>
               ))}
@@ -429,11 +441,11 @@ export function PartnershipsPage({ storeId }: { storeId?: string }) {
         <div className="rounded-2xl border border-[#F0E6D2] bg-white p-4">
           <div className="flex items-center gap-2">
             <span className="text-[12px] font-semibold text-slate-700">크루별 기여</span>
-            <span className="ml-auto text-[10.5px] text-[#B49A6A]">분담결제·방문 피드백 자동 집계</span>
+            <span className="ml-auto text-[10.5px] text-[#B49A6A]">체크인·분담결제·방문 피드백 자동 집계</span>
           </div>
           {(perf?.by_crew?.length ?? 0) === 0 ? (
             <p className="py-8 text-center text-[12px] text-slate-400">
-              아직 제휴 방문 데이터가 없어요. 크루를 승인하고 방문이 생기면 여기 쌓여요.
+              아직 제휴 방문 데이터가 없어요. 체크인 QR을 계산대에 붙여두면 방문이 여기 쌓여요.
             </p>
           ) : (
             <div className="mt-2 overflow-x-auto">
@@ -442,6 +454,7 @@ export function PartnershipsPage({ storeId }: { storeId?: string }) {
                   <tr className="text-[10.5px] text-[#B49A6A]">
                     <th className="py-1.5 font-medium">크루</th>
                     <th className="py-1.5 text-right font-medium">방문</th>
+                    <th className="py-1.5 text-right font-medium">제휴 사용</th>
                     <th className="py-1.5 text-right font-medium">매출</th>
                     <th className="py-1.5 text-right font-medium">재방문 의사</th>
                   </tr>
@@ -455,6 +468,7 @@ export function PartnershipsPage({ storeId }: { storeId?: string }) {
                         <span className="font-medium text-slate-800">{c.title}</span>
                       </td>
                       <td className="py-2 text-right font-semibold text-slate-800">{c.visits}회</td>
+                      <td className="py-2 text-right text-[#854F0B]">{c.deal_uses ?? 0}회</td>
                       <td className="py-2 text-right text-slate-700">{c.amount.toLocaleString()}원</td>
                       <td className="py-2 text-right text-emerald-700">{c.revisits}</td>
                     </tr>
@@ -463,7 +477,9 @@ export function PartnershipsPage({ storeId }: { storeId?: string }) {
               </table>
               <div className="mt-2 flex items-center gap-4 border-t border-[#F0E6D2] pt-2 text-[11.5px] text-slate-500">
                 <span>합계</span>
-                <span className="ml-auto font-semibold text-slate-800">{perf!.visits}회 · {perf!.amount.toLocaleString()}원 · 재방문 {perf!.revisits}</span>
+                <span className="ml-auto font-semibold text-slate-800">
+                  방문 {perf!.visits}회 · 제휴 {perf!.deal_uses ?? 0}회 · {perf!.amount.toLocaleString()}원 · 재방문 {perf!.revisits}
+                </span>
               </div>
             </div>
           )}
