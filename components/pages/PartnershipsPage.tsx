@@ -49,22 +49,24 @@ const TIMES = Array.from({ length: 48 }, (_, i) => {
 type DealForm = {
   title: string; benefit: string; discount_pct: string; target: string;
   days: string[]; time_from: string; time_to: string; min_party: string;
+  duration_months: string; max_members: string; monthly_uses: string;
 };
-const EMPTY_FORM: DealForm = { title: "", benefit: "", discount_pct: "", target: "all", days: [], time_from: "", time_to: "", min_party: "" };
+const EMPTY_FORM: DealForm = { title: "", benefit: "", discount_pct: "", target: "all", days: [], time_from: "", time_to: "", min_party: "",
+  duration_months: "3", max_members: "", monthly_uses: "" };
 
 // 템플릿 프리셋 — 선택하면 폼이 채워지고 수정만 하면 발행
 const TEMPLATES: { key: string; emoji: string; name: string; hint: string; form: DealForm }[] = [
   {
     key: "dinner", emoji: "🥂", name: "평일 저녁 단체", hint: "월–목 17–19시 · 4인+ · 15%",
-    form: { title: "평일 저녁 단체 15%", benefit: "전 메뉴 15% 할인", discount_pct: "15", target: "all", days: ["mon", "tue", "wed", "thu"], time_from: "17:00", time_to: "19:00", min_party: "4" },
+    form: { title: "평일 저녁 단체 15%", benefit: "전 메뉴 15% 할인", discount_pct: "15", target: "all", days: ["mon", "tue", "wed", "thu"], time_from: "17:00", time_to: "19:00", min_party: "4", duration_months: "3", max_members: "", monthly_uses: "" },
   },
   {
     key: "late", emoji: "🍺", name: "심야 음료 서비스", hint: "21시 이후 · 3인+",
-    form: { title: "심야 단체 음료 서비스", benefit: "단체 방문 시 음료 1병 서비스", discount_pct: "", target: "all", days: [], time_from: "21:00", time_to: "", min_party: "3" },
+    form: { title: "심야 단체 음료 서비스", benefit: "단체 방문 시 음료 1병 서비스", discount_pct: "", target: "all", days: [], time_from: "21:00", time_to: "", min_party: "3", duration_months: "3", max_members: "", monthly_uses: "" },
   },
   {
     key: "univ", emoji: "🎓", name: "대학생 응원", hint: "대학 크루 전용 · 20%",
-    form: { title: "시험기간 대학생 응원 20%", benefit: "대학 크루 전 메뉴 20% 할인", discount_pct: "20", target: "university", days: [], time_from: "", time_to: "", min_party: "2" },
+    form: { title: "시험기간 대학생 응원 20%", benefit: "대학 크루 전 메뉴 20% 할인", discount_pct: "20", target: "university", days: [], time_from: "", time_to: "", min_party: "2", duration_months: "3", max_members: "", monthly_uses: "" },
   },
   { key: "custom", emoji: "✏️", name: "직접 만들기", hint: "조건 자유 설정", form: EMPTY_FORM },
 ];
@@ -74,6 +76,8 @@ function condChips(c: Record<string, any>): string[] {
   if (Array.isArray(c.days) && c.days.length) out.push(c.days.map((d: string) => DAY_KO[d] || d).join("·"));
   if (c.time_from || c.time_to) out.push(`${c.time_from || ""}–${c.time_to || "마감"}`);
   if (c.min_party) out.push(`${c.min_party}인+`);
+  if (c.max_members) out.push(`크루 ${c.max_members}명까지`);
+  if (c.monthly_uses) out.push(`월 ${c.monthly_uses}회`);
   return out;
 }
 
@@ -155,6 +159,9 @@ export function PartnershipsPage({ storeId }: { storeId?: string }) {
             ...(form.time_to ? { time_to: form.time_to } : {}),
             ...(form.min_party ? { min_party: Number(form.min_party) } : {}),
           },
+          duration_months: Number(form.duration_months) || 3,
+          ...(form.max_members ? { max_members: Number(form.max_members) } : {}),
+          ...(form.monthly_uses ? { monthly_uses: Number(form.monthly_uses) } : {}),
         }),
       });
       toast("제휴 딜을 발행했어요 — 자격 크루들에게 노출됩니다.", "success");
@@ -611,6 +618,43 @@ export function PartnershipsPage({ storeId }: { storeId?: string }) {
                   placeholder="최소 인원" inputMode="numeric"
                   className="w-24 rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none" />
               </div>
+            </div>
+
+            {/* 기간·한도 — 기간 없는 제휴는 사실상 영구 할인이 된다 */}
+            <div className="mt-4">
+              <label className="text-[12px] font-semibold text-slate-600">기간과 한도</label>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {["1", "3", "6", "12"].map((mth) => (
+                  <button
+                    key={mth}
+                    onClick={() => setForm({ ...form, duration_months: mth })}
+                    className={`rounded-xl border px-3 py-2 text-[12px] font-semibold transition-colors ${
+                      form.duration_months === mth
+                        ? "border-[#F5A623] bg-[#FFF9EC] text-[#854F0B]"
+                        : "border-[#F0E6D2] bg-white text-slate-500"
+                    }`}
+                  >
+                    {mth}개월
+                  </button>
+                ))}
+                <input
+                  value={form.max_members}
+                  onChange={(e) => setForm({ ...form, max_members: e.target.value.replace(/\D/g, "").slice(0, 3) })}
+                  placeholder="크루 최대 인원"
+                  inputMode="numeric"
+                  className="w-32 rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none"
+                />
+                <input
+                  value={form.monthly_uses}
+                  onChange={(e) => setForm({ ...form, monthly_uses: e.target.value.replace(/\D/g, "").slice(0, 3) })}
+                  placeholder="월 사용 횟수"
+                  inputMode="numeric"
+                  className="w-32 rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none"
+                />
+              </div>
+              <p className="mt-1 text-[10.5px] text-[#B49A6A]">
+                기간이 끝나면 자동 종료돼요. 인원·횟수를 비워두면 제한 없음이고, 크루가 수락한 시점의 조건이 그대로 유지돼요.
+              </p>
             </div>
 
             <div className="mt-5 flex gap-2">
