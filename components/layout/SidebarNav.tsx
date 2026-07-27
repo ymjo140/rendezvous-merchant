@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
 import { useAppReservations } from "@/lib/hooks/useAppReservations";
+import { usePartnershipAlerts } from "@/lib/hooks/usePartnershipAlerts";
 
 function todayStr() {
   const d = new Date();
@@ -42,6 +43,9 @@ export function SidebarNav({
     (r) => r.status === "confirmed" && r.date >= todayStr()
   ).length;
 
+  // 크루가 낸 제휴 신청 → '제휴' 메뉴 뱃지. 사장님에겐 이게 유일한 알림 채널이다.
+  const { pending: partnershipCount } = usePartnershipAlerts(resolvedStoreId ?? undefined);
+
   return (
     <nav className="flex h-full flex-col gap-4 p-6">
       <div className="text-lg font-bold text-brand">랑데부</div>
@@ -76,14 +80,15 @@ export function SidebarNav({
               )}
             >
               <span>{item.label}</span>
-              {item.slug === "reservations" && pendingCount > 0 && (
+              {((item.slug === "reservations" && pendingCount > 0) ||
+                (item.slug === "partnerships" && partnershipCount > 0)) && (
                 <span
                   className={cn(
                     "ml-2 rounded-full px-1.5 py-0.5 text-[10px] font-bold",
                     isActive ? "bg-white text-brand" : "bg-rose-500 text-white"
                   )}
                 >
-                  {pendingCount}
+                  {item.slug === "partnerships" ? partnershipCount : pendingCount}
                 </span>
               )}
             </Link>
