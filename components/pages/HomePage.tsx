@@ -16,6 +16,7 @@ import { useRules } from "@/lib/hooks/useRules";
 import { suggestRules } from "@/domain/offers/yieldEngine";
 import { fetchWithAuth } from "@/lib/api/client";
 import { VacancyCard } from "@/components/home/VacancyCard";
+import { DemandRadarCard } from "@/components/pages/DemandRadarCard";
 
 type Period = "today" | "week" | "month";
 
@@ -253,6 +254,9 @@ export function HomePage({ storeId }: { storeId?: string }) {
           </div>
         )}
       </div>
+
+      {/* 📡 지금 찾는 중인 크루 — 아직 안 온 손님. 기존 CRM이 못 보는 자리다 */}
+      <DemandRadarCard storeId={storeId} />
 
       {/* 오늘 브리핑 (오늘 기간에서만) */}
       {period === "today" && (
