@@ -17,8 +17,10 @@ type Signal = {
   when_date: string | null;
   when_time: string | null;
   area: string;
+  regions: string[];        // 크루가 나란히 놓고 검토 중인 동네들
   distance_km: number;
   candidates: number;
+  candidates_here: number;  // 그중 우리 동네에서 담긴 후보 수
   on_candidate_list: boolean;
   opened_hours_ago: number;
 };
@@ -140,6 +142,17 @@ export function DemandRadarCard({ storeId }: { storeId?: string }) {
                   <div className="mt-0.5 text-[11px] text-slate-500">
                     {whenLabel(s)} · {s.area || "근처"} {s.distance_km}km · 후보 {s.candidates}곳
                   </div>
+                  {/* 크루는 동네 여러 곳을 놓고 고른다 — 우리 동네가 아직 비었으면 그게 기회다 */}
+                  {s.regions.length > 1 && (
+                    <div className="mt-0.5 text-[10.5px] text-slate-500">
+                      검토 중인 동네: {s.regions.join(" · ")}
+                      {s.candidates_here === 0 ? (
+                        <span className="ml-1 font-semibold text-[#B4551F]">우리 동네는 아직 후보 0곳</span>
+                      ) : (
+                        <span className="ml-1 text-slate-400">우리 동네 후보 {s.candidates_here}곳</span>
+                      )}
+                    </div>
+                  )}
                   <div className="mt-0.5 text-[10px] text-slate-400">{agoLabel(s.opened_hours_ago)}에 고르기 시작</div>
                 </div>
                 {sent[s.signal_id] ? (
