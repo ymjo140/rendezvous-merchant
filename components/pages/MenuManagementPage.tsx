@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog } from "@/components/ui/dialog";
 import { useMenus, type MenuRow } from "@/lib/hooks/useMenus";
 import { useStoreId } from "@/components/layout/Layout";
+import { MenuScanDialog } from "./MenuScanDialog";
+import { useQueryClient } from "@tanstack/react-query";
 
 const categoryOptions = [
   { value: "MAIN", label: "메인" },
@@ -44,6 +46,8 @@ export function MenuManagementPage({ storeId }: { storeId?: string }) {
     categoryOptions[0]?.label ?? "MAIN"
   );
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
+  const queryClient = useQueryClient();
   const [editingMenu, setEditingMenu] = useState<MenuRow | null>(null);
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
@@ -126,8 +130,21 @@ export function MenuManagementPage({ storeId }: { storeId?: string }) {
             {"메뉴 정보를 등록하고 추천 메뉴를 가려보세요."}
           </p>
         </div>
-        <Button onClick={openCreate}>{"+ 메뉴 추가"}</Button>
+        <div className="flex gap-2">
+          {/* 손입력보다 이쪽이 먼저 눈에 띄어야 한다 — 30~80개를 치라고 하면 아무도 안 한다 */}
+          <Button onClick={() => setScanOpen(true)}>{"📷 메뉴판 사진으로 등록"}</Button>
+          <Button variant="secondary" onClick={openCreate}>{"+ 직접 추가"}</Button>
+        </div>
       </div>
+
+      <MenuScanDialog
+        storeId={resolvedStoreId}
+        open={scanOpen}
+        onClose={() => setScanOpen(false)}
+        onSaved={() =>
+          queryClient.invalidateQueries({ queryKey: ["store_menus", resolvedStoreId] })
+        }
+      />
 
       <Tabs
         tabs={categoryOptions.map((item) => item.label)}
