@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabase/client";
 import { toast } from "@/components/ui/toaster";
 import { checkinUrl } from "@/lib/utils/appUrl";
 import { VIBE_OPTIONS, FACILITY_OPTIONS } from "@/domain/storeFilters";
+import { HeroImageField } from "@/components/pages/HeroImageField";
 
 // 손님 앱(B2C) 장소 상세가 그대로 읽는 필드들 — 여기서 수정하면 앱에 바로 반영됨.
 type StoreInfo = {
@@ -47,6 +48,8 @@ export function SettingsPage({ storeId }: { storeId?: string }) {
   const [facilities, setFacilities] = useState<string[]>([]); // 시설 영어키
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // 대표 사진은 다른 필드와 저장 경로가 다르다 — 소유권 검증이 필요해 FastAPI를 거친다
+  const [hero, setHero] = useState<string | null>(null);
 
   const toggleVibe = (v: string) =>
     setVibes((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]));
@@ -64,7 +67,7 @@ export function SettingsPage({ storeId }: { storeId?: string }) {
       }
       const { data, error } = await supabase
         .from("places")
-        .select("name, cuisine_type, category, phone, business_hours, address, price_range, external_link, vibe_tags, features")
+        .select("name, cuisine_type, category, phone, business_hours, address, price_range, external_link, vibe_tags, features, hero_image")
         .eq("id", placeId)
         .maybeSingle();
       if (!active) return;
@@ -78,6 +81,7 @@ export function SettingsPage({ storeId }: { storeId?: string }) {
           price_range: data.price_range ?? "",
           external_link: data.external_link ?? "",
         });
+        setHero(data.hero_image ?? null);
         setVibes(Array.isArray(data.vibe_tags) ? data.vibe_tags : []);
         // features는 {key: true} dict → 켜진 키 목록으로
         const feat = data.features && typeof data.features === "object" ? data.features : {};
@@ -170,6 +174,7 @@ export function SettingsPage({ storeId }: { storeId?: string }) {
             <p className="py-4 text-sm text-slate-400">불러오는 중...</p>
           ) : (
             <>
+              <HeroImageField storeId={storeId} value={hero} onChange={setHero} />
               <div className="grid gap-3 md:grid-cols-2">
                 <Field label="가게 이름 *">
                   <Input value={info.name} onChange={set("name")} placeholder="예: 랑데부 포차" />
