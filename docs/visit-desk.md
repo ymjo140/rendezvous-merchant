@@ -40,6 +40,8 @@ QR과 대기 목록은 컴포넌트 메모리에만 보관한다. 요청 시간 
 
 로컬 검증: 화면/계약 테스트 23개, 타입검사·기존 린트 증가 0건, 프로덕션 빌드. 본 앱 테스트와 PostgreSQL CI, 최종 병합·배포 결과는 양쪽 PR에 기록한다.
 
+테스트 실행기는 자식 프로세스의 `NODE_ENV`를 `test`로 지정한다. 상위 빌드 작업이 `production`이어도 React DOM 테스트 도구가 동작하며, 뒤의 Next.js 프로덕션 빌드 환경에는 영향을 주지 않는다. CI도 `NODE_ENV=production npm test` 조건으로 이 경계를 검사한다.
+
 아직 실기기 시각 검증과 실계정 방문은 수행하지 않았다. 기존 방문·예약·제휴 외 영역의 린트/권한 문제와 점주 모집·사용자 관찰은 남아 있다. 4주차 전체 베타 평가 완료를 의미하지 않는다.
 
 참고: [Supabase getSession](https://supabase.com/docs/reference/javascript/auth-getsession), [Auth 상태 변경](https://supabase.com/docs/reference/javascript/auth-onauthstatechange), [Next.js 보안 수정](https://nextjs.org/blog/july-2026-security-release).
