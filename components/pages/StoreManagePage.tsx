@@ -111,7 +111,7 @@ export function StoreManagePage({ storeId }: { storeId?: string }) {
       link.download = `rendezvous_checkin_${resolvedStoreId}.png`;
       link.href = dataUrl;
       link.click();
-      toast("QR 이미지를 저장했어요 — 테이블·계산대에 붙여주세요.", "success");
+      toast("방문 요청 QR을 저장했어요. 요청한 손님은 직원의 현장 승인이 필요해요.", "success");
     } catch {
       toast("이미지 저장에 실패했어요.", "error");
     }
@@ -271,19 +271,19 @@ export function StoreManagePage({ storeId }: { storeId?: string }) {
         <div className="rounded-2xl border border-[#F0E6D2] bg-white p-4">
           <div className="flex items-center gap-2">
             <span className="text-lg">📥</span>
-            <b className="text-[14px] font-bold text-slate-900">체크인 QR</b>
-            <button onClick={downloadQr} className="ml-auto rounded-lg bg-[#F5A623] px-3 py-1.5 text-[11.5px] font-bold text-white hover:bg-[#e09415]">다운로드</button>
+            <b className="text-[14px] font-bold text-slate-900">방문 확인·요청 QR</b>
+            <button onClick={downloadQr} className="ml-auto rounded-lg bg-slate-100 px-3 py-1.5 text-[11.5px] font-bold text-slate-700 hover:bg-slate-200">인쇄용 QR</button>
           </div>
           <div className="mt-2.5 flex items-center gap-4">
             <div ref={qrRef} className="shrink-0 rounded-xl border border-[#F0E6D2] bg-white p-2">
               <QRCodeCanvas value={qrValue} size={72} />
             </div>
             <p className="text-[12px] leading-relaxed text-slate-600">
-              테이블·계산대에 붙여두면<br />
-              <b className="text-slate-800">방문 인증</b> (재방문 데이터의 시작) +{" "}
-              <b className="text-[#854F0B]">우리 가게 단골 크루 가입</b> 입구가 돼요
+              인쇄용 QR은 <b className="text-slate-800">방문 요청 화면</b>으로 연결돼요.
+              직원이 손님의 이름·요청 번호와 실제 방문을 확인한 뒤 승인해주세요.
             </p>
           </div>
+          <button onClick={() => go("visits")} className="mt-4 w-full rounded-lg bg-[#F5A623] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#e09415]">현장 QR·승인 대기 열기</button>
         </div>
       </div>
 

@@ -1,8 +1,10 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { clearToken } from "@/lib/auth/tokenStore";
+import { supabase } from "@/lib/supabase/client";
 
 export function Topbar({
   children,
@@ -12,6 +14,8 @@ export function Topbar({
   onMenuClick?: () => void;
 }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const [signingOut, setSigningOut] = useState(false);
   return (
     <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 lg:px-6">
       <div className="flex items-center gap-3">
@@ -41,9 +45,14 @@ export function Topbar({
         {children}
         <button
           className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-600 hover:bg-slate-50"
-          onClick={() => {
+          disabled={signingOut}
+          onClick={async () => {
+            setSigningOut(true);
             clearToken();
-            router.push("/login");
+            queryClient.clear();
+            try { await supabase.auth.signOut({ scope: "local" }); }
+            catch { /* The local screen and legacy token have already been cleared. */ }
+            finally { router.replace("/login"); setSigningOut(false); }
           }}
         >
           로그아웃
