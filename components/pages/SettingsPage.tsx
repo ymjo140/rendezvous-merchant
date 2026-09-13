@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { QRCodeCanvas } from "qrcode.react";
 import { toPng } from "html-to-image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -297,9 +298,10 @@ export function SettingsPage({ storeId }: { storeId?: string }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>📥 매장 체크인 QR 발급</CardTitle>
+          <CardTitle>📥 인쇄용 방문 요청 QR</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <Link href={`/stores/${resolvedStoreId}/visits`} className="inline-block rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white">현장 QR·승인 대기 열기</Link>
           <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
             <span className="font-medium">색상 선택</span>
             <label className="flex items-center gap-2">
@@ -341,7 +343,7 @@ export function SettingsPage({ storeId }: { storeId?: string }) {
             </div>
             <Button onClick={handleDownload}>이미지로 저장</Button>
             <div className="text-xs text-slate-500">
-              💡 별도의 리더기가 필요 없습니다. 손님 스마트폰 카메라로 찍으면 방문 인증이 완료됩니다.
+              손님이 스캔하면 방문 요청 화면이 열려요. 직원이 실제 방문을 확인하고 승인해주세요. 위치로 확인하려면 위의 방문 확인 화면에서 새 QR을 보여주세요.
             </div>
           </div>
         </CardContent>

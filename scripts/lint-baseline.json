@@ -1,0 +1,92 @@
+{
+  "components/home/VacancyCard.tsx": {
+    "react-hooks/set-state-in-effect:2": 1
+  },
+  "components/layout/StoreSwitcher.tsx": {
+    "@typescript-eslint/no-explicit-any:2": 1,
+    "react-hooks/set-state-in-effect:2": 2
+  },
+  "components/offers/HotDealCard.tsx": {
+    "@next/next/no-img-element:1": 1
+  },
+  "components/pages/BenefitsCatalogPage.tsx": {
+    "react-hooks/rules-of-hooks:2": 6
+  },
+  "components/pages/HomePage.tsx": {
+    "@typescript-eslint/no-explicit-any:2": 3,
+    "react-hooks/set-state-in-effect:2": 1
+  },
+  "components/pages/MenuManagementPage.tsx": {
+    "@next/next/no-img-element:1": 1,
+    "react-hooks/rules-of-hooks:2": 1
+  },
+  "components/pages/OfferRulesPage.tsx": {
+    "@typescript-eslint/no-explicit-any:2": 1
+  },
+  "components/pages/OnboardingPage.tsx": {
+    "@typescript-eslint/no-unused-vars:1": 1,
+    "react-hooks/set-state-in-effect:2": 1
+  },
+  "components/pages/PartnershipsPage.tsx": {
+    "@typescript-eslint/no-explicit-any:2": 2
+  },
+  "components/pages/RegularsPage.tsx": {
+    "react-hooks/exhaustive-deps:1": 1
+  },
+  "components/pages/ReservationDetailPage.tsx": {
+    "react-hooks/set-state-in-effect:2": 1
+  },
+  "components/pages/ReservationsPage.tsx": {
+    "@typescript-eslint/no-unused-vars:1": 5,
+    "react-hooks/rules-of-hooks:2": 20
+  },
+  "components/pages/RuleBuilderPage.tsx": {
+    "@typescript-eslint/no-unused-vars:1": 4,
+    "react-hooks/exhaustive-deps:1": 1,
+    "react-hooks/rules-of-hooks:2": 29
+  },
+  "components/pages/SettingsPage.tsx": {
+    "@typescript-eslint/no-explicit-any:2": 2,
+    "react/no-unescaped-entities:2": 2
+  },
+  "components/pages/StoreManagePage.tsx": {
+    "@typescript-eslint/no-explicit-any:2": 6,
+    "react-hooks/preserve-manual-memoization:2": 1
+  },
+  "components/pages/TableMapPage.tsx": {
+    "@typescript-eslint/no-explicit-any:2": 2
+  },
+  "components/pages/YieldEnginePage.tsx": {
+    "@typescript-eslint/no-explicit-any:2": 1
+  },
+  "domain/offers/yieldEngine.ts": {
+    "prefer-const:2": 1
+  },
+  "lib/api/stores.ts": {
+    "@typescript-eslint/no-explicit-any:2": 2
+  },
+  "lib/hooks/useAppReservations.ts": {
+    "react-hooks/exhaustive-deps:1": 1
+  },
+  "lib/hooks/useBenefits.ts": {
+    "react-hooks/exhaustive-deps:1": 1
+  },
+  "lib/hooks/useMenus.ts": {
+    "react-hooks/exhaustive-deps:1": 1
+  },
+  "lib/hooks/useReservations.ts": {
+    "react-hooks/exhaustive-deps:1": 1
+  },
+  "lib/hooks/useRules.ts": {
+    "react-hooks/exhaustive-deps:1": 1
+  },
+  "lib/hooks/useTableSnapshots.ts": {
+    "@typescript-eslint/no-explicit-any:2": 2
+  },
+  "lib/hooks/useTableUnits.ts": {
+    "react-hooks/exhaustive-deps:1": 1
+  },
+  "lib/hooks/useTimeDeals.ts": {
+    "react-hooks/exhaustive-deps:1": 1
+  }
+}

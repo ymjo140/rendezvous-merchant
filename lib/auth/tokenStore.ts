@@ -13,6 +13,6 @@ export function setToken(token: string) {
 export function clearToken() {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(TOKEN_KEY);
+  window.dispatchEvent(new Event("merchant:sign-out"));
 }
-
 
